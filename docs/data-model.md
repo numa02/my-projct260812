@@ -25,7 +25,7 @@ erDiagram
 
     TEACHER {
         uuid id PK "Supabase AuthのユーザーIDと同一"
-        string email
+        string email "概念上の項目。実テーブルにはemail列を複製しない(下記注記参照)"
         date start_date "起算日。未設定ならnull。授業記録(メモ)が1件以上存在すると通常は変更不可だが、「年度を更新する」操作を経由すれば再設定できる"
         datetime created_at
     }
@@ -134,7 +134,7 @@ erDiagram
 - `CLASS`: (teacher_id, grade, group_number) — 組番号は学年区分内で一意、欠番は再利用しない
 - `CLASS_NUMBER_COUNTER`: (teacher_id, grade_group) — 学年区分ごとに1行。クラスを削除しても`last_issued_number`は減らさないことで欠番を保証する
 - `STUDENT`: (class_id, attendance_number) — クラス内で出席番号は一意。登録(インポート)時・個別編集時の両方で検証する
-- `SUBJECT`: (teacher_id, name) — 教員ごとに科目名は一意という設計上の追加(要件は明言していないが、表記ゆれ防止のマスタ化という趣旨から妥当と判断した)
+- `SUBJECT`: 一意制約なし(教員ごとに同名の科目を複数登録できる)。**2026-08-13の設計レビューで、当初「表記ゆれ防止のため一意にすべきでは」という設計側の仮定を提案したが、ユーザーヒアリングの結果「重複を許可する」で確定した。** `docs/design.md`のDDLでは`(teacher_id, name)`のユニーク制約を設けていない
 - `TIMETABLE_MASTER_SLOT`: (teacher_id, weekday, period) — マスのスロットは1つのみ
 - `WEEKLY_SUBJECT_OVERRIDE`: (teacher_id, week_start_date, weekday, period)
 - `WEEKLY_CLASS_OVERRIDE`: (teacher_id, week_start_date, weekday, period)
@@ -144,6 +144,8 @@ erDiagram
 `WEEKLY_SUBJECT_OVERRIDE` / `WEEKLY_CLASS_OVERRIDE` を分離しているのは、F4・F5が「科目とクラスは独立に個別変更でき、一致した項目だけがマスタ追従に戻る」と定義しているため。1テーブルにまとめて2つのnull許容カラムを持たせるより、科目側とクラス側で行の有無自体が「個別変更されているかどうか」を表す設計の方が、この部分一致・部分削除の挙動を素直に表現できると判断した(要件はテーブル構造までは指定していないため、これは設計判断)。
 
 `STUDENT`・`MEMO`・`STUDENT_COMMENT`は生徒削除時に物理削除で連鎖する(ON DELETE CASCADE相当)。`CLASS`は生徒が0人の場合のみ物理削除でき、`TIMETABLE_MASTER_SLOT`・`WEEKLY_CLASS_OVERRIDE`からの参照は削除前に自動でnull/削除に置き換わる(F1)。
+
+`TEACHER`エンティティの`email`はER図上の概念的な項目であり、`docs/design.md`の実テーブル(`teacher_profile`)には複製しない。`auth.users.email`と二重管理してズレが生じるのを避けるため、表示が必要な箇所ではSupabase Authのセッションから直接取得する想定とする。
 
 `STUDENT_COMMENT`と`MEMO`の間にはFK関係を持たせていない。所感は生成・保存時点のテキストを保持する独立したスナップショットであり、元になったメモを後から編集・削除しても既存の所感の内容には影響しない(F11)。
 
@@ -155,6 +157,6 @@ F14は既存エンティティを横断的に読み取ってJSONにまとめる�
 
 **科目マスタの初期値**: 新規アカウント作成時に科目一覧を空の状態で始めるか、代表的な科目(国語・算数・理科・社会等)をあらかじめ用意しておくかは未確定(`docs/requirements.md`の未決事項にも記載)。
 
-**`SUBJECT`の一意性は要件の明言なしに設計側で追加した仮定**: 教員ごとに同名の科目を複数登録できてしまうと、時間割マスタ・メモでの表記ゆれ防止という科目マスタ新設の趣旨が半分損なわれる。名前の一意性を求めるかどうか、要件側での明記が望ましい。
+**`SUBJECT`の一意性については解消済み**: 上記ユニーク制約の項の通り、2026-08-13のヒアリングで「重複を許可する」と確定した。表記ゆれのリスクは受け入れた上で、保存時のエラーによる教員の作業中断を避けることを優先している。
 
 **エクスポートに実質的な復元経路がない**: F14はエクスポート専用でインポートを持たないため、「バックアップ」として機能するのは教員が手元のファイルを保管し続け、かつ将来何らかの手段(手動でのDB復元作業など)でそれを使う場合に限られる。現状ではエクスポートしたJSONを使ってサービス側にデータを戻す手段が存在しないため、「バックアップ」と呼べる実効性がどこまであるかは要件側で認識をすり合わせておいた方がよい。
