@@ -21,55 +21,55 @@
 
 ## 基盤
 
-- [ ] **T-007** `teacher_profile` テーブルと `auth.users` 作成時トリガーを実装する(`docs/design.md` §4.2)
+- [x] **T-007** `teacher_profile` テーブルと `auth.users` 作成時トリガーを実装する(`docs/design.md` §4.2)
   - DoD: サインアップ直後に `teacher_profile` 行が自動作成されることをローカルDBで確認できる
-- [ ] **T-008** `class` / `class_number_counter` テーブルを作成しRLSを設定する
+- [x] **T-008** `class` / `class_number_counter` テーブルを作成しRLSを設定する
   - DoD: 他教員IDでの `class` へのアクセスがRLSで拒否されることを確認できる
-- [ ] **T-009** `student` テーブルを作成しRLSを設定する(クラス経由のポリシー)
+- [x] **T-009** `student` テーブルを作成しRLSを設定する(クラス経由のポリシー)
   - DoD: 他教員のクラスに紐づく生徒へのアクセスがRLSで拒否される
-- [ ] **T-010** `subject` テーブルを作成しRLSを設定する
+- [x] **T-010** `subject` テーブルを作成しRLSを設定する
   - DoD: 科目名の重複が許可され、DBユニーク制約がないことを確認できる(`docs/design.md` §0)
-- [ ] **T-011** `timetable_master_slot` テーブルを作成しRLSを設定する
+- [x] **T-011** `timetable_master_slot` テーブルを作成しRLSを設定する
   - DoD: `(teacher_id, weekday, period)` のユニーク制約が機能する
-- [ ] **T-012** `weekly_subject_override` / `weekly_class_override` テーブルを作成しRLSを設定する
+- [x] **T-012** `weekly_subject_override` / `weekly_class_override` テーブルを作成しRLSを設定する
   - DoD: 同一マス・同一週での重複が制約で防がれる
-- [ ] **T-013** `memo` テーブルを作成しRLSを設定する
+- [x] **T-013** `memo` テーブルを作成しRLSを設定する
   - DoD: `(student_id, subject_id, note_date, period)` のユニーク制約でupsertが機能する
-- [ ] **T-014** `student_comment` テーブルを作成しRLSを設定する
+- [x] **T-014** `student_comment` テーブルを作成しRLSを設定する
   - DoD: `(student_id, period_start_date, period_end_date)` のユニーク制約でupsertが機能する
-- [ ] **T-015** `ai_provider_setting` / `prompt_template` テーブルを作成しRLSを設定する
+- [x] **T-015** `ai_provider_setting` / `prompt_template` テーブルを作成しRLSを設定する
   - DoD: APIキーが平文で保存されないカラム構成になっている(暗号化は T-028 で実装)
-- [ ] **T-016** `create_class` / `update_class_grade` / `delete_class` のRPC関数を実装する(`docs/design.md` §4.4)
+- [x] **T-016** `create_class` / `update_class_grade` / `delete_class` のRPC関数を実装する(`docs/design.md` §4.4)
   - DoD: 組番号採番、学年変更時の再採番、生徒が存在する場合の削除拒否がそれぞれDB結合テストで再現できる
-- [ ] **T-017** `delete_subject` RPC関数を実装する
+- [x] **T-017** `delete_subject` RPC関数を実装する
   - DoD: メモで使用中の科目削除が拒否され、時間割のみ使用中の場合は削除後に未設定へ戻ることを確認できる
-- [ ] **T-018** `import_students` RPC関数を実装する
+- [x] **T-018** `import_students` RPC関数を実装する
   - DoD: 必須項目欠落・出席番号重複の行がエラーとして返り、有効な行だけが登録される(F2)
-- [ ] **T-019** `save_timetable_master` RPC関数を実装する
+- [x] **T-019** `save_timetable_master` RPC関数を実装する
   - DoD: マスタ保存後、内容が一致した個別変更が自動的に削除される巻き戻しロジックが動作する(F4)
-- [ ] **T-020** `update_timetable_start_date` RPC関数を実装する
+- [x] **T-020** `update_timetable_start_date` RPC関数を実装する
   - DoD: メモが1件以上ある場合、`force=false` では拒否され、`force=true` では更新できる(F4)
-- [ ] **T-021** `export_teacher_data` RPC関数を実装する
+- [x] **T-021** `export_teacher_data` RPC関数を実装する
   - DoD: 生徒ごとにメモ・所感がまとまったJSONが返り、`ai_provider_setting` が含まれない(F14)
-- [ ] **T-022** `supabase-browser.ts` / `supabase-server.ts` クライアントを実装する
+- [x] **T-022** `supabase-browser.ts` / `supabase-server.ts` クライアントを実装する
   - DoD: ブラウザ側・Server Component/middleware側それぞれからセッションを取得できる
-- [ ] **T-023** `middleware.ts` で未ログイン時のリダイレクトを実装する(F8)
+- [x] **T-023** `proxy.ts`(Next.js 16。旧`middleware.ts`)で未ログイン時のリダイレクトを実装する(F8)
   - DoD: 未ログイン状態で `(main)` 配下にアクセスするとログイン画面にリダイレクトされる
-- [ ] **T-024** TanStack Query Providerを設定する
+- [x] **T-024** TanStack Query Providerを設定する
   - DoD: 任意のクエリフックがキャッシュされ、DevToolsで確認できる
-- [ ] **T-024b** 共通クラス選択フック `useClassOptions()` を実装する
+- [x] **T-024b** 共通クラス選択フック `useClassOptions()` を実装する
   - DoD: 教員のクラス一覧取得+選択中クラスの生徒一覧取得をまとめて提供する。生徒名簿(T-055)・生徒別メモ一覧(T-064)・所感画面(T-065)の3箇所から共通で呼び出され、各画面で同じロジックを再実装しない
-- [ ] **T-025** `shared/schemas` にzodスキーマを実装する
+- [x] **T-025** `shared/schemas` にzodスキーマを実装する
   - DoD: `memoInputSchema` 等がフロントのバリデーションで使用できる
-- [ ] **T-026** `shared/` の純粋関数(`pseudonym.ts`, `week.ts`, `prompt-builder.ts`, `resolve-weekly-slots.ts`)を実装する
+- [x] **T-026** `shared/` の純粋関数(`pseudonym.ts`, `week.ts`, `prompt-builder.ts`, `resolve-weekly-slots.ts`)を実装する
   - DoD: それぞれ単体テストが書け、仮名コード生成例(F12)・週番号計算が期待通りの値を返す
-- [ ] **T-027** Honoアプリの基盤とCSPヘッダーを実装する(`docs/design.md` §1, §5.1)
+- [x] **T-027** Honoアプリの基盤とCSPヘッダーを実装する(`docs/design.md` §1, §5.1)
   - DoD: `app/api/[[...route]]/route.ts` がマウントされ、レスポンスに `default-src 'self'` を含むCSPヘッダーが付与される
-- [ ] **T-028** `crypto.ts`(APIキー暗号化・復号)を実装する
+- [x] **T-028** `crypto.ts`(APIキー暗号化・復号)を実装する
   - DoD: AES-256-GCM・AAD=teacher_idで暗号化/復号の往復が単体テストで確認できる
-- [ ] **T-029** AIアダプタ(openai / anthropic / gemini)を実装する
+- [x] **T-029** AIアダプタ(openai / anthropic / gemini)を実装する
   - DoD: 各アダプタがモック環境で `generateComment` を呼び出せる
-- [ ] **T-030** `shared/ai-models.ts` の許可モデルリストを確定・実装する(未決事項の解消)
+- [x] **T-030** `shared/ai-models.ts` の許可モデルリストを確定・実装する(未決事項の解消)
   - DoD: 3プロバイダそれぞれに既定モデルと選択肢が定義され、許可リスト外のモデル指定がHono側で400になる
 
 ## デザインシステム実装

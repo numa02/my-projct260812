@@ -31,7 +31,7 @@
 
 ```
 app/(auth)/            未ログイン向け画面(ログイン・サインアップ・パスワードリセット)
-app/(main)/            ログイン必須画面。middleware.tsでガード
+app/(main)/            ログイン必須画面。proxy.ts(Next.js 16。旧middleware.ts)でガード
 app/api/[[...route]]/  Honoアプリのマウント先
 components/            画面横断コンポーネント(timetable/, memo/, comment/, ui/)
 hooks/                 TanStack Queryベースのデータ取得・更新フック

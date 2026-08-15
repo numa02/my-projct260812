@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "test": "vitest run",
+    "test:db": "vitest run --config vitest.config.db.mts",
     "test:e2e": "playwright test",
     "format": "prettier --write .",
     "preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
@@ -16,14 +17,22 @@
     "cf-typegen": "wrangler types --env-interface CloudflareEnv cloudflare-env.d.ts"
   },
   "dependencies": {
+    "@supabase/ssr": "^0.12.4",
+    "@supabase/supabase-js": "^2.112.3",
+    "@tanstack/react-query": "^5.101.4",
+    "date-fns": "^4.4.0",
+    "date-fns-tz": "^3.2.0",
+    "hono": "^4.13.2",
     "next": "16.3.1",
     "react": "19.2.8",
-    "react-dom": "19.2.8"
+    "react-dom": "19.2.8",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@opennextjs/cloudflare": "^1.20.2",
     "@playwright/test": "^1.62.1",
     "@tailwindcss/postcss": "^4",
+    "@tanstack/react-query-devtools": "^5.101.4",
     "@testing-library/dom": "^10.4.1",
     "@testing-library/jest-dom": "^7.0.1",
     "@testing-library/react": "^16.3.2",
@@ -31,6 +40,7 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@vitejs/plugin-react": "^6.0.5",
+    "dotenv": "^17.4.2",
     "eslint": "^9",
     "eslint-config-next": "16.3.1",
     "eslint-config-prettier": "^10.1.8",

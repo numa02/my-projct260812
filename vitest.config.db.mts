@@ -5,10 +5,10 @@ import path from "node:path";
 export default defineConfig({
   plugins: [react()],
   test: {
-    environment: "jsdom",
+    environment: "node",
     setupFiles: ["./vitest.setup.ts"],
-    include: ["**/*.test.{ts,tsx}"],
-    exclude: ["node_modules", ".next", "e2e", "supabase", "tests/db"],
+    include: ["tests/db/**/*.test.{ts,tsx}"],
+    testTimeout: 20_000,
   },
   resolve: {
     alias: {
