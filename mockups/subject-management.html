@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>モック: 科目管理画面</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        colors: {
+          gray: { 50:'#F8F9FA',100:'#F1F3F5',200:'#E9ECEF',300:'#DEE2E6',400:'#ADB5BD',500:'#868E96',600:'#495057',700:'#343A40',900:'#212529' },
+          primary: { 50:'#EEF3FB',100:'#D6E2F5',500:'#3A6EA5',600:'#2F5A87',700:'#254669' },
+          success: { 500:'#2F9E5B' },
+          warning: { 500:'#C97A1F' },
+          error: { 500:'#C0392B' },
+        },
+        fontFamily: {
+          sans: ['-apple-system','BlinkMacSystemFont','Hiragino Sans','Noto Sans JP','Yu Gothic UI','sans-serif'],
+        },
+        borderRadius: { sm: '6px', md: '10px', lg: '16px' },
+        boxShadow: {
+          sm: '0 1px 2px rgba(33, 37, 41, 0.06)',
+          md: '0 4px 12px rgba(33, 37, 41, 0.08)',
+        },
+        screens: { tablet: '768px', desktop: '1280px' },
+      }
+    }
+  }
+</script>
+</head>
+<body class="bg-gray-50 font-sans text-gray-700 text-base leading-[1.6]">
+
+<div class="flex h-screen overflow-hidden">
+
+  <!-- サイドバー -->
+  <aside class="hidden tablet:flex w-[240px] shrink-0 h-screen overflow-y-auto bg-white border-r border-gray-200 flex-col justify-between">
+    <div>
+      <div class="px-4 py-4 border-b border-gray-200">
+        <p class="text-sm font-semibold text-gray-900 leading-tight">週間時間割・所感ツール</p>
+      </div>
+      <nav class="px-2 py-3 space-y-4 text-sm">
+        <div>
+          <p class="px-2 text-xs text-gray-400 mb-1">時間割</p>
+          <a href="weekly-timetable.html" class="block px-2 py-1.5 rounded-sm text-gray-600 hover:bg-gray-50">週次時間割</a>
+          <a href="timetable-master.html" class="block px-2 py-1.5 rounded-sm text-gray-600 hover:bg-gray-50">時間割マスタ</a>
+        </div>
+        <div>
+          <p class="px-2 text-xs text-gray-400 mb-1">メモ</p>
+          <a href="class-record.html" class="block px-2 py-1.5 rounded-sm text-gray-600 hover:bg-gray-50">授業記録</a>
+          <a href="student-memo-list.html" class="block px-2 py-1.5 rounded-sm text-gray-600 hover:bg-gray-50">生徒別メモ</a>
+        </div>
+        <div>
+          <p class="px-2 text-xs text-gray-400 mb-1">所感</p>
+          <a href="comment.html" class="block px-2 py-1.5 rounded-sm text-gray-600 hover:bg-gray-50">所感</a>
+        </div>
+        <div>
+          <p class="px-2 text-xs text-gray-400 mb-1">管理</p>
+          <a href="class-management.html" class="block px-2 py-1.5 rounded-sm text-gray-600 hover:bg-gray-50">クラス管理</a>
+          <a href="student-roster.html" class="block px-2 py-1.5 rounded-sm text-gray-600 hover:bg-gray-50">生徒名簿</a>
+          <a href="subject-management.html" class="block px-2 py-1.5 rounded-sm bg-primary-50 text-primary-600 font-medium">科目管理</a>
+        </div>
+      </nav>
+    </div>
+    <div class="px-4 py-4 border-t border-gray-200 space-y-2">
+      <a href="settings.html" class="block text-sm text-gray-600 hover:bg-gray-50 rounded-sm px-2 py-1.5">設定</a>
+      <div class="flex items-center justify-between px-2">
+        <span class="text-xs text-gray-400 truncate">tanaka@school.example.jp</span>
+        <a href="login.html" class="text-xs text-gray-500 hover:underline shrink-0 ml-2">ログアウト</a>
+      </div>
+    </div>
+  </aside>
+
+  <main class="flex-1 min-w-0 h-screen overflow-y-auto px-6 tablet:px-10 py-8 space-y-12 max-w-[700px]">
+
+    <header class="space-y-1">
+      <p class="text-sm text-gray-500">モック(状態バリエーション確認用)</p>
+      <h1 class="text-2xl font-semibold text-gray-900">科目管理画面</h1>
+    </header>
+
+    <!-- 正常状態 -->
+    <section class="space-y-3">
+      <h2 class="text-sm font-medium text-gray-500">正常状態</h2>
+
+      <div class="bg-white rounded-lg border border-gray-200 shadow-sm p-4 tablet:p-6 space-y-6">
+        <div class="flex items-end gap-3">
+          <div class="space-y-1.5 flex-1">
+            <label class="text-xs text-gray-500">科目名</label>
+            <input type="text" placeholder="例:国語" class="w-full h-10 px-3 rounded-sm border border-gray-300 text-sm placeholder-gray-400">
+          </div>
+          <button class="h-10 px-5 rounded-sm bg-primary-500 text-white text-sm font-medium hover:bg-primary-600">登録</button>
+        </div>
+
+        <div class="divide-y divide-gray-100">
+          <div class="py-3 flex items-center justify-between">
+            <span class="text-sm font-medium text-gray-900">国語</span>
+            <div class="flex gap-3 text-xs text-gray-400">
+              <button class="hover:text-primary-500 hover:underline">編集</button>
+              <button class="hover:text-error-500 hover:underline">削除</button>
+            </div>
+          </div>
+          <div class="py-3 flex items-center justify-between">
+            <span class="text-sm font-medium text-gray-900">算数</span>
+            <div class="flex gap-3 text-xs text-gray-400">
+              <button class="hover:text-primary-500 hover:underline">編集</button>
+              <button class="hover:text-error-500 hover:underline">削除</button>
+            </div>
+          </div>
+          <div class="py-3 flex items-center justify-between">
+            <span class="text-sm font-medium text-gray-900">理科</span>
+            <div class="flex gap-3 text-xs text-gray-400">
+              <button class="hover:text-primary-500 hover:underline">編集</button>
+              <button class="hover:text-error-500 hover:underline">削除</button>
+            </div>
+          </div>
+          <div class="py-3 flex items-center justify-between">
+            <span class="text-sm font-medium text-gray-900">社会</span>
+            <div class="flex gap-3 text-xs text-gray-400">
+              <button class="hover:text-primary-500 hover:underline">編集</button>
+              <button class="hover:text-error-500 hover:underline">削除</button>
+            </div>
+          </div>
+          <div class="py-3 flex items-center justify-between">
+            <span class="text-sm font-medium text-gray-900">体育</span>
+            <div class="flex gap-3 text-xs text-gray-400">
+              <button class="hover:text-primary-500 hover:underline">編集</button>
+              <button class="hover:text-error-500 hover:underline">削除</button>
+            </div>
+          </div>
+          <div class="py-3 flex items-center justify-between">
+            <span class="text-sm font-medium text-gray-900">図工</span>
+            <div class="flex gap-3 text-xs text-gray-400">
+              <button class="hover:text-primary-500 hover:underline">編集</button>
+              <button class="hover:text-error-500 hover:underline">削除</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- エラー状態 -->
+    <section class="space-y-3">
+      <h2 class="text-sm font-medium text-gray-500">エラー状態(使用中の科目を削除しようとした場合)</h2>
+      <div class="flex items-start gap-2 bg-error-500/10 border border-error-500/30 text-error-500 text-sm rounded-sm px-3 py-2.5 max-w-xl">
+        <span class="mt-0.5">⚠</span>
+        <span>この科目は時間割またはメモで使用されているため削除できません。</span>
+      </div>
+    </section>
+
+    <!-- 空状態 -->
+    <section class="space-y-3">
+      <h2 class="text-sm font-medium text-gray-500">空状態(科目が1件もない)</h2>
+      <div class="bg-white rounded-lg border border-gray-200 shadow-sm p-8 text-center space-y-1">
+        <p class="text-gray-900 font-medium">まだ科目が登録されていません</p>
+        <p class="text-sm text-gray-500">上のフォームから科目を登録してください。時間割の設定・授業記録には科目の登録が必要です</p>
+      </div>
+    </section>
+
+    <footer class="text-xs text-gray-400 pt-4 pb-12">
+      docs/design/screens.md「7. 科目管理画面」に対応
+    </footer>
+
+  </main>
+</div>
+</body>
+</html>

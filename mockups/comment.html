@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>モック: 所感画面(生成・履歴)</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        colors: {
+          gray: { 50:'#F8F9FA',100:'#F1F3F5',200:'#E9ECEF',300:'#DEE2E6',400:'#ADB5BD',500:'#868E96',600:'#495057',700:'#343A40',900:'#212529' },
+          primary: { 50:'#EEF3FB',100:'#D6E2F5',500:'#3A6EA5',600:'#2F5A87',700:'#254669' },
+          success: { 500:'#2F9E5B' },
+          warning: { 500:'#C97A1F' },
+          error: { 500:'#C0392B' },
+        },
+        fontFamily: {
+          sans: ['-apple-system','BlinkMacSystemFont','Hiragino Sans','Noto Sans JP','Yu Gothic UI','sans-serif'],
+        },
+        borderRadius: { sm: '6px', md: '10px', lg: '16px' },
+        boxShadow: {
+          sm: '0 1px 2px rgba(33, 37, 41, 0.06)',
+          md: '0 4px 12px rgba(33, 37, 41, 0.08)',
+        },
+        screens: { tablet: '768px', desktop: '1280px' },
+      }
+    }
+  }
+</script>
+</head>
+<body class="bg-gray-50 font-sans text-gray-700 text-base leading-[1.6]">
+
+<div class="flex h-screen overflow-hidden">
+
+  <!-- サイドバー -->
+  <aside class="hidden tablet:flex w-[240px] shrink-0 h-screen overflow-y-auto bg-white border-r border-gray-200 flex-col justify-between">
+    <div>
+      <div class="px-4 py-4 border-b border-gray-200">
+        <p class="text-sm font-semibold text-gray-900 leading-tight">週間時間割・所感ツール</p>
+      </div>
+      <nav class="px-2 py-3 space-y-4 text-sm">
+        <div>
+          <p class="px-2 text-xs text-gray-400 mb-1">時間割</p>
+          <a href="weekly-timetable.html" class="block px-2 py-1.5 rounded-sm text-gray-600 hover:bg-gray-50">週次時間割</a>
+          <a href="timetable-master.html" class="block px-2 py-1.5 rounded-sm text-gray-600 hover:bg-gray-50">時間割マスタ</a>
+        </div>
+        <div>
+          <p class="px-2 text-xs text-gray-400 mb-1">メモ</p>
+          <a href="class-record.html" class="block px-2 py-1.5 rounded-sm text-gray-600 hover:bg-gray-50">授業記録</a>
+          <a href="student-memo-list.html" class="block px-2 py-1.5 rounded-sm text-gray-600 hover:bg-gray-50">生徒別メモ</a>
+        </div>
+        <div>
+          <p class="px-2 text-xs text-gray-400 mb-1">所感</p>
+          <a href="comment.html" class="block px-2 py-1.5 rounded-sm bg-primary-50 text-primary-600 font-medium">所感</a>
+        </div>
+        <div>
+          <p class="px-2 text-xs text-gray-400 mb-1">管理</p>
+          <a href="class-management.html" class="block px-2 py-1.5 rounded-sm text-gray-600 hover:bg-gray-50">クラス管理</a>
+          <a href="student-roster.html" class="block px-2 py-1.5 rounded-sm text-gray-600 hover:bg-gray-50">生徒名簿</a>
+          <a href="subject-management.html" class="block px-2 py-1.5 rounded-sm text-gray-600 hover:bg-gray-50">科目管理</a>
+        </div>
+      </nav>
+    </div>
+    <div class="px-4 py-4 border-t border-gray-200 space-y-2">
+      <a href="settings.html" class="block text-sm text-gray-600 hover:bg-gray-50 rounded-sm px-2 py-1.5">設定</a>
+      <div class="flex items-center justify-between px-2">
+        <span class="text-xs text-gray-400 truncate">tanaka@school.example.jp</span>
+        <a href="login.html" class="text-xs text-gray-500 hover:underline shrink-0 ml-2">ログアウト</a>
+      </div>
+    </div>
+  </aside>
+
+  <main class="flex-1 min-w-0 h-screen overflow-y-auto px-6 tablet:px-10 py-8 space-y-12 max-w-[1100px]">
+
+    <header class="space-y-1">
+      <p class="text-sm text-gray-500">モック(状態バリエーション確認用)</p>
+      <h1 class="text-2xl font-semibold text-gray-900">所感画面(生成・履歴)</h1>
+      <p class="text-sm text-gray-500">「生成」「履歴」は別画面ではなく同一画面内のタブです。クラス・生徒の選択はタブ間で共有されます。</p>
+    </header>
+
+    <!-- タブ + 共有クラス/生徒選択 -->
+    <section class="space-y-3">
+      <h2 class="text-sm font-medium text-gray-500">実際に「生成」⇔「履歴」タブを切り替えられます(クリックして確認できます)</h2>
+
+      <div class="bg-white rounded-lg border border-gray-200 shadow-sm p-4 tablet:p-6 space-y-5">
+
+        <div class="grid grid-cols-1 tablet:grid-cols-2 gap-3">
+          <div class="space-y-1.5">
+            <label class="text-sm font-medium text-gray-700">クラス</label>
+            <select class="w-full h-10 px-3 rounded-sm border border-gray-300 text-sm">
+              <option>3年2組</option>
+              <option>3年3組</option>
+              <option>ひまわり組(特支)</option>
+            </select>
+          </div>
+          <div class="space-y-1.5">
+            <label class="text-sm font-medium text-gray-700">生徒</label>
+            <div class="flex items-center gap-2">
+              <select class="flex-1 h-10 px-3 rounded-sm border border-gray-300 text-sm">
+                <option>田中 陽菜</option>
+              </select>
+              <span class="text-xs text-gray-400 bg-gray-100 px-2 py-1 rounded-sm shrink-0">1-03-01</span>
+            </div>
+          </div>
+        </div>
+
+        <input type="radio" name="comment-tab" id="tab-generate" class="peer/generate hidden" checked>
+        <input type="radio" name="comment-tab" id="tab-history" class="peer/history hidden">
+
+        <div class="inline-flex bg-gray-100 rounded-sm p-1 text-sm">
+          <label for="tab-generate" class="px-3 py-1.5 rounded-sm cursor-pointer text-gray-500 peer-checked/generate:bg-white peer-checked/generate:shadow-sm peer-checked/generate:text-gray-900 peer-checked/generate:font-medium">生成</label>
+          <label for="tab-history" class="px-3 py-1.5 rounded-sm cursor-pointer text-gray-500 peer-checked/history:bg-white peer-checked/history:shadow-sm peer-checked/history:text-gray-900 peer-checked/history:font-medium">履歴</label>
+        </div>
+
+        <!-- 生成タブ パネル -->
+        <div class="hidden peer-checked/generate:block space-y-8">
+
+          <div class="space-y-4">
+            <h3 class="text-sm font-medium text-gray-500">正常状態(直接生成モード・APIキー設定済み)</h3>
+            <div class="border border-gray-200 rounded-md p-4 space-y-4">
+              <div class="grid grid-cols-1 tablet:grid-cols-2 gap-4">
+                <div class="space-y-1.5">
+                  <label class="text-sm font-medium text-gray-700">目安文字数</label>
+                  <input type="number" value="150" class="w-full h-10 px-3 rounded-sm border border-gray-300 text-sm">
+                </div>
+                <div class="space-y-1.5">
+                  <label class="text-sm font-medium text-gray-700">対象期間(開始)</label>
+                  <input type="date" value="2026-09-01" class="w-full h-10 px-3 rounded-sm border border-gray-300 text-sm">
+                </div>
+                <div class="space-y-1.5">
+                  <label class="text-sm font-medium text-gray-700">対象期間(終了)</label>
+                  <input type="date" value="2026-10-14" class="w-full h-10 px-3 rounded-sm border border-gray-300 text-sm">
+                </div>
+              </div>
+              <div class="flex items-start gap-2 bg-gray-50 border border-gray-200 text-gray-600 text-xs rounded-sm px-3 py-2.5">
+                <span class="mt-0.5">ℹ</span>
+                <span>「共有する」区分のメモが仮名化された状態で外部のAIサービスに送信されます。</span>
+              </div>
+              <div class="flex justify-end">
+                <button class="h-11 px-6 rounded-sm bg-primary-500 text-white font-medium hover:bg-primary-600">所感を生成する</button>
+              </div>
+              <div class="space-y-1.5">
+                <label class="text-sm font-medium text-gray-700">生成結果</label>
+                <textarea rows="5" class="w-full px-3 py-3 rounded-sm border border-gray-300 text-base leading-[1.8]">国語の音読や発言に積極的に取り組み、学習に対する意欲の高まりが見られました。体育のグループ活動でも仲間と協力しながら課題に取り組む姿勢が印象的でした。今後も自分の考えを表現する機会を大切にしていきたいです。</textarea>
+              </div>
+              <div class="flex justify-end">
+                <button class="h-10 px-5 rounded-sm bg-primary-500 text-white text-sm font-medium hover:bg-primary-600">保存する</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="space-y-4">
+            <h3 class="text-sm font-medium text-gray-500">ローディング状態(AI生成中)</h3>
+            <div class="border border-gray-200 rounded-md p-8 flex flex-col items-center gap-3 text-center">
+              <svg class="animate-spin h-6 w-6 text-primary-500" viewBox="0 0 24 24" fill="none">
+                <circle class="opacity-20" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-90" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+              </svg>
+              <p class="text-sm text-gray-500">AIが所感文を生成しています…</p>
+            </div>
+          </div>
+
+          <div class="space-y-4">
+            <h3 class="text-sm font-medium text-gray-500">プロンプトコピー運用(APIキー未設定)</h3>
+            <div class="border border-gray-200 rounded-md p-4 space-y-4">
+              <div class="space-y-1.5">
+                <div class="flex items-center justify-between">
+                  <label class="text-sm font-medium text-gray-700">生成用プロンプト</label>
+                  <button class="text-xs text-primary-500 hover:underline">コピーする</button>
+                </div>
+                <div class="bg-gray-50 border border-gray-200 rounded-sm px-3 py-3 text-sm text-gray-600 leading-[1.8]">
+                  以下は生徒「1-03-01」の授業メモです。これをもとに150字程度の所感文を作成してください。<br>
+                  ・10/14 国語:音読の声が大きくなってきた。挙手も増えている。<br>
+                  ・10/10 体育:リレーでバトンパスの練習に積極的に取り組んでいた。
+                </div>
+              </div>
+              <div class="space-y-1.5">
+                <label class="text-sm font-medium text-gray-700">外部AIの応答を貼り付け</label>
+                <textarea rows="4" placeholder="外部のAIチャットサービスから得た回答を貼り付けてください" class="w-full px-3 py-2 rounded-sm border border-gray-300 text-sm placeholder-gray-400"></textarea>
+              </div>
+              <div class="flex justify-end">
+                <button class="h-10 px-5 rounded-sm bg-primary-500 text-white text-sm font-medium hover:bg-primary-600">所感として保存</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="space-y-4">
+            <h3 class="text-sm font-medium text-gray-500">エラー状態(API認証エラー/レート制限)</h3>
+            <div class="flex items-start gap-2 bg-error-500/10 border border-error-500/30 text-error-500 text-sm rounded-sm px-3 py-2.5">
+              <span class="mt-0.5">⚠</span>
+              <span>AIプロバイダの呼び出しに失敗しました(認証エラー)。設定画面でAPIキーをご確認ください。所感は保存されていません。</span>
+            </div>
+          </div>
+
+          <div class="space-y-4">
+            <h3 class="text-sm font-medium text-gray-500">空状態(対象期間に共有メモが1件もない)</h3>
+            <div class="border border-gray-200 rounded-md p-8 text-center space-y-1">
+              <p class="text-gray-900 font-medium">送信可能なメモが存在しません</p>
+              <p class="text-sm text-gray-500">対象期間を変更するか、授業記録画面でメモを入力してください</p>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- 履歴タブ パネル -->
+        <div class="hidden peer-checked/history:block space-y-8">
+
+          <div class="space-y-4">
+            <h3 class="text-sm font-medium text-gray-500">正常状態(デスクトップ:一覧+詳細の2カラム)</h3>
+            <div class="grid grid-cols-1 desktop:grid-cols-[280px_1fr] gap-5">
+              <div class="space-y-2">
+                <button class="w-full text-left border border-primary-500 bg-primary-50 rounded-md p-3 space-y-1">
+                  <p class="text-sm font-medium text-gray-900">2026/09/01〜2026/10/14</p>
+                  <div class="flex items-center gap-2 text-xs">
+                    <span class="bg-primary-100 text-primary-600 px-1.5 py-0.5 rounded-sm">直接生成</span>
+                    <span class="text-gray-400">10/14 更新</span>
+                  </div>
+                </button>
+                <button class="w-full text-left border border-gray-200 hover:border-gray-300 rounded-md p-3 space-y-1">
+                  <p class="text-sm font-medium text-gray-900">2026/04/08〜2026/07/19</p>
+                  <div class="flex items-center gap-2 text-xs">
+                    <span class="bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded-sm">プロンプトコピー運用</span>
+                    <span class="text-gray-400">7/20 更新</span>
+                  </div>
+                </button>
+                <button class="w-full text-left border border-gray-200 hover:border-gray-300 rounded-md p-3 space-y-1">
+                  <p class="text-sm font-medium text-gray-900">2025/09/01〜2025/12/20</p>
+                  <div class="flex items-center gap-2 text-xs">
+                    <span class="bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded-sm">手動作成</span>
+                    <span class="text-gray-400">2025/12/22 更新</span>
+                  </div>
+                </button>
+              </div>
+              <div class="space-y-3">
+                <div class="flex items-center justify-between">
+                  <p class="text-sm font-medium text-gray-700">対象期間:2026/09/01〜2026/10/14</p>
+                  <span class="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-sm">直接生成・10/14更新</span>
+                </div>
+                <textarea rows="8" class="w-full px-3 py-3 rounded-sm border border-gray-300 text-base leading-[1.8]">国語の音読や発言に積極的に取り組み、学習に対する意欲の高まりが見られました。体育のグループ活動でも仲間と協力しながら課題に取り組む姿勢が印象的でした。今後も自分の考えを表現する機会を大切にしていきたいです。</textarea>
+                <div class="flex justify-end">
+                  <button class="h-10 px-5 rounded-sm bg-primary-500 text-white text-sm font-medium hover:bg-primary-600">保存</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="space-y-4">
+            <h3 class="text-sm font-medium text-gray-500">手動作成(生成タブを経由せず直接入力)</h3>
+            <div class="border border-gray-200 rounded-md p-4 space-y-4 max-w-xl">
+              <div class="grid grid-cols-2 gap-3">
+                <div class="space-y-1.5">
+                  <label class="text-xs text-gray-500">対象期間(開始)</label>
+                  <input type="date" class="w-full h-9 px-3 rounded-sm border border-gray-300 text-sm">
+                </div>
+                <div class="space-y-1.5">
+                  <label class="text-xs text-gray-500">対象期間(終了)</label>
+                  <input type="date" class="w-full h-9 px-3 rounded-sm border border-gray-300 text-sm">
+                </div>
+              </div>
+              <textarea rows="4" placeholder="所感文を直接入力…" class="w-full px-3 py-2 rounded-sm border border-gray-300 text-sm placeholder-gray-400"></textarea>
+              <div class="flex justify-end">
+                <button class="h-10 px-5 rounded-sm bg-primary-500 text-white text-sm font-medium hover:bg-primary-600">保存</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="space-y-4">
+            <h3 class="text-sm font-medium text-gray-500">上書き確認ダイアログ(同じ生徒・同じ期間の所感が既にある)</h3>
+            <div class="max-w-md bg-white rounded-lg shadow-md border border-gray-200 p-6 space-y-4">
+              <h4 class="text-base font-semibold text-gray-900">この期間の所感は既に保存されています</h4>
+              <p class="text-sm text-gray-600">上書きしますか?この操作は取り消せません。</p>
+              <div class="flex justify-end gap-2 pt-1">
+                <button class="h-10 px-4 rounded-sm border border-gray-300 text-sm text-gray-600 hover:bg-gray-50">キャンセル</button>
+                <button class="h-10 px-4 rounded-sm bg-primary-500 text-white text-sm font-medium hover:bg-primary-600">上書きする</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="space-y-4">
+            <h3 class="text-sm font-medium text-gray-500">空状態(所感が1件も保存されていない生徒)</h3>
+            <div class="border border-gray-200 rounded-md p-8 text-center space-y-1">
+              <p class="text-gray-900 font-medium">まだ所感が保存されていません</p>
+              <p class="text-sm text-gray-500">「生成」タブでAIに下書きを作らせるか、このタブで直接入力してください</p>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+    </section>
+
+    <footer class="text-xs text-gray-400 pt-4 pb-12">
+      docs/design/screens.md「12. 所感画面(生成・履歴)」に対応
+    </footer>
+
+  </main>
+</div>
+</body>
+</html>
