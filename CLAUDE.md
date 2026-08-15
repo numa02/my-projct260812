@@ -37,7 +37,7 @@ components/            画面横断コンポーネント(timetable/, memo/, comm
 hooks/                 TanStack Queryベースのデータ取得・更新フック
 lib/                   supabaseクライアント、Honoサーバー本体
 shared/                zodスキーマ、仮名コード生成・週番号計算・プロンプト組み立て等の純粋関数
-db/migrations/         Supabase CLIのSQLマイグレーション(テーブル+RPC関数)
+supabase/migrations/   Supabase CLIのSQLマイグレーション(テーブル+RPC関数)
 docs/                  要件定義・データモデル・技術設計・デザイン定義
 ```
 

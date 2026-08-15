@@ -1,0 +1,9 @@
+.next
+node_modules
+public
+package-lock.json
+docs
+mockups
+.open-next
+.wrangler
+supabase

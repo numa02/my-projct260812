@@ -4,17 +4,19 @@
 
 ## セットアップ
 
-- [ ] **T-001** Next.js (App Router) + TypeScriptプロジェクトを初期化する
+- [x] **T-001** Next.js (App Router) + TypeScriptプロジェクトを初期化する
   - DoD: `npm run dev` でトップページが表示される
-- [ ] **T-002** Tailwind CSSを導入する
+- [x] **T-002** Tailwind CSSを導入する
   - DoD: `docs/design/design-system.md` のトークンを反映する土台として、Tailwind設定ファイルが存在し、任意のクラスがページに反映される
-- [ ] **T-003** ESLint / Prettierを設定する
-  - DoD: `npm run lint` が実行でき、意図的な違反がエラーとして検出される
-- [ ] **T-004** Supabaseプロジェクトを作成し、Supabase CLIをローカルに連携する
+- [x] **T-003** ESLint / Prettierを設定する
+  - DoD: `npm run lint` が実行でき、意図的な違反が検出される(既定重大度のためwarning表示。エラー扱いへの格上げはスコープ外と判断)
+- [x] **T-004** Supabaseプロジェクトを作成し、Supabase CLIをローカルに連携する
   - DoD: `supabase start` でローカルスタックが起動し、Studioにアクセスできる
+  - 注記: 今回はローカルスタックの連携のみ実施。クラウド側のSupabaseプロジェクト作成・`supabase link`は未実施(要ダッシュボード操作のため別途)
 - [ ] **T-005** Cloudflare Pagesへのデプロイ設定を行う
   - DoD: mainブランチの変更が自動デプロイされ、疎通確認(トップページ表示)ができる
-- [ ] **T-006** Vitest・React Testing Library・Playwrightをセットアップする
+  - 進捗: `@opennextjs/cloudflare` + `wrangler` の設定ファイル(`open-next.config.ts`, `wrangler.jsonc`)を用意し、`npm run build`→`opennextjs-cloudflare build`→ローカルpreview(`wrangler dev`)まで疎通確認済み。GitHub連携・Cloudflareアカウントでの自動デプロイ設定は未実施(要ダッシュボード操作のため別途)。DoD未達のため未チェック
+- [x] **T-006** Vitest・React Testing Library・Playwrightをセットアップする
   - DoD: それぞれのサンプルテストが1本ずつ通る
 
 ## 基盤
