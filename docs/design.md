@@ -75,7 +75,7 @@ flowchart LR
 | DB・認証 | Supabase (PostgreSQL + Supabase Auth + RLS) | 要件定義書で指定 |
 | DBアクセス方式 | `@supabase/supabase-js`(PostgREST経由、ブラウザから直接) + **Postgres関数(RPC)** | 単純CRUDはPostgRESTへの直接アクセス、複数テーブルにまたがる操作やビジネスロジックはPostgres関数に寄せる。これによりHonoというアプリケーション層を経由せずに「RLSで保護されたアトミックな操作」が実現でき、初版で懸念だった非アトミック性とAPI層の肥大化を同時に解消する。代償として、ビジネスロジックの一部がTypeScriptではなくPL/pgSQLで書かれることになり、DB側のロジックのテスト・デバッグには別スキルセットが要る(§7で許容コストとして明記) |
 | 認証セッション管理 | `@supabase/ssr`(Cookieベース) | Next.jsのMiddleware・Server Componentからもログイン状態を判定できる必要があるため。ブラウザのみが保持するセッションでは§1で述べた矛盾が生じる |
-| 状態管理(サーバー state) | TanStack Query | `supabase-js`の直接呼び出し結果をクラス切替・週次時間割の期間ジャンプ等の画面間でキャッシュ・再検証するために利用。保存はLWW(最後の保存が勝つ)方針のため楽観的更新は行わず(§6)、キャッシュ管理の目的に限定して使う |
+| 状態管理(サーバー state) | TanStack Query | `supabase-js`の直接呼び出し結果を画面内クラス選択・週次時間割の期間ジャンプ等の画面間でキャッシュ・再検証するために利用。保存はLWW(最後の保存が勝つ)方針のため楽観的更新は行わず(§6)、キャッシュ管理の目的に限定して使う |
 | フォーム・バリデーション | react-hook-form + zod | `packages/`ではなく単一アプリ内の`shared/schemas`にzodスキーマを置き、フロントのバリデーション(`zodResolver`)とRPC呼び出し前のクライアント側事前チェックの両方で使い回す。DB側の制約(NOT NULL、CHECK、RLS)が最終防衛線であることに変わりはない |
 | 日付・週番号計算 | date-fns + date-fns-tz | 非機能要件で日付計算を常にJST固定と定めているため、サーバー実行環境のTZに依存しないライブラリが必要 |
 | AIプロバイダ呼び出し | 各プロバイダ公式REST APIへの`fetch`直呼び出し(共通アダプタ層でラップ、Hono側のみ) | ストリーミング等の高度機能は不要で、「プロンプトを送って完成文を1回受け取る」だけの単純な呼び出しのため、SDK依存を増やさない。3社分のリクエスト/レスポンス形式・エラー形式の変更に自前で追従するコストは継続的に発生する点は許容する |
@@ -94,7 +94,7 @@ flowchart LR
 │   │   ├── signup/page.tsx
 │   │   └── reset-password/page.tsx
 │   ├── (main)/                     # ログイン必須。middleware.tsでガード(F8)
-│   │   ├── layout.tsx              # ヘッダー・クラス切替(F1)
+│   │   ├── layout.tsx              # サイドバー・ナビゲーション(グローバルなクラス切替は持たない)
 │   │   ├── classes/page.tsx
 │   │   ├── students/page.tsx
 │   │   ├── subjects/page.tsx
@@ -103,9 +103,9 @@ flowchart LR
 │   │   │   └── weekly/page.tsx
 │   │   ├── memos/
 │   │   │   ├── record/page.tsx         # 授業記録(F6)
-│   │   │   └── students/[id]/page.tsx  # 生徒別メモ一覧(F7)
+│   │   │   └── students/[id]/page.tsx  # 生徒別メモ一覧(F7)。クラス選択は画面内state、[id]は初期選択のヒントとして使う
 │   │   ├── comments/
-│   │   │   └── students/[id]/page.tsx  # 所感生成・履歴(F9-F11)
+│   │   │   └── students/[id]/page.tsx  # 所感画面(F9-F11)。生成/履歴はページ内タブ(別ルートに分割しない)。クラス・生徒選択はタブ間で共有
 │   │   └── settings/
 │   │       ├── ai-provider/page.tsx
 │   │       ├── prompt-template/page.tsx
@@ -533,7 +533,7 @@ export const POST = app.fetch;
 
 **認証方式とCSRF対策。** この2エンドポイントはCookieベースセッション(`@supabase/ssr`)で認証する。フロントの`fetch("/api/...")`は同一オリジンのためCookieが自動送信され、Honoハンドラ側は`@supabase/ssr`のサーバークライアントでNext.jsの`Request`からCookieを読み、セッションを検証する。Bearerトークンを手動で取得・付与する仕組みは不要になった一方、状態変更を伴うリクエストがCookie認証に依存する以上、CSRFが新たな考慮点になる(初版のBearerトークン方式は構造的にCSRFへ強かったが、Cookie方式への変更でこの前提が崩れていた)。対策として、この2エンドポイントに限り`sec-fetch-site`ヘッダー(フォールバックとして`Origin`ヘッダー)が`same-origin`であることをHono側のミドルウェアで確認し、一致しなければ403で拒否する。
 
-`POST /comments/generate`はプロンプト文字列を**フロントから受け取る**(組み立てはブラウザ側で`shared/prompt-builder.ts`が行う。メモの取得も直接Supabaseから行うため、Hono側はメモテーブルに一切アクセスしない)。Hono側の責務は、その教員の`ai_provider_setting`をJWTスコープのSupabaseクライアントで読み、暗号化キーを復号し、外部プロバイダへ送信し、生のレスポンステキストを返すことだけに限定される。仮名コード→実名の置換はフロント側で(仮名コードも実名も非秘匿情報のため)行う。
+`POST /comments/generate`はプロンプト文字列を**フロントから受け取る**(組み立てはブラウザ側で`shared/prompt-builder.ts`が行う。メモの取得も直接Supabaseから行うため、Hono側はメモテーブルに一切アクセスしない)。Hono側の責務は、その教員の`ai_provider_setting`をJWTスコープのSupabaseクライアントで読み、暗号化キーを復号し、外部プロバイダへ送信し、生のレスポンステキストを返すことだけに限定される。生成される所感文は生徒個人を特定する氏名・仮名コードを本文中に含まない前提のため、応答テキストはそのままフロントに返し、仮名コード→実名の置換処理は行わない(`docs/requirements.md` F12参照)。
 
 ### 5.2 Postgres RPC関数一覧(§4.4のシグネチャ)
 
@@ -661,7 +661,7 @@ export function resolveWeeklySlots(
 ): ResolvedSlot[];
 ```
 
-F10(プロンプトコピー運用)・F12(仮名⇔実名の置換)は秘密情報を扱わないため、初版で構想していた`POST /comments/prompt`・`POST /comments/resolve-pseudonym`エンドポイントは廃止し、完全にブラウザ側の純粋関数で完結させる。
+F10(プロンプトコピー運用)は秘密情報を扱わないため、初版で構想していた`POST /comments/prompt`エンドポイントは廃止し、完全にブラウザ側の純粋関数(`buildPrompt`)で完結させる。F12は仮名コード→実名の自動置換を行わない(応答テキストをそのまま表示する、`docs/requirements.md` F12参照)ため、初版で構想していた`POST /comments/resolve-pseudonym`エンドポイントおよびそれに相当するフロント側の変換関数は不要であり、実装しない。
 
 ### 5.6 AIアダプタ(Hono側、変更なし)
 
@@ -681,11 +681,14 @@ export const aiAdapters: Record<AiProvider, AiAdapter> = { openai, anthropic, ge
 | `<WeeklyTimetableGrid>` | 週次時間割のマス表示。`resolveWeeklySlots`の結果を描画 |
 | `<SlotEditModal>` | マス編集。個別変更の保存/revertは直接upsert/delete |
 | `<MemoEntryGrid>` | 授業記録画面。生徒一覧+メモ入力欄。保存は各行を直接upsert |
-| `<StudentMemoList>` | 生徒別メモ一覧(日付順/教科別) |
-| `<CommentGenerator>` | 期間・目安文字数指定→(APIキー未設定ならプロンプト表示、設定済みなら`/api/comments/generate`呼び出し) |
-| `<CommentHistoryList>` | 所感履歴一覧 |
+| `<StudentRoster>` | 生徒名簿画面。`useClassOptions()`によるクラス選択(クラス0件時はクラス管理画面への導線を表示)+CSV/貼り付けインポート+一覧 |
+| `<StudentMemoList>` | 生徒別メモ一覧(日付順/教科別)。`useClassOptions()`によるクラス選択で生徒候補を絞り込む |
+| `<CommentTabs>` | 所感画面のタブ切り替え(生成/履歴)。`useClassOptions()`によるクラス選択+生徒選択をタブ間で共有する状態として保持する |
+| `<CommentGenerator>` | 「生成」タブの中身。期間・目安文字数指定→(APIキー未設定ならプロンプト表示、設定済みなら`/api/comments/generate`呼び出し) |
+| `<CommentHistoryList>` | 「履歴」タブの中身。所感履歴一覧+詳細編集+手動作成 |
 | `<ConfirmDialog>` | 汎用確認ダイアログ(RPC関数が投げる例外メッセージ、または既存チェック結果を受けて表示) |
 | `useClasses()` / `useWeeklyTimetable()` / `useStudentMemos()` 等 | TanStack Queryベース。`queryFn`が直接`supabase-js`を呼ぶ |
+| `useClassOptions()` | 生徒名簿・生徒別メモ一覧・所感画面で共通利用する画面内クラス選択フック。教員のクラス一覧取得+選択中クラスの生徒一覧取得をまとめて提供し、4画面での重複実装を避ける |
 
 ## 6. エラーハンドリング方針
 
@@ -709,10 +712,10 @@ export const aiAdapters: Record<AiProvider, AiAdapter> = { openai, anthropic, ge
 - 自動リトライは行わない。エラー表示と共に、同じ入力内容を保持したまま再度保存できる状態を維持する。
 - §6.1の通り、全か無かの操作はRPCのトランザクション境界がそのまま保証を提供するため、「一部だけ保存された」状態は原理的に発生しない。
 
-### 6.4 AI呼び出し特有のエラー処理(F9/F12、変更なし)
+### 6.4 AI呼び出し特有のエラー処理(F9/F12)
 
 - 認証エラー・レート制限エラーは所感を保存せず、直前の画面状態を維持する。
-- 応答内に対象生徒の仮名コードが1つも含まれない場合は、実名への自動置換を行わず警告を表示し、保存するかどうかを教員に委ねる。
+- AIの応答テキストはそのまま画面に表示する。生成される所感文は生徒個人を特定する氏名・仮名コードを本文中に含まない前提のため、応答内の仮名コード検出・警告は行わない(`docs/requirements.md` F12参照。旧版にあった検出・警告ロジックは廃止した)。
 
 ## 7. テスト方針
 
