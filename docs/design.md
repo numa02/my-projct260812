@@ -58,7 +58,7 @@ flowchart LR
 
 設計上のポイント:
 
-- **認証はSupabase Authに委譲し、Cookieベースセッションを使う。** `@supabase/ssr`を用いてセッションをCookieに保持することで、Next.jsのServer ComponentsやEdge Middleware(`middleware.ts`)からもログイン状態を判定できる。初版ではブラウザのみが把握するセッション(localStorage相当)を前提にmiddlewareでガードする設計になっており、Edge側からlocalStorageは読めないため実際にはガードが機能しない矛盾があった。Cookieベースにすることでこの矛盾を解消し、F8(未ログイン時のリダイレクト)を実際にサーバー側で保証する。
+- **認証はSupabase Authに委譲し、Cookieベースセッションを使う。** `@supabase/ssr`を用いてセッションをCookieに保持することで、Next.jsのServer ComponentsやEdge Middleware(`proxy.ts`。Next.js 16でmiddleware.tsから改名)からもログイン状態を判定できる。初版ではブラウザのみが把握するセッション(localStorage相当)を前提にmiddlewareでガードする設計になっており、Edge側からlocalStorageは読めないため実際にはガードが機能しない矛盾があった。Cookieベースにすることでこの矛盾を解消し、F8(未ログイン時のリダイレクト)を実際にサーバー側で保証する。
 - **単純CRUDはHonoを経由しない。** クラス・生徒・科目・時間割・メモ・所感の読み書きは、ブラウザの`supabase-js`クライアントがユーザーのセッション(JWT)を使って直接PostgRESTへアクセスする。RLSポリシーがテナント分離の最終防衛線であり、かつ唯一の防衛線になる(アプリ層のフィルタ漏れという回避不能な依存を作らない)。
 - **複数テーブルにまたがる操作はPostgres関数(RPC)に集約する。** 組番号の発行とクラス作成、クラス削除に伴う時間割参照のクリーンアップ、CSV一括登録、時間割マスタ保存時の週次個別変更の巻き戻し判定、データエクスポートは、いずれも複数行・複数テーブルを一貫性を保ったまま更新する必要がある。これらをHonoハンドラ内での複数回のAPI呼び出しとして実装すると、途中で失敗した場合に部分的な更新が残ってしまう(初版の問題点)。Postgres関数として実装すれば、1回の呼び出しが1つのDBトランザクションになり、この問題が構造的に起きない。Postgres関数はデフォルトで`SECURITY INVOKER`(呼び出し元の権限で実行)であるため、Honoを経由しなくてもRLSはそのまま効く。したがってこれらもブラウザから`supabase.rpc()`で直接呼び出せる。
 - **Honoが担当するのは、秘密情報が絡む処理だけに絞る。** 具体的には(a)AIプロバイダのAPIキーをサーバー側で暗号化して保存する処理、(b)保存済みのAPIキーを復号して外部AIプロバイダを呼び出す処理、の2系統のみ。暗号化鍵(Workers Secrets)はPostgres側には一切置かず、DBが仮に全件漏洩してもこの鍵だけは漏れない、という多層防御を維持するため、この2つだけは今後もHono(Workers runtime)側に残す。
@@ -71,7 +71,7 @@ flowchart LR
 |---|---|---|
 | フロントエンド | Next.js (App Router) + TypeScript | 要件定義書で指定。認証必須のCRUD画面が中心でSEO要件がないため、ほぼ全画面をクライアントコンポーネントとして実装し、SSR/RSCには依存しない。ファイルベースルーティングでF1〜F14の画面数に素直に対応させる |
 | バックエンド(最小構成) | Hono + TypeScript(Next.jsのRoute Handlerとしてマウント) | 要件定義書で「バックエンドはHono」と指定されているため、独立したフレームワークとして残すが、担当範囲は§1の通り最小化した。`app.fetch`がWeb標準のFetch API形状(Request→Response)に一致するため、Next.jsのRoute HandlerのGET/POST/PUTハンドラにそのまま割り当てられる |
-| ホスティング | Cloudflare Pages(Next.js本体+Hono両方を含む単一デプロイ) | 要件定義書で指定。初版は「フロント用Pages」「API用Workers」の2デプロイだったが、Honoの担当範囲縮小により1デプロイに統合し、運用対象を減らした |
+| ホスティング | Cloudflare Pages(Next.js本体+Hono両方を含む単一デプロイ)。ビルドアダプタは`@opennextjs/cloudflare`(実装時点でCloudflare公式が推奨する後継ツール。`@cloudflare/next-on-pages`は不採用) | 要件定義書で指定。初版は「フロント用Pages」「API用Workers」の2デプロイだったが、Honoの担当範囲縮小により1デプロイに統合し、運用対象を減らした。`@opennextjs/cloudflare`はNext.js App Routerとの互換性が高く、`next-on-pages`と異なり全ルートでのedge runtime指定が不要 |
 | DB・認証 | Supabase (PostgreSQL + Supabase Auth + RLS) | 要件定義書で指定 |
 | DBアクセス方式 | `@supabase/supabase-js`(PostgREST経由、ブラウザから直接) + **Postgres関数(RPC)** | 単純CRUDはPostgRESTへの直接アクセス、複数テーブルにまたがる操作やビジネスロジックはPostgres関数に寄せる。これによりHonoというアプリケーション層を経由せずに「RLSで保護されたアトミックな操作」が実現でき、初版で懸念だった非アトミック性とAPI層の肥大化を同時に解消する。代償として、ビジネスロジックの一部がTypeScriptではなくPL/pgSQLで書かれることになり、DB側のロジックのテスト・デバッグには別スキルセットが要る(§7で許容コストとして明記) |
 | 認証セッション管理 | `@supabase/ssr`(Cookieベース) | Next.jsのMiddleware・Server Componentからもログイン状態を判定できる必要があるため。ブラウザのみが保持するセッションでは§1で述べた矛盾が生じる |
@@ -93,7 +93,7 @@ flowchart LR
 │   │   ├── login/page.tsx
 │   │   ├── signup/page.tsx
 │   │   └── reset-password/page.tsx
-│   ├── (main)/                     # ログイン必須。middleware.tsでガード(F8)
+│   ├── (main)/                     # ログイン必須。proxy.tsでガード(F8)
 │   │   ├── layout.tsx              # サイドバー・ナビゲーション(グローバルなクラス切替は持たない)
 │   │   ├── classes/page.tsx
 │   │   ├── students/page.tsx
@@ -110,9 +110,9 @@ flowchart LR
 │   │       ├── ai-provider/page.tsx
 │   │       ├── prompt-template/page.tsx
 │   │       └── export/page.tsx
-│   ├── api/
-│   │   └── [[...route]]/route.ts   # Honoアプリのマウント先(§5.1)
-│   └── middleware.ts               # 未ログイン時のリダイレクト(@supabase/ssr, F8)
+│   └── api/
+│       └── [[...route]]/route.ts   # Honoアプリのマウント先(§5.1)
+├── proxy.ts                        # 未ログイン時のリダイレクト(@supabase/ssr, F8)。Next.js 16の規約でapp/の外(ルート直下)に置く
 ├── components/
 │   ├── timetable/                  # WeeklyTimetableGrid, SlotEditModal 等
 │   ├── memo/
@@ -121,7 +121,7 @@ flowchart LR
 ├── hooks/                          # useClasses, useWeeklyTimetable 等(TanStack Query)
 ├── lib/
 │   ├── supabase-browser.ts         # supabase-jsクライアント(直接CRUD・RPC呼び出し兼用)
-│   ├── supabase-server.ts          # middleware/Server Component用(@supabase/ssr)
+│   ├── supabase-server.ts          # proxy.ts/Server Component用(@supabase/ssr)
 │   └── hono-server/                # Honoアプリ本体
 │       ├── app.ts
 │       ├── routes/
@@ -135,7 +135,7 @@ flowchart LR
 │   ├── week.ts                     # JST週番号計算(純粋関数)
 │   ├── prompt-builder.ts           # プロンプト組み立て(純粋関数)
 │   └── resolve-weekly-slots.ts     # マスタ+個別変更の解決(純粋関数、§5.4)
-├── db/
+├── supabase/
 │   └── migrations/                 # Supabase CLIのSQLマイグレーション(テーブル+RPC関数)
 └── docs/
     ├── requirements.md
@@ -308,6 +308,14 @@ create policy "teacher can manage own classes"
 
 `student`/`memo`/`student_comment`のように`teacher_id`を直接持たないテーブルは、親テーブル経由のサブクエリでポリシーを書く(初版と同じ)。
 
+**GRANTが別途必要(実装時に判明)。** Supabaseの現行デフォルト(`auto_expose_new_tables`が既定でfalse)では、新規テーブルはRLSポリシーを設定しただけでは`authenticated`/`service_role`ロールから一切アクセスできない(`permission denied for table ...`)。RLSは「行単位のフィルタ」であり、その手前の「テーブルへのアクセス可否」はPostgreSQLの`GRANT`が別途必要なため、各テーブルのマイグレーションで以下を明示的に付与している。
+
+```sql
+grant select, insert, update, delete on class to authenticated, service_role;
+```
+
+(`teacher_profile`のみ、insertはトリガー経由(§4.2)のためselect, updateのみを付与)
+
 ### 4.4 Postgres関数(RPC) ― アトミック性が必要な操作の集約先
 
 初版では「クラス削除時のoverride削除→スロットnull化→クラス削除」のような複数テーブル操作をHonoハンドラ内で複数回のAPI呼び出しとして実装する想定だったが、これは失敗時に部分更新が残るリスクがあった。以下は全てブラウザから`supabase.rpc('関数名', {...})`で直接呼び出し、`auth.uid()`を関数内部で使うことで、渡されたパラメータの偽装(他教員のteacher_idを渡す等)がRLS・関数内チェックの両方で防がれるようにする。
@@ -412,6 +420,7 @@ end;
 $$;
 
 -- CSV一括登録: 行ごとの部分成功を返す(F2の仕様通り、全体をロールバックしない)
+-- p_rows: [{ "attendanceNumber": number, "name": string }, ...]
 create function import_students(p_class_id uuid, p_rows jsonb)
 returns jsonb
 language plpgsql
@@ -419,9 +428,13 @@ as $$
 declare
   v_teacher_id uuid := auth.uid();
   v_row jsonb;
+  v_index int := 0;
   v_errors jsonb := '[]'::jsonb;
   v_imported jsonb := '[]'::jsonb;
-  v_seen int[] := '{}';
+  v_attendance_number int;
+  v_name text;
+  v_seen_numbers int[] := '{}';
+  v_existing_count int;
 begin
   -- p_class_id が呼び出し教員のものであることを確認
   perform 1 from class where id = p_class_id and teacher_id = v_teacher_id;
@@ -430,31 +443,144 @@ begin
   end if;
 
   for v_row in select * from jsonb_array_elements(p_rows) loop
-    -- 氏名・出席番号の必須チェック、バッチ内重複チェック、DB内既存重複チェックを行い、
-    -- 有効な行だけ insert into student、無効な行は理由付きで v_errors に積む
-    -- (詳細なバリデーション手順は実装時にPL/pgSQLで展開する)
-    null;
+    v_index := v_index + 1;
+    v_name := nullif(trim(both from coalesce(v_row->>'name', '')), '');
+
+    begin
+      v_attendance_number := (v_row->>'attendanceNumber')::int;
+    exception when others then
+      v_attendance_number := null;
+    end;
+
+    if v_name is null or v_attendance_number is null then
+      v_errors := v_errors || jsonb_build_object(
+        'rowIndex', v_index,
+        'reason', 'MISSING_FIELD',
+        'attendanceNumber', v_row->>'attendanceNumber',
+        'name', v_row->>'name'
+      );
+      continue;
+    end if;
+
+    if v_attendance_number = any (v_seen_numbers) then
+      v_errors := v_errors || jsonb_build_object(
+        'rowIndex', v_index,
+        'reason', 'DUPLICATE_IN_BATCH',
+        'attendanceNumber', v_attendance_number,
+        'name', v_name
+      );
+      continue;
+    end if;
+
+    select count(*) into v_existing_count
+    from student
+    where class_id = p_class_id and attendance_number = v_attendance_number;
+
+    if v_existing_count > 0 then
+      v_errors := v_errors || jsonb_build_object(
+        'rowIndex', v_index,
+        'reason', 'DUPLICATE_EXISTING',
+        'attendanceNumber', v_attendance_number,
+        'name', v_name
+      );
+      continue;
+    end if;
+
+    v_seen_numbers := array_append(v_seen_numbers, v_attendance_number);
+
+    insert into student (class_id, attendance_number, name)
+    values (p_class_id, v_attendance_number, v_name);
+
+    v_imported := v_imported || jsonb_build_object(
+      'rowIndex', v_index,
+      'attendanceNumber', v_attendance_number,
+      'name', v_name
+    );
   end loop;
 
   return jsonb_build_object('imported', v_imported, 'errors', v_errors);
 end;
 $$;
+```
 
+`imported`/`errors`は行配列。`errors`の各要素は`reason`(`MISSING_FIELD` | `DUPLICATE_IN_BATCH` | `DUPLICATE_EXISTING`)を持ち、フロントはこのコードでエラー行の表示文言を出し分ける(F2)。
+
+```sql
 -- 時間割マスタ保存: 全スロット upsert + 既存の週次個別変更のうち
 -- 新しいマスタ内容と一致した項目だけをマスタ追従に戻す(F4の巻き戻しロジック)
+-- p_slots: [{ "weekday": number, "period": number, "subjectId": uuid|null, "classId": uuid|null }, ...]
+--
+-- 一括モードでの上書き確認(F4):p_slotsの中で「classIdが設定されているスロットが2件以上」あり、
+-- かつそれらが単一のクラスに統一されており、かつ既存マスタにそれと異なるクラスが割り当てられている
+-- スロットが1件以上ある場合、p_confirm_overwrite=false なら例外を投げてフロントに確認ダイアログを出させる。
+-- 「2件以上」の条件は、教科担任制モードでの1マスだけの部分保存を誤って一括モードの上書きとみなさないための
+-- ガード(実装時に判明した必要な補正。単純に「distinct class数=1」だけで判定すると、1マスだけを保存した
+-- 場合にも毎回このダイアログが出てしまう)。既存の全マスのクラスが既にそのクラスと一致している場合は
+-- 上書きが実質的に発生しないため対象外。
 create function save_timetable_master(p_slots jsonb, p_confirm_overwrite boolean default false)
 returns jsonb
 language plpgsql
 as $$
 declare
   v_teacher_id uuid := auth.uid();
+  v_slot jsonb;
+  v_weekday int;
+  v_period int;
+  v_subject_id uuid;
+  v_class_id uuid;
+  v_class_slot_count int;
+  v_distinct_class_count int;
+  v_uniform_class_id uuid;
+  v_conflicting_count int;
+  v_class_display_name text;
 begin
-  -- 1. p_slots の内容で timetable_master_slot を upsert
-  -- 2. 保存後のマスタ内容と一致する weekly_subject_override / weekly_class_override 行を削除
-  --    (一致 = マスタ追従への巻き戻し。部分一致(科目のみ/クラスのみ)はそれぞれのテーブル単位で判定できるため、
-  --     テーブルを分離した初版のデータモデルがそのままこのロジックを素直に表現する)
-  -- 3. 一括モードでの上書きにより既存の個別クラス設定が失われる場合は、
-  --    p_confirm_overwrite=false ならここで例外を投げてフロントに確認ダイアログを出させる
+  select count(*), count(distinct (s ->> 'classId')::uuid), (array_agg((s ->> 'classId')::uuid)) [1]
+    into v_class_slot_count, v_distinct_class_count, v_uniform_class_id
+  from jsonb_array_elements(p_slots) s
+  where s ->> 'classId' is not null;
+
+  if v_distinct_class_count = 1 and v_class_slot_count > 1 then
+    select count(*) into v_conflicting_count
+    from timetable_master_slot
+    where
+      teacher_id = v_teacher_id
+      and class_id is not null
+      and class_id <> v_uniform_class_id;
+
+    if v_conflicting_count > 0 and not p_confirm_overwrite then
+      select display_name into v_class_display_name from class where id = v_uniform_class_id;
+      raise exception 'CONFIRM_OVERWRITE: 保存すると、マスごとに設定されているクラスがすべて「%」に統一されます。続行しますか', v_class_display_name;
+    end if;
+  end if;
+
+  for v_slot in select * from jsonb_array_elements(p_slots) loop
+    v_weekday := (v_slot ->> 'weekday')::int;
+    v_period := (v_slot ->> 'period')::int;
+    v_subject_id := nullif(v_slot ->> 'subjectId', '')::uuid;
+    v_class_id := nullif(v_slot ->> 'classId', '')::uuid;
+
+    insert into timetable_master_slot (teacher_id, weekday, period, subject_id, class_id)
+    values (v_teacher_id, v_weekday, v_period, v_subject_id, v_class_id)
+    on conflict (teacher_id, weekday, period)
+    do update set subject_id = excluded.subject_id, class_id = excluded.class_id;
+
+    -- 巻き戻し: 保存後のマスタ内容と一致した個別変更を、科目・クラスそれぞれ独立に判定して削除
+    -- (「一致」はnull同士も一致とみなす必要があるためis not distinct fromを使う)
+    delete from weekly_subject_override
+    where
+      teacher_id = v_teacher_id
+      and weekday = v_weekday
+      and period = v_period
+      and subject_id is not distinct from v_subject_id;
+
+    delete from weekly_class_override
+    where
+      teacher_id = v_teacher_id
+      and weekday = v_weekday
+      and period = v_period
+      and class_id is not distinct from v_class_id;
+  end loop;
+
   return jsonb_build_object('ok', true);
 end;
 $$;
@@ -488,22 +614,109 @@ end;
 $$;
 
 -- 全データエクスポート: 生徒ごとにメモ・所感がまとまったJSONを1回で返す
+-- ai_provider_setting は対象外
 create function export_teacher_data()
 returns jsonb
 language plpgsql
 as $$
 declare
   v_teacher_id uuid := auth.uid();
+  v_result jsonb;
 begin
-  -- classes / subjects / timetable_master_slot / weekly_*_override /
-  -- (student × memos × comments をネストしたJSON) をまとめて1つのjsonbで返す。
-  -- ai_provider_setting は対象外(F14)
-  return '{}'::jsonb;
+  select jsonb_build_object(
+    'exportedAt', now(),
+    'classes', coalesce((
+      select jsonb_agg(jsonb_build_object(
+        'id', c.id,
+        'grade', c.grade,
+        'groupNumber', c.group_number,
+        'displayName', c.display_name,
+        'createdAt', c.created_at
+      ) order by c.grade, c.group_number)
+      from class c where c.teacher_id = v_teacher_id
+    ), '[]'::jsonb),
+    'subjects', coalesce((
+      select jsonb_agg(jsonb_build_object(
+        'id', sub.id,
+        'name', sub.name,
+        'createdAt', sub.created_at
+      ) order by sub.created_at)
+      from subject sub where sub.teacher_id = v_teacher_id
+    ), '[]'::jsonb),
+    'timetableMaster', coalesce((
+      select jsonb_agg(jsonb_build_object(
+        'weekday', t.weekday,
+        'period', t.period,
+        'subjectId', t.subject_id,
+        'classId', t.class_id
+      ) order by t.weekday, t.period)
+      from timetable_master_slot t where t.teacher_id = v_teacher_id
+    ), '[]'::jsonb),
+    'weeklySubjectOverrides', coalesce((
+      select jsonb_agg(jsonb_build_object(
+        'weekStartDate', o.week_start_date,
+        'weekday', o.weekday,
+        'period', o.period,
+        'subjectId', o.subject_id
+      ) order by o.week_start_date, o.weekday, o.period)
+      from weekly_subject_override o where o.teacher_id = v_teacher_id
+    ), '[]'::jsonb),
+    'weeklyClassOverrides', coalesce((
+      select jsonb_agg(jsonb_build_object(
+        'weekStartDate', o.week_start_date,
+        'weekday', o.weekday,
+        'period', o.period,
+        'classId', o.class_id
+      ) order by o.week_start_date, o.weekday, o.period)
+      from weekly_class_override o where o.teacher_id = v_teacher_id
+    ), '[]'::jsonb),
+    'promptTemplate', (
+      select jsonb_build_object('content', p.content, 'updatedAt', p.updated_at)
+      from prompt_template p where p.teacher_id = v_teacher_id
+    ),
+    'students', coalesce((
+      select jsonb_agg(jsonb_build_object(
+        'id', s.id,
+        'classId', s.class_id,
+        'attendanceNumber', s.attendance_number,
+        'name', s.name,
+        'memos', coalesce((
+          select jsonb_agg(jsonb_build_object(
+            'id', m.id,
+            'subjectId', m.subject_id,
+            'noteDate', m.note_date,
+            'period', m.period,
+            'content', m.content,
+            'shareFlag', m.share_flag,
+            'createdAt', m.created_at,
+            'updatedAt', m.updated_at
+          ) order by m.note_date, m.period)
+          from memo m where m.student_id = s.id
+        ), '[]'::jsonb),
+        'comments', coalesce((
+          select jsonb_agg(jsonb_build_object(
+            'id', sc.id,
+            'periodStartDate', sc.period_start_date,
+            'periodEndDate', sc.period_end_date,
+            'content', sc.content,
+            'targetCharCount', sc.target_char_count,
+            'creationMethod', sc.creation_method,
+            'createdAt', sc.created_at,
+            'updatedAt', sc.updated_at
+          ) order by sc.period_start_date)
+          from student_comment sc where sc.student_id = s.id
+        ), '[]'::jsonb)
+      ) order by s.class_id, s.attendance_number)
+      from student s join class c on c.id = s.class_id where c.teacher_id = v_teacher_id
+    ), '[]'::jsonb)
+  ) into v_result;
+
+  return v_result;
 end;
 $$;
 ```
 
-`import_students`と`save_timetable_master`は完全なPL/pgSQL実装をここでは省略している(設計書としてはインターフェースとトランザクション境界を示すことを目的とし、詳細なループ処理は実装時に展開する)。
+上記8関数はすべて`supabase/migrations/`に実装済み(基盤フェーズで完了)。DB結合テスト(RLSクロステナント拒否・各RPCの正常系/例外系)は`tests/db/`に実装している。
 
 ### 4.5 仮名コードは保存しない(変更なし)
 
@@ -518,8 +731,6 @@ $$;
 ```ts
 import { Hono } from "hono";
 
-export const runtime = "edge";
-
 const app = new Hono().basePath("/api");
 
 app.get("/settings/ai-provider", /* ... */);   // 現在の provider/model と hasKey(boolean) のみ返す。鍵本体は返さない
@@ -530,6 +741,8 @@ export const GET = app.fetch;
 export const PUT = app.fetch;
 export const POST = app.fetch;
 ```
+
+`export const runtime = "edge";` は付けない。ホスティングアダプタとして`@cloudflare/next-on-pages`ではなく`@opennextjs/cloudflare`を採用したため(§2)、全ルートでのedge runtime指定は不要(Node.js互換モードで動作する)。CSPヘッダー(`default-src 'self'`)はHonoではなく`next.config.ts`の`headers()`でアプリ全体に付与する。
 
 **認証方式とCSRF対策。** この2エンドポイントはCookieベースセッション(`@supabase/ssr`)で認証する。フロントの`fetch("/api/...")`は同一オリジンのためCookieが自動送信され、Honoハンドラ側は`@supabase/ssr`のサーバークライアントでNext.jsの`Request`からCookieを読み、セッションを検証する。Bearerトークンを手動で取得・付与する仕組みは不要になった一方、状態変更を伴うリクエストがCookie認証に依存する以上、CSRFが新たな考慮点になる(初版のBearerトークン方式は構造的にCSRFへ強かったが、Cookie方式への変更でこの前提が崩れていた)。対策として、この2エンドポイントに限り`sec-fetch-site`ヘッダー(フォールバックとして`Origin`ヘッダー)が`same-origin`であることをHono側のミドルウェアで確認し、一致しなければ403で拒否する。
 
@@ -574,15 +787,21 @@ export const commentSaveInputSchema = z.object({
 **モデル名のバリデーション。** `PUT /settings/ai-provider`は`model`を自由入力のまま受け付けず、プロバイダごとの許可リストと照合する。許可リストは`shared/ai-models.ts`に静的に持つ。
 
 ```ts
-// shared/ai-models.ts
+// shared/ai-models.ts(実装時点、2026-08。各社のリリース状況に応じて要更新)
 export const SUPPORTED_MODELS: Record<AiProvider, readonly string[]> = {
-  openai: [/* 実装時に確定。コスト・品質のバランスを重視した中位モデルを既定値にする */],
-  anthropic: [/* 同上 */],
-  gemini: [/* 同上 */],
+  openai: ["gpt-5-nano", "gpt-5-mini", "gpt-5"],
+  anthropic: ["claude-haiku-4-5-20251001", "claude-sonnet-5", "claude-opus-5"],
+  gemini: ["gemini-2.5-flash-lite", "gemini-2.5-flash", "gemini-2.5-pro"],
+};
+
+export const DEFAULT_MODEL: Record<AiProvider, string> = {
+  openai: "gpt-5-mini",
+  anthropic: "claude-sonnet-5",
+  gemini: "gemini-2.5-flash",
 };
 ```
 
-許可リストに存在しない`model`が送られた場合は400エラーとする。各社のモデルラインアップは頻繁に更新されるため、このリストは新モデルのリリースに合わせて手動更新する運用になる(要件定義書の未決事項「AIプロバイダごとに選択可能なモデルの具体的な一覧は未確定」に対応する実装上の受け皿であり、具体的なモデル名の確定自体は本書のスコープ外)。
+許可リストに存在しない`model`が送られた場合は400(`UNSUPPORTED_MODEL`)エラーとする。各社のモデルラインアップは頻繁に更新されるため、このリストは新モデルのリリースに合わせて手動更新する運用になる(要件定義書の未決事項「AIプロバイダごとに選択可能なモデルの具体的な一覧は未確定」に対応する実装上の受け皿)。上記のモデル名は実装時点で確認できたものであり、実際の提供状況・料金は各プロバイダの公式ドキュメントで都度確認し、乖離があれば更新すること。
 
 ### 5.4 直接Supabaseアクセスのパターン
 
@@ -663,13 +882,25 @@ export function resolveWeeklySlots(
 
 F10(プロンプトコピー運用)は秘密情報を扱わないため、初版で構想していた`POST /comments/prompt`エンドポイントは廃止し、完全にブラウザ側の純粋関数(`buildPrompt`)で完結させる。F12は仮名コード→実名の自動置換を行わない(応答テキストをそのまま表示する、`docs/requirements.md` F12参照)ため、初版で構想していた`POST /comments/resolve-pseudonym`エンドポイントおよびそれに相当するフロント側の変換関数は不要であり、実装しない。
 
-### 5.6 AIアダプタ(Hono側、変更なし)
+### 5.6 AIアダプタ(Hono側)
 
 ```ts
 export interface AiAdapter {
   generateComment(params: { apiKey: string; model: string; prompt: string }): Promise<string>;
 }
 export const aiAdapters: Record<AiProvider, AiAdapter> = { openai, anthropic, gemini };
+
+// 各アダプタは各社REST APIのHTTPステータスを以下のコードに正規化して投げる。
+// Hono側(POST /comments/generate)はこれを捕捉し、401(AUTH_ERROR)・429(RATE_LIMIT)・
+// それ以外(PROVIDER_ERROR、502)として { error: { code, message } } を返す(§6.2)。
+export class AiProviderError extends Error {
+  constructor(
+    public readonly code: "AUTH_ERROR" | "RATE_LIMIT" | "PROVIDER_ERROR",
+    message: string,
+  ) {
+    super(message);
+  }
+}
 ```
 
 ### 5.7 主要なフロントエンドコンポーネント/フック
@@ -690,6 +921,19 @@ export const aiAdapters: Record<AiProvider, AiAdapter> = { openai, anthropic, ge
 | `useClasses()` / `useWeeklyTimetable()` / `useStudentMemos()` 等 | TanStack Queryベース。`queryFn`が直接`supabase-js`を呼ぶ |
 | `useClassOptions()` | 生徒名簿・生徒別メモ一覧・所感画面で共通利用する画面内クラス選択フック。教員のクラス一覧取得+選択中クラスの生徒一覧取得をまとめて提供し、4画面での重複実装を避ける |
 
+`useClassOptions()`の返り値:
+
+```ts
+{
+  classes: ClassOption[];             // { id, grade, groupNumber, displayName }[]
+  isLoadingClasses: boolean;
+  selectedClassId: string | null;
+  setSelectedClassId: (id: string | null) => void;
+  students: StudentOption[];          // { id, attendanceNumber, name }[]。selectedClassIdがnullの間は空配列
+  isLoadingStudents: boolean;
+}
+```
+
 ## 6. エラーハンドリング方針
 
 ### 6.1 部分成功を許す操作と、全か無かの操作を明確に分ける
@@ -704,7 +948,7 @@ export const aiAdapters: Record<AiProvider, AiAdapter> = { openai, anthropic, ge
 - **RPC関数からのビジネスルール違反**: `raise exception 'CODE: メッセージ'`という接頭辞付きの文字列規約で統一する。PostgRESTはこれをHTTP 400 + `{ message: "CODE: メッセージ" }`として返すため、フロント共通のエラーハンドラが`:`より前をコードとして分岐処理(確認ダイアログの出し分け等)に、`:`より後をそのままトースト表示に使う。
 - **RLS拒否**: PostgRESTが403相当を返す。通常のユーザー操作では発生しない想定のため、フロントは汎用的な「アクセス権がありません」表示のみ行う(想定外パスの検知用)。
 - **一意制約違反**: メモ・所感の保存は`upsert`(`onConflict`指定)を使うため、通常は制約違反自体が発生しない。
-- **Hono側(`/settings/ai-provider`, `/comments/generate`)**: `{ error: { code, message } }`の独自エンベロープを維持する(この2エンドポイントはHonoが完全に制御しているため)。認証エラー・レート制限エラーはAIプロバイダからの応答をラップして返し、所感は保存せず直前の状態を維持する(F9)。
+- **Hono側(`/settings/ai-provider`, `/comments/generate`)**: `{ error: { code, message } }`の独自エンベロープを維持する(この2エンドポイントはHonoが完全に制御しているため)。認証エラー・レート制限エラーはAIプロバイダからの応答をラップして返し、所感は保存せず直前の状態を維持する(F9)。実装している`code`一覧: `UNAUTHORIZED`(401、未ログイン)・`FORBIDDEN`(403、CSRF対策で同一オリジン以外を拒否)・`INVALID_INPUT`(400)・`UNSUPPORTED_MODEL`(400、§5.3の許可リスト外)・`NOT_CONFIGURED`(400、AIプロバイダ未設定で生成を実行)・`AUTH_ERROR`(401、AIプロバイダ側の認証エラー)・`RATE_LIMIT`(429)・`PROVIDER_ERROR`(502、その他のAIプロバイダエラー)・`INTERNAL_ERROR`(500)。
 
 ### 6.3 保存エラー(F13)
 
