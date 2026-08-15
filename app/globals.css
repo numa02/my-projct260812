@@ -1,19 +1,69 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+/* mockups/はデザイン参照用の静的HTMLで実アプリのコードではないため、自動コンテンツスキャンの対象から除外する */
+@source not "../mockups";
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+/*
+ * デザインシステムトークン(docs/design/design-system.md)。
+ * Primary/Secondary/Accentカラーは同ドキュメントで「未定」とされているため定義しない。
+ * ダークモードは対応しない(design-principles.mdの方針)。
+ */
+@theme {
+  /* グレースケール */
+  --color-gray-50: #f8f9fa;
+  --color-gray-100: #f1f3f5;
+  --color-gray-200: #e9ecef;
+  --color-gray-300: #dee2e6;
+  --color-gray-400: #adb5bd;
+  --color-gray-500: #868e96;
+  --color-gray-600: #495057;
+  --color-gray-700: #343a40;
+  --color-gray-900: #212529;
+
+  /* 状態色。色のみに依存せずテキスト・アイコンでも意味を補足すること */
+  --color-success-500: #2f9e5b;
+  --color-warning-500: #c97a1f;
+  --color-error-500: #c0392b;
+
+  /* セマンティックエイリアス */
+  --color-background: var(--color-gray-50);
+  --color-foreground: var(--color-gray-900);
+
+  /* タイポグラフィ。システムフォント優先(読み込み速度・native感を重視) */
+  --font-sans:
+    -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Noto Sans JP", "Yu Gothic UI", sans-serif;
+  --text-xs: 12px;
+  --text-sm: 14px;
+  --text-base: 16px;
+  --text-lg: 18px;
+  --text-xl: 20px;
+  --text-2xl: 24px;
+  --leading-normal: 1.6; /* 本文 */
+  --leading-loose: 1.8; /* 所感文などまとまった文章 */
+  /* フォントウェイトは通常400(font-normal)、強調500〜600(font-medium/font-semibold)。
+     太字700(font-bold)は装飾よりも静けさを優先する原則により多用しない */
+
+  /* スペーシング。8pxベース(4pxの倍数)は既定の--spacing(4px)からTailwindのpaddingやmargin、
+     gapのユーティリティがそのままspace-1(4px)からspace-12(48px)相当の値を生成するため、
+     独自のトークン追加は不要 */
+
+  /* ボーダー半径。craft.doのような柔らかいカード表現を意識しやや大きめにする */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+
+  /* シャドウ。強い影は使わず静かな印象を保つ */
+  --shadow-sm: 0 1px 2px rgba(33, 37, 41, 0.06);
+  --shadow-md: 0 4px 12px rgba(33, 37, 41, 0.08);
+
+  /* ブレークポイント。スマートフォンは要件のスコープ外のため定義しない */
+  --breakpoint-tablet: 768px;
+  --breakpoint-desktop: 1280px;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--color-background);
+  color: var(--color-foreground);
+  font-family: var(--font-sans);
+  line-height: var(--leading-normal);
 }
