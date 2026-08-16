@@ -21,9 +21,9 @@ export interface StudentOption {
  * 生徒名簿(T-055)・生徒別メモ一覧(T-064)・所感画面(T-065)で共通利用する画面内クラス選択フック。
  * 教員のクラス一覧取得+選択中クラスの生徒一覧取得をまとめて提供する。
  */
-export function useClassOptions() {
+export function useClassOptions(initialClassId: string | null = null) {
   const supabase = useMemo(() => createSupabaseBrowserClient(), []);
-  const [selectedClassId, setSelectedClassId] = useState<string | null>(null);
+  const [selectedClassId, setSelectedClassId] = useState<string | null>(initialClassId);
 
   const classesQuery = useQuery({
     queryKey: ["classes"],

@@ -116,7 +116,7 @@ export default function StudentsPage() {
         ) : (
           <div className="flex items-center gap-2">
             <Link
-              href={`/memos/students/${s.id}`}
+              href={`/memos/students/${s.id}?from=/students`}
               className="font-medium text-gray-900 hover:underline"
             >
               {s.name}
