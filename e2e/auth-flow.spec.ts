@@ -25,7 +25,7 @@ async function getLatestEmailLinkTo(request: APIRequestContext, toAddress: strin
 
 test.describe("認証フロー(T-049〜T-052)", () => {
   test("サインアップ→ログアウト→ログイン(誤ったパスワードはエラー)ができる", async ({ page }) => {
-    const email = `e2e-${Date.now()}@example.com`;
+    const email = `e2e-${crypto.randomUUID()}@example.com`;
     const password = "password123";
 
     await page.goto("/signup");
@@ -52,7 +52,7 @@ test.describe("認証フロー(T-049〜T-052)", () => {
   });
 
   test("登録済みメールアドレスで再サインアップするとエラーになる", async ({ page }) => {
-    const email = `e2e-dup-${Date.now()}@example.com`;
+    const email = `e2e-dup-${crypto.randomUUID()}@example.com`;
     const password = "password123";
 
     await page.goto("/signup");
@@ -82,7 +82,7 @@ test.describe("認証フロー(T-049〜T-052)", () => {
     page,
     request,
   }) => {
-    const email = `e2e-reset-${Date.now()}@example.com`;
+    const email = `e2e-reset-${crypto.randomUUID()}@example.com`;
     const oldPassword = "password123";
     const newPassword = "newpassword456";
 
