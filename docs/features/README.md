@@ -15,10 +15,10 @@
 - [授業記録](./memo-record/test-cases.md)(T-063)
 - [生徒別メモ一覧](./memo-students-list/test-cases.md)(T-064)
 - [所感画面(骨格)](./comments/test-cases.md)(T-065。履歴タブの中身はT-067で追記)
-- [所感生成(直接呼び出し)](./comments-generate/test-cases.md)(T-066a。F11の保存・上書き確認も含む)
+- [所感生成(直接呼び出し・プロンプトコピー運用)](./comments-generate/test-cases.md)(T-066a, T-066b。F11の保存・上書き確認も含む)
 - [AIプロバイダ設定](./settings-ai-provider/test-cases.md)(T-068)
 
 ## 未実装(今後追加)
 
-- 所感画面・生成タブ(プロンプトコピー運用)/履歴タブ(T-066b, T-067)
+- 所感画面・履歴タブ(T-067)
 - 設定画面・プロンプトひな形編集/データエクスポート(T-069, T-070)

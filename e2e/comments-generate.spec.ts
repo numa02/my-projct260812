@@ -176,7 +176,33 @@ test.describe("所感画面・生成タブ:直接呼び出し(T-066a)", () => {
     await expect(page.getByRole("button", { name: "生成" })).not.toBeVisible();
   });
 
-  test("APIキー未設定の場合は直接生成できない旨と設定画面への導線が表示される", async ({ page }) => {
+  test("APIキー設定済みの場合は「生成」ボタンが表示され、プロンプトコピー用UIは表示されない", async ({
+    page,
+  }) => {
+    await signUpAndLogin(page);
+    await createClass(page, "1", "1年1組");
+    await createSubject(page, "国語");
+    await importStudents(page, "1年1組", "1,生徒A");
+    await setUpMaster(page, "2026-04-06");
+    await recordMemo(page, "2026-04-06", 1, "音読が上手にできました");
+    await setApiKey(page);
+
+    await openCommentsForStudentA(page);
+    await page.getByLabel("開始日").fill("2026-04-01");
+    await page.getByLabel("終了日").fill("2026-04-30");
+
+    await expect(page.getByRole("button", { name: "生成" })).toBeVisible();
+    await expect(page.getByLabel("プロンプト")).not.toBeVisible();
+  });
+});
+
+test.describe("所感画面・生成タブ:プロンプトコピー運用(T-066b)", () => {
+  test("APIキー未設定の場合、プロンプトが表示されコピーでき、貼り付けたテキストをそのまま保存できる", async ({
+    page,
+    context,
+  }) => {
+    await context.grantPermissions(["clipboard-read", "clipboard-write"]);
+
     await signUpAndLogin(page);
     await createClass(page, "1", "1年1組");
     await createSubject(page, "国語");
@@ -188,11 +214,39 @@ test.describe("所感画面・生成タブ:直接呼び出し(T-066a)", () => {
     await page.getByLabel("開始日").fill("2026-04-01");
     await page.getByLabel("終了日").fill("2026-04-30");
 
-    await expect(
-      page.getByText("APIキーが未設定のため直接生成はできません。設定画面でAPIキーを登録してください"),
-    ).toBeVisible();
     await expect(page.getByRole("button", { name: "生成" })).not.toBeVisible();
-    await page.getByRole("link", { name: "AIプロバイダ設定画面へ" }).click();
-    await expect(page).toHaveURL(/\/settings\/ai-provider$/);
+    const promptField = page.getByLabel("プロンプト");
+    await expect(promptField).toBeVisible();
+    await expect(promptField).toHaveValue(/1-01-01/); // 仮名コードが含まれる
+    await expect(promptField).toHaveValue(/音読が上手にできました/);
+    await expect(promptField).not.toHaveValue(/生徒A/); // 実名は含まれない
+
+    await page.getByRole("button", { name: "プロンプトをコピー" }).click();
+    await expect(page.getByText("プロンプトをコピーしました")).toBeVisible();
+    const clipboardText = await page.evaluate(() => navigator.clipboard.readText());
+    expect(clipboardText).toContain("1-01-01");
+
+    await page
+      .getByLabel("AIの応答を貼り付け")
+      .fill("外部AIから得た所感文をそのまま貼り付けました。");
+    await page.getByRole("button", { name: "保存" }).click();
+    await expect(page.getByText("所感を保存しました")).toBeVisible();
+
+    // 履歴タブ相当のデータとして直接確認はT-067実装後に行うため、ここでは保存成功のみ確認する
+  });
+
+  test("送信可能なメモが0件の場合はプロンプト表示自体が行われない", async ({ page }) => {
+    await signUpAndLogin(page);
+    await createClass(page, "1", "1年1組");
+    await createSubject(page, "国語");
+    await importStudents(page, "1年1組", "1,生徒A");
+    await setUpMaster(page, "2026-04-06");
+
+    await openCommentsForStudentA(page);
+    await page.getByLabel("開始日").fill("2026-04-01");
+    await page.getByLabel("終了日").fill("2026-04-30");
+
+    await expect(page.getByText("送信可能なメモが存在しません")).toBeVisible();
+    await expect(page.getByLabel("プロンプト")).not.toBeVisible();
   });
 });

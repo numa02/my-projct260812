@@ -1,7 +1,6 @@
 "use client";
 
-import { useState } from "react";
-import Link from "next/link";
+import { useMemo, useState } from "react";
 import { useAiProviderSettings } from "@/hooks/useAiProviderSettings";
 import { usePromptTemplate } from "@/hooks/usePromptTemplate";
 import { useSharedMemosForPeriod } from "@/hooks/useSharedMemosForPeriod";
@@ -22,7 +21,7 @@ export interface CommentGenerateTabProps {
   pseudonymCode: string;
 }
 
-/** 所感画面「生成」タブ。直接呼び出し(F9)に対応。プロンプトコピー運用(F10)はAPIキー未設定時の案内のみ表示する */
+/** 所感画面「生成」タブ。直接呼び出し(F9)とプロンプトコピー運用(F10)の両方に対応する */
 export function CommentGenerateTab({ studentId, pseudonymCode }: CommentGenerateTabProps) {
   const { showToast } = useToast();
   const { setting, isLoading: isLoadingSetting } = useAiProviderSettings();
@@ -41,8 +40,12 @@ export function CommentGenerateTab({ studentId, pseudonymCode }: CommentGenerate
   const hasSharedMemos = memos.length > 0;
   const targetCharCountNumber = targetCharCount.trim() ? Number(targetCharCount) : undefined;
 
+  const prompt = useMemo(
+    () => buildPrompt({ template, memos, targetCharCount: targetCharCountNumber, pseudonymCode }),
+    [template, memos, targetCharCountNumber, pseudonymCode],
+  );
+
   const handleGenerate = async () => {
-    const prompt = buildPrompt({ template, memos, targetCharCount: targetCharCountNumber, pseudonymCode });
     try {
       const { rawText } = await generateComment.mutateAsync({
         prompt,
@@ -54,6 +57,15 @@ export function CommentGenerateTab({ studentId, pseudonymCode }: CommentGenerate
     }
   };
 
+  const handleCopyPrompt = async () => {
+    try {
+      await navigator.clipboard.writeText(prompt);
+      showToast("success", "プロンプトをコピーしました");
+    } catch {
+      showToast("error", "コピーに失敗しました");
+    }
+  };
+
   const doSave = async () => {
     try {
       await saveComment.mutateAsync({
@@ -61,7 +73,7 @@ export function CommentGenerateTab({ studentId, pseudonymCode }: CommentGenerate
         periodEndDate: endDate,
         content: resultText.trim(),
         targetCharCount: targetCharCountNumber,
-        creationMethod: "direct_ai",
+        creationMethod: setting.hasKey ? "direct_ai" : "prompt_copy",
       });
       showToast("success", "所感を保存しました");
       setOverwriteConfirmOpen(false);
@@ -125,34 +137,42 @@ export function CommentGenerateTab({ studentId, pseudonymCode }: CommentGenerate
       )}
 
       {hasPeriod && !isLoadingMemos && hasSharedMemos && !setting.hasKey && (
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-4">
           <InlineMessage
-            variant="warning"
-            message="APIキーが未設定のため直接生成はできません。設定画面でAPIキーを登録してください"
+            variant="info"
+            message="APIキーが未設定のため、プロンプトをコピーして外部のAIサービスに貼り付けてください。「共有する」区分のメモは仮名化された状態でプロンプトに含まれます"
           />
-          <Link href="/settings/ai-provider" className="self-start text-sm text-gray-700 underline">
-            AIプロバイダ設定画面へ
-          </Link>
-        </div>
-      )}
-
-      {resultText && (
-        <>
+          <Textarea label="プロンプト" value={prompt} readOnly rows={8} />
+          <Button variant="outline" className="self-start" onClick={handleCopyPrompt}>
+            プロンプトをコピー
+          </Button>
           <Textarea
-            label="生成結果"
+            label="AIの応答を貼り付け"
             value={resultText}
             onChange={(e) => setResultText(e.target.value)}
             rows={8}
           />
-          <Button
-            variant="primary"
-            className="self-start"
-            loading={saveComment.isPending}
-            onClick={handleSaveClick}
-          >
-            保存
-          </Button>
-        </>
+        </div>
+      )}
+
+      {setting.hasKey && resultText && (
+        <Textarea
+          label="生成結果"
+          value={resultText}
+          onChange={(e) => setResultText(e.target.value)}
+          rows={8}
+        />
+      )}
+
+      {hasPeriod && !isLoadingMemos && hasSharedMemos && resultText.trim().length > 0 && (
+        <Button
+          variant="primary"
+          className="self-start"
+          loading={saveComment.isPending}
+          onClick={handleSaveClick}
+        >
+          保存
+        </Button>
       )}
 
       <ConfirmDialog
