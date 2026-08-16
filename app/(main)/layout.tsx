@@ -1,7 +1,7 @@
 "use client";
 
 import { usePathname, useRouter } from "next/navigation";
-import { LayoutGrid, Users, BookOpen } from "lucide-react";
+import { LayoutGrid, Users, BookOpen, CalendarDays } from "lucide-react";
 import { GlobalNav, type NavItem } from "@/components/ui/GlobalNav";
 import { createSupabaseBrowserClient } from "@/lib/supabase-browser";
 
@@ -10,6 +10,7 @@ const NAV_ITEMS: NavItem[] = [
   { href: "/classes", label: "クラス管理", icon: LayoutGrid },
   { href: "/students", label: "生徒名簿", icon: Users },
   { href: "/subjects", label: "科目管理", icon: BookOpen },
+  { href: "/timetable/master", label: "時間割マスタ設定", icon: CalendarDays },
 ];
 
 export default function MainLayout({ children }: { children: React.ReactNode }) {
