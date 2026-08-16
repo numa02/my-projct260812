@@ -169,8 +169,10 @@
 - [ ] **T-072** 全画面のEmptyState表示を確認・調整する(`docs/design/screens.md` の空状態一覧に対応)
 - [ ] **T-073** 全画面のローディング状態を確認・調整する
 - [ ] **T-074** アクセシビリティレビュー(コントラスト比WCAG AA、タップ領域44×44px、色以外での情報伝達)
-- [ ] **T-075** `shared/` 純粋関数の単体テストを整備する
-- [ ] **T-076** RPC関数8つ+RLSクロステナント拒否のDB結合テストを整備する(縮小しない対象、`docs/design.md` §7)
+- [x] **T-075** `shared/` 純粋関数の単体テストを整備する
+  - 注記: 各画面実装タスクの進行に伴い、`shared/`配下の全ファイル(pseudonym, week, prompt-builder, resolve-weekly-slots, parse-student-rows, ai-models, schemas)に対応する`.test.ts`をその都度整備済みだったため、既に完了していた
+- [x] **T-076** RPC関数8つ+RLSクロステナント拒否のDB結合テストを整備する(縮小しない対象、`docs/design.md` §7)
+  - 注記: RPC関数8つは各画面実装タスクの進行に伴い既にテスト済みだったが、RLSクロステナント拒否テスト(`tests/db/rls.test.ts`)は`class`/`student`の2テーブルのみで、残り8テーブル(`subject`, `timetable_master_slot`, `weekly_subject_override`, `weekly_class_override`, `memo`, `student_comment`, `ai_provider_setting`, `prompt_template`)が未カバーだったため、本タスクで追加した。`npm run test:db`で9ファイル・35テストが全てパスすることを確認済み
 - [ ] **T-077** E2Eゴールデンパスを実装する(サインアップ→クラス作成→CSV登録→時間割設定→メモ記録→所感生成・保存)
 - [ ] **T-078** 上書き確認ダイアログ系のE2Eを2〜3本実装する
 - [ ] **T-079** 本番ビルド・Cloudflare Pages最終デプロイを確認する
