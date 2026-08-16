@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import type { ReactNode } from "react";
 import { X } from "lucide-react";
 import { cn } from "@/lib/cn";
+import { useHasMounted } from "@/lib/useHasMounted";
 
 export interface ModalProps {
   title: string;
@@ -16,6 +17,8 @@ export interface ModalProps {
 
 /** フォームモーダルの基盤。ConfirmDialogもこの上に構築する */
 export function Modal({ title, open, onClose, children, className }: ModalProps) {
+  const mounted = useHasMounted();
+
   useEffect(() => {
     if (!open) return;
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -25,7 +28,7 @@ export function Modal({ title, open, onClose, children, className }: ModalProps)
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [open, onClose]);
 
-  if (!open || typeof document === "undefined") return null;
+  if (!open || !mounted) return null;
 
   return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/40 p-4">

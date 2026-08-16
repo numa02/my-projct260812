@@ -1,5 +1,40 @@
 import { z } from "zod";
 
+// パスワードの最小文字数はSupabase Auth側(supabase/config.toml minimum_password_length)と揃える
+const PASSWORD_MIN_LENGTH = 6;
+
+export const loginInputSchema = z.object({
+  email: z.string().email("メールアドレスの形式が正しくありません"),
+  password: z.string().min(1, "パスワードを入力してください"),
+});
+export type LoginInput = z.infer<typeof loginInputSchema>;
+
+export const signupInputSchema = z.object({
+  email: z.string().email("メールアドレスの形式が正しくありません"),
+  password: z
+    .string()
+    .min(PASSWORD_MIN_LENGTH, `パスワードは${PASSWORD_MIN_LENGTH}文字以上で入力してください`),
+});
+export type SignupInput = z.infer<typeof signupInputSchema>;
+
+export const resetRequestInputSchema = z.object({
+  email: z.string().email("メールアドレスの形式が正しくありません"),
+});
+export type ResetRequestInput = z.infer<typeof resetRequestInputSchema>;
+
+export const resetConfirmInputSchema = z
+  .object({
+    password: z
+      .string()
+      .min(PASSWORD_MIN_LENGTH, `パスワードは${PASSWORD_MIN_LENGTH}文字以上で入力してください`),
+    confirmPassword: z.string(),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: "パスワードが一致しません",
+    path: ["confirmPassword"],
+  });
+export type ResetConfirmInput = z.infer<typeof resetConfirmInputSchema>;
+
 export const classInputSchema = z.object({
   grade: z.string().min(1),
   displayName: z.string().min(1),

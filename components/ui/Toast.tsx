@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { CircleCheck, CircleX } from "lucide-react";
 import { cn } from "@/lib/cn";
+import { useHasMounted } from "@/lib/useHasMounted";
 
 export type ToastVariant = "success" | "error";
 
@@ -34,6 +35,7 @@ const VARIANT_ICON: Record<ToastVariant, typeof CircleCheck> = {
 
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<ToastItem[]>([]);
+  const mounted = useHasMounted();
 
   const showToast = useCallback(
     (variant: ToastVariant, message: string, duration = DEFAULT_DURATION_MS) => {
@@ -51,7 +53,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   return (
     <ToastContext.Provider value={value}>
       {children}
-      {typeof document !== "undefined" &&
+      {mounted &&
         createPortal(
           <div
             role="status"
