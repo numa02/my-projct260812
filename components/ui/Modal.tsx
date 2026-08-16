@@ -49,7 +49,7 @@ export function Modal({ title, open, onClose, children, className }: ModalProps)
             type="button"
             onClick={onClose}
             aria-label="閉じる"
-            className="rounded-sm p-1 text-gray-500 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-400"
+            className="flex h-11 w-11 items-center justify-center rounded-sm text-gray-500 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-400"
           >
             <X className="h-5 w-5" aria-hidden />
           </button>

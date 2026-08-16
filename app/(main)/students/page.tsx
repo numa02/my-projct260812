@@ -149,7 +149,7 @@ export default function StudentsPage() {
               type="button"
               onClick={saveEdit}
               aria-label="保存"
-              className="rounded-sm p-1 text-gray-500 hover:bg-gray-100"
+              className="flex h-11 w-11 items-center justify-center rounded-sm text-gray-500 hover:bg-gray-100"
             >
               <Check className="h-4 w-4" aria-hidden />
             </button>
@@ -157,7 +157,7 @@ export default function StudentsPage() {
               type="button"
               onClick={() => setEditingId(null)}
               aria-label="キャンセル"
-              className="rounded-sm p-1 text-gray-500 hover:bg-gray-100"
+              className="flex h-11 w-11 items-center justify-center rounded-sm text-gray-500 hover:bg-gray-100"
             >
               <X className="h-4 w-4" aria-hidden />
             </button>
@@ -167,7 +167,7 @@ export default function StudentsPage() {
             <Link
               href={`/comments/students/${s.id}`}
               aria-label={`${s.name}の所感`}
-              className="rounded-sm p-1 text-gray-500 hover:bg-gray-100"
+              className="flex h-11 w-11 items-center justify-center rounded-sm text-gray-500 hover:bg-gray-100"
             >
               <Sparkles className="h-4 w-4" aria-hidden />
             </Link>
@@ -175,7 +175,7 @@ export default function StudentsPage() {
               type="button"
               onClick={() => startEdit(s)}
               aria-label={`${s.name}を編集`}
-              className="rounded-sm p-1 text-gray-500 hover:bg-gray-100"
+              className="flex h-11 w-11 items-center justify-center rounded-sm text-gray-500 hover:bg-gray-100"
             >
               <Pencil className="h-4 w-4" aria-hidden />
             </button>
@@ -183,7 +183,7 @@ export default function StudentsPage() {
               type="button"
               onClick={() => setDeleteTarget(s)}
               aria-label={`${s.name}を削除`}
-              className="rounded-sm p-1 text-gray-500 hover:bg-gray-100"
+              className="flex h-11 w-11 items-center justify-center rounded-sm text-gray-500 hover:bg-gray-100"
             >
               <Trash2 className="h-4 w-4" aria-hidden />
             </button>

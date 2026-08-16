@@ -133,6 +133,9 @@ export function CommentGenerateTab({ studentId, pseudonymCode }: CommentGenerate
           <Button variant="primary" loading={generateComment.isPending} onClick={handleGenerate}>
             生成
           </Button>
+          {generateComment.isPending && (
+            <LoadingSpinner label="AIが所感を生成しています(数秒〜数十秒かかることがあります)" />
+          )}
         </>
       )}
 

@@ -103,7 +103,7 @@ export default function SubjectsPage() {
                     type="button"
                     onClick={saveEdit}
                     aria-label="保存"
-                    className="rounded-sm p-1 text-gray-500 hover:bg-gray-100"
+                    className="flex h-11 w-11 items-center justify-center rounded-sm text-gray-500 hover:bg-gray-100"
                   >
                     <Check className="h-4 w-4" aria-hidden />
                   </button>
@@ -111,7 +111,7 @@ export default function SubjectsPage() {
                     type="button"
                     onClick={() => setEditingId(null)}
                     aria-label="キャンセル"
-                    className="rounded-sm p-1 text-gray-500 hover:bg-gray-100"
+                    className="flex h-11 w-11 items-center justify-center rounded-sm text-gray-500 hover:bg-gray-100"
                   >
                     <X className="h-4 w-4" aria-hidden />
                   </button>
@@ -124,7 +124,7 @@ export default function SubjectsPage() {
                       type="button"
                       onClick={() => startEdit(subject)}
                       aria-label={`${subject.name}を編集`}
-                      className="rounded-sm p-1 text-gray-500 hover:bg-gray-100"
+                      className="flex h-11 w-11 items-center justify-center rounded-sm text-gray-500 hover:bg-gray-100"
                     >
                       <Pencil className="h-4 w-4" aria-hidden />
                     </button>
@@ -132,7 +132,7 @@ export default function SubjectsPage() {
                       type="button"
                       onClick={() => setDeleteTarget(subject)}
                       aria-label={`${subject.name}を削除`}
-                      className="rounded-sm p-1 text-gray-500 hover:bg-gray-100"
+                      className="flex h-11 w-11 items-center justify-center rounded-sm text-gray-500 hover:bg-gray-100"
                     >
                       <Trash2 className="h-4 w-4" aria-hidden />
                     </button>

@@ -121,6 +121,43 @@ test.describe("時間割マスタ設定画面(T-058, T-059, T-060)", () => {
     await expect(page.getByLabel("月曜1限のクラス")).toHaveValue(/./);
   });
 
+  test("一括モードで保存すると、既存のマスごとのクラス設定と異なる場合は上書き確認ダイアログが表示される", async ({
+    page,
+  }) => {
+    await signUpAndLogin(page);
+    await createClass(page, "1", "1年1組");
+    await createClass(page, "2", "2年1組");
+    await createSubject(page, "国語");
+    await createSubject(page, "算数");
+
+    await page.goto("/timetable/master");
+    await page.getByRole("radio", { name: "教科担任制モード" }).click();
+    await page.getByLabel("月曜1限の科目").selectOption({ label: "国語" });
+    await page.getByLabel("月曜1限のクラス").selectOption({ label: "1年1組" });
+    await page.getByLabel("火曜2限の科目").selectOption({ label: "算数" });
+    await page.getByLabel("火曜2限のクラス").selectOption({ label: "2年1組" });
+    await page.getByLabel("起算日").fill("2026-04-06");
+    await page.getByRole("button", { name: "保存" }).click();
+    await expect(page.getByText("時間割マスタを保存しました")).toBeVisible();
+
+    // 一括モードに切り替え、既存と異なるクラスに統一しようとする
+    await page.getByRole("radio", { name: "一括モード" }).click();
+    await page.getByLabel("クラス(全マスに適用)").selectOption({ label: "1年1組" });
+    await page.getByRole("button", { name: "保存" }).click();
+
+    await expect(page.getByRole("heading", { name: "マスごとのクラス設定を統一しますか" })).toBeVisible();
+    await expect(
+      page.getByText("保存すると、マスごとに設定されているクラスがすべて選択したクラスに統一されます。続行しますか。"),
+    ).toBeVisible();
+
+    await page.getByRole("button", { name: "続行" }).click();
+    await expect(page.getByText("時間割マスタを保存しました").last()).toBeVisible();
+
+    // 火曜2限のクラスも1年1組に統一されたことを確認する
+    await page.getByRole("radio", { name: "教科担任制モード" }).click();
+    await expect(page.getByLabel("火曜2限のクラス").locator("option:checked")).toHaveText("1年1組");
+  });
+
   test("起算日未入力での保存はエラーになる", async ({ page }) => {
     await signUpAndLogin(page);
     await createClass(page, "1", "1年1組");

@@ -113,7 +113,7 @@ export function StudentMemosContent({
             type="button"
             onClick={() => startEdit(memo)}
             aria-label={`${memo.noteDate} ${memo.period}限 ${memo.subjectName}のメモを編集`}
-            className="rounded-sm p-1 text-gray-500 hover:bg-gray-100"
+            className="flex h-11 w-11 items-center justify-center rounded-sm text-gray-500 hover:bg-gray-100"
           >
             <Pencil className="h-4 w-4" aria-hidden />
           </button>
@@ -121,7 +121,7 @@ export function StudentMemosContent({
             type="button"
             onClick={() => setDeleteTarget(memo)}
             aria-label={`${memo.noteDate} ${memo.period}限 ${memo.subjectName}のメモを削除`}
-            className="rounded-sm p-1 text-gray-500 hover:bg-gray-100"
+            className="flex h-11 w-11 items-center justify-center rounded-sm text-gray-500 hover:bg-gray-100"
           >
             <Trash2 className="h-4 w-4" aria-hidden />
           </button>

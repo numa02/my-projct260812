@@ -78,7 +78,11 @@ export function TimetableMasterForm({
     setStartDateError(null);
     setSaving(true);
     try {
-      await saveMaster.mutateAsync({ slots: buildPayload(), confirmOverwrite });
+      const payload = buildPayload();
+      await saveMaster.mutateAsync({ slots: payload, confirmOverwrite });
+      // 一括モードのclassId上書きはdraftSlots自体には反映されていないため、保存成功時に同期する
+      // (教科担任制モードに切り替えて確認した際に古い値が見えてしまうのを防ぐ)
+      setDraftSlots(payload);
 
       if (isStartDateEditable && startDateInput !== initialStartDate) {
         await updateStartDate.mutateAsync({
