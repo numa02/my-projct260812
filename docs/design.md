@@ -110,9 +110,12 @@ flowchart LR
 │   │       ├── ai-provider/page.tsx
 │   │       ├── prompt-template/page.tsx
 │   │       └── export/page.tsx
-│   └── api/
-│       └── [[...route]]/route.ts   # Honoアプリのマウント先(§5.1)
-├── proxy.ts                        # 未ログイン時のリダイレクト(@supabase/ssr, F8)。Next.js 16の規約でapp/の外(ルート直下)に置く
+│   ├── api/
+│   │   └── [[...route]]/route.ts   # Honoアプリのマウント先(§5.1)
+│   └── dev/
+│       └── components/page.tsx     # 開発用コンポーネントギャラリー(components.md記載の全状態を目視確認)。本番ビルドではnotFound()を返す
+├── proxy.ts                        # 未ログイン時のリダイレクト(@supabase/ssr, F8)。Next.js 16の規約でapp/の外(ルート直下)に置く。
+│                                    # /devは未ログインでも閲覧可能な公開パスに含めている(ページ自体が本番で404を返すため実害はない)
 ├── components/
 │   ├── timetable/                  # WeeklyTimetableGrid, SlotEditModal 等
 │   ├── memo/
@@ -120,6 +123,7 @@ flowchart LR
 │   └── ui/                         # 確認ダイアログ等の汎用コンポーネント
 ├── hooks/                          # useClasses, useWeeklyTimetable 等(TanStack Query)
 ├── lib/
+│   ├── cn.ts                       # classNameを結合する小さなユーティリティ(components/ui/配下から共通利用)
 │   ├── supabase-browser.ts         # supabase-jsクライアント(直接CRUD・RPC呼び出し兼用)
 │   ├── supabase-server.ts          # proxy.ts/Server Component用(@supabase/ssr)
 │   └── hono-server/                # Honoアプリ本体
@@ -920,6 +924,7 @@ export class AiProviderError extends Error {
 | `<ConfirmDialog>` | 汎用確認ダイアログ(RPC関数が投げる例外メッセージ、または既存チェック結果を受けて表示) |
 | `useClasses()` / `useWeeklyTimetable()` / `useStudentMemos()` 等 | TanStack Queryベース。`queryFn`が直接`supabase-js`を呼ぶ |
 | `useClassOptions()` | 生徒名簿・生徒別メモ一覧・所感画面で共通利用する画面内クラス選択フック。教員のクラス一覧取得+選択中クラスの生徒一覧取得をまとめて提供し、4画面での重複実装を避ける |
+| `<ToastProvider>` / `useToast()` | 保存成功・失敗等のトースト通知(`components.md` Toast)。`app/providers.tsx`でアプリ全体をラップし、`useToast().showToast(variant, message)`でどこからでも呼び出せる |
 
 `useClassOptions()`の返り値:
 

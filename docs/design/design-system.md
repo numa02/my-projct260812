@@ -119,4 +119,4 @@ craft.doのような柔らかいカード表現を意識し、やや大きめの
 ## 未定事項
 
 - Primary / Secondary / Accent カラーの具体値(ロゴ・ブランドカラー確定後に定義)
-- アイコンセット
+- ~~アイコンセット~~: `lucide-react` に決定(`components.md` 未定事項も参照)

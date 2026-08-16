@@ -38,6 +38,7 @@
 - **使用箇所**: クラス管理、生徒名簿、科目管理、生徒別メモ一覧、所感画面(履歴タブ)、授業記録(折りたたみリスト)
 - **入力プロパティ**: `columns`, `rows`, `loading`, `emptyState`、折りたたみリストは `expandedRowId`, `onToggleRow` を追加で持つ
 - **備考**: 折りたたみリストは各行が独立して展開・保存できることを前提とし、ある行の展開・保存操作が他の行の状態に影響してはならない
+- **実装(T-048時点)**: 3バリエーションは見た目・DOM構造の差が大きいため、1コンポーネントではなく `Table`(表形式) / `CardList`(カードリスト形式) / `CollapsibleList`(折りたたみリスト)の3つの独立したコンポーネント(`components/ui/`)として実装した。`columns`/`rows`/`loading`/`emptyState`は共通、`CollapsibleList`のみ`renderSummary`/`renderExpanded`/`expandedRowId`/`onToggleRow`を持つ
 
 ## Card
 
@@ -95,6 +96,7 @@
 - **状態**: default / dragover / エラー行あり(取り込み結果にエラー一覧を表示)
 - **使用箇所**: 生徒名簿画面のインポート
 - **入力プロパティ**: `onImport`, `errorRows`
+- **実装**: `errorRows`の各要素は `{ rowIndex, reason, attendanceNumber?, name? }`。`reason`は`import_students` RPC(design.md §4.4)が返す`MISSING_FIELD` / `DUPLICATE_IN_BATCH` / `DUPLICATE_EXISTING`とそのまま対応させ、コンポーネント側で日本語文言に変換して表示する
 
 ## TimetableGrid(時間割グリッド)
 
@@ -121,5 +123,5 @@
 
 ## 未定事項
 
-- アイコンセット(`design-system.md` の未定事項と同様、実装時に決定)
-- Toastの自動消去までの秒数(実装時に調整)
+- ~~アイコンセット~~: `lucide-react` に決定(T-033〜T-048実装時)
+- ~~Toastの自動消去までの秒数~~: 4000msに決定(T-041実装時、`components/ui/Toast.tsx`の`DEFAULT_DURATION_MS`)

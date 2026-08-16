@@ -13,6 +13,7 @@
 - 状態管理: TanStack Query(`supabase-js` の呼び出し結果のキャッシュ用途)
 - フォーム: react-hook-form + zod(`shared/schemas`)
 - 日付・週番号: date-fns + date-fns-tz(JST固定)
+- アイコン: lucide-react
 - テスト: Vitest + React Testing Library、Playwright(E2Eはゴールデンパス中心に絞る)
 
 詳細な選定理由・データモデル・API設計は `docs/design.md` を参照。
