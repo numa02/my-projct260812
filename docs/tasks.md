@@ -15,6 +15,7 @@
   - 注記: 今回はローカルスタックの連携のみ実施。クラウド側のSupabaseプロジェクト作成・`supabase link`は未実施(要ダッシュボード操作のため別途)
 - [ ] **T-005** Cloudflare Pagesへのデプロイ設定を行う
   - DoD: mainブランチの変更が自動デプロイされ、疎通確認(トップページ表示)ができる
+  - 注記: T-079実施時に判明したブロッカーあり。詳細はT-079の注記を参照
   - 進捗: `@opennextjs/cloudflare` + `wrangler` の設定ファイル(`open-next.config.ts`, `wrangler.jsonc`)を用意し、`npm run build`→`opennextjs-cloudflare build`→ローカルpreview(`wrangler dev`)まで疎通確認済み。GitHub連携・Cloudflareアカウントでの自動デプロイ設定は未実施(要ダッシュボード操作のため別途)。DoD未達のため未チェック
 - [x] **T-006** Vitest・React Testing Library・Playwrightをセットアップする
   - DoD: それぞれのサンプルテストが1本ずつ通る
@@ -182,6 +183,8 @@
 - [x] **T-078** 上書き確認ダイアログ系のE2Eを2〜3本実装する
   - 注記: 所感生成タブの上書き確認(T-066a)・所感履歴タブの上書き確認(T-067)に加え、時間割マスタ設定・一括モードでの「マスごとのクラス設定を統一しますか」確認(T-058)を新規に追加し、計3本とした。この3本目の追加により、一括モード保存成功後にdraftSlotsがサーバー保存内容と同期されず、教科担任制モードに切り替えると古いクラス値が表示される状態管理バグを発見・修正した(`TimetableMasterForm.tsx`のdoSave)
 - [ ] **T-079** 本番ビルド・Cloudflare Pages最終デプロイを確認する
+  - DoD: 本番ビルド(`npm run build`)は継続してグリーン。実デプロイはブロッカーのため未達
+  - **ブロッカー(要対応方針決定)**: `npm run preview`(`opennextjs-cloudflare build`)がビルド段階で失敗する。原因はNext.js 16.3.1の`proxy.ts`(旧`middleware.ts`)がNode.jsランタイム専用に固定されたこと(`export const runtime = "edge"`を付与するとNext.js自身が「Proxyは常にNode.jsランタイムで動作する」とビルドエラーにする)と、`@opennextjs/cloudflare`(現時点の最新1.20.2)がNode.js middlewareを明示的に拒否する(`Node.js middleware is not currently supported`)ことの組み合わせによる。`@opennextjs/cloudflare`の`package.json`は`next: ">=16.2.11"`をpeerDependencyとして許容範囲に含めており対応意図はあるようだが、実際のビルド時チェックは追いついていない模様(アップストリームの既知ギャップの可能性)。調査の過程で`esbuild`が`@opennextjs/cloudflare`のビルドに必要な直接依存として不足していた点は補った(devDependenciesに追加、`npm install-scripts approve`でesbuild/fsevents/unrs-resolver/workerdの postinstall を許可済み)ため、依存関係自体は解決済み。対応方針(a. `@opennextjs/cloudflare`の将来アップデートを待つ、b. `proxy.ts`をやめてページ/レイアウト側の認証ガードに置き換える大規模リファクタ、c. 他のデプロイ手段を検討、等)は保留し、次回着手時にユーザーと相談する
 
 ## 後回し(MVP後)
 
