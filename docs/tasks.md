@@ -83,23 +83,23 @@
 
 `docs/design/components.md` の各コンポーネントに対応。
 
-- [ ] **T-033** Button(Primary/Secondary/Outline/Danger、サイズ、loading状態)
-- [ ] **T-034** Input(text/email/password/number/date/textarea、error状態)
-- [ ] **T-035** Select(通常セレクト+セグメントコントロール、empty状態)
-- [ ] **T-036** Toggle(共有区分用)
-- [ ] **T-037** Table/List(表形式+カードリスト形式、empty/loading状態)
-- [ ] **T-038** Card(メモカード/所感カード共通)
-- [ ] **T-039** Modal + ConfirmDialog(フォームモーダル、確認ダイアログ)
-- [ ] **T-040** InlineMessage(info/warning、常時表示)
-- [ ] **T-041** Toast(success/error)
-- [ ] **T-042** EmptyState(案内文+アクションボタン)
-- [ ] **T-043** LoadingSpinner / Skeleton
-- [ ] **T-044** Badge/Tag(共有区分・作成方法・「変更あり」)
-- [ ] **T-045** PasteOrUploadArea(CSV取り込み欄)
-- [ ] **T-046** CodeBadge(仮名コード表示)
-- [ ] **T-047** Header/GlobalNav(ナビゲーション、ログアウト。グローバルなクラス切替は持たない)
+- [x] **T-033** Button(Primary/Secondary/Outline/Danger、サイズ、loading状態)
+- [x] **T-034** Input(text/email/password/number/date/textarea、error状態)
+- [x] **T-035** Select(通常セレクト+セグメントコントロール、empty状態)
+- [x] **T-036** Toggle(共有区分用)
+- [x] **T-037** Table/List(表形式+カードリスト形式、empty/loading状態)
+- [x] **T-038** Card(メモカード/所感カード共通)
+- [x] **T-039** Modal + ConfirmDialog(フォームモーダル、確認ダイアログ)
+- [x] **T-040** InlineMessage(info/warning、常時表示)
+- [x] **T-041** Toast(success/error)
+- [x] **T-042** EmptyState(案内文+アクションボタン)
+- [x] **T-043** LoadingSpinner / Skeleton
+- [x] **T-044** Badge/Tag(共有区分・作成方法・「変更あり」)
+- [x] **T-045** PasteOrUploadArea(CSV取り込み欄)
+- [x] **T-046** CodeBadge(仮名コード表示)
+- [x] **T-047** Header/GlobalNav(ナビゲーション、ログアウト。グローバルなクラス切替は持たない)
   - DoD: 画面全体の高さに固定されたサイドバーとして実装され、メインコンテンツを大きくスクロールしてもサイドバーの表示位置・内容は変化しない(サイドバーとメインが独立にスクロールする)
-- [ ] **T-048** TimetableGrid(セル描画の共通基盤。編集モード切替は画面側で分岐)
+- [x] **T-048** TimetableGrid(セル描画の共通基盤。編集モード切替は画面側で分岐)
 
 各タスクのDoD共通: Storybook等での確認、または該当画面への組み込みで `default/hover/active/disabled/loading` 等 `components.md` に記載の状態が目視確認できる。
 

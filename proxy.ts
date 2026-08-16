@@ -1,7 +1,9 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
-const PUBLIC_PATHS = ["/login", "/signup", "/reset-password"];
+// /devは開発用コンポーネントギャラリー。本番ではページ自体がnotFound()を返すため
+// 未ログインで公開扱いにしても実害はない
+const PUBLIC_PATHS = ["/login", "/signup", "/reset-password", "/dev"];
 
 function isPublicPath(pathname: string): boolean {
   return PUBLIC_PATHS.some((path) => pathname === path || pathname.startsWith(`${path}/`));
