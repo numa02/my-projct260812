@@ -6,7 +6,7 @@ async function signUpAndLogin(page: Page): Promise<void> {
   await page.getByLabel("メールアドレス").fill(email);
   await page.getByLabel("パスワード").fill("password123");
   await page.getByRole("button", { name: "サインアップ" }).click();
-  await expect(page).toHaveURL(/\/$/);
+  await expect(page).toHaveURL(/\/classes$/);
 }
 
 async function createClass(page: Page, grade: string, displayName: string): Promise<void> {

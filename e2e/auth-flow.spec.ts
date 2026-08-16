@@ -33,7 +33,7 @@ test.describe("認証フロー(T-049〜T-052)", () => {
     await page.getByLabel("パスワード").fill(password);
     await page.getByRole("button", { name: "サインアップ" }).click();
 
-    await expect(page).toHaveURL(/\/$/);
+    await expect(page).toHaveURL(/\/classes$/);
 
     // ログアウトしてログイン画面から誤ったパスワードでログイン
     await page.context().clearCookies();
@@ -48,7 +48,7 @@ test.describe("認証フロー(T-049〜T-052)", () => {
     // 正しいパスワードでログイン
     await page.getByLabel("パスワード").fill(password);
     await page.getByRole("button", { name: "ログイン" }).click();
-    await expect(page).toHaveURL(/\/$/);
+    await expect(page).toHaveURL(/\/classes$/);
   });
 
   test("登録済みメールアドレスで再サインアップするとエラーになる", async ({ page }) => {
@@ -59,7 +59,7 @@ test.describe("認証フロー(T-049〜T-052)", () => {
     await page.getByLabel("メールアドレス").fill(email);
     await page.getByLabel("パスワード").fill(password);
     await page.getByRole("button", { name: "サインアップ" }).click();
-    await expect(page).toHaveURL(/\/$/);
+    await expect(page).toHaveURL(/\/classes$/);
 
     await page.context().clearCookies();
     await page.goto("/signup");
@@ -90,7 +90,7 @@ test.describe("認証フロー(T-049〜T-052)", () => {
     await page.getByLabel("メールアドレス").fill(email);
     await page.getByLabel("パスワード").fill(oldPassword);
     await page.getByRole("button", { name: "サインアップ" }).click();
-    await expect(page).toHaveURL(/\/$/);
+    await expect(page).toHaveURL(/\/classes$/);
     await page.context().clearCookies();
 
     await page.goto("/reset-password");
@@ -113,6 +113,6 @@ test.describe("認証フロー(T-049〜T-052)", () => {
     await page.getByLabel("メールアドレス").fill(email);
     await page.getByLabel("パスワード").fill(newPassword);
     await page.getByRole("button", { name: "ログイン" }).click();
-    await expect(page).toHaveURL(/\/$/);
+    await expect(page).toHaveURL(/\/classes$/);
   });
 });

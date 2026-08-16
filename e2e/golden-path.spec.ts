@@ -14,7 +14,7 @@ test("サインアップからクラス作成・生徒登録・時間割設定�
   await page.getByLabel("メールアドレス").fill(email);
   await page.getByLabel("パスワード").fill("password123");
   await page.getByRole("button", { name: "サインアップ" }).click();
-  await expect(page).toHaveURL(/\/$/);
+  await expect(page).toHaveURL(/\/classes$/);
 
   // 2. クラス作成
   await page.goto("/classes");
