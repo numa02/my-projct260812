@@ -100,7 +100,7 @@ test.describe("所感画面・履歴タブ(T-067)", () => {
     await contentField.fill("編集後の所感文です。");
     await page.getByRole("button", { name: "保存" }).click();
 
-    await expect(page.getByText("所感を保存しました")).toBeVisible();
+    await expect(page.getByText("所感を保存しました").last()).toBeVisible();
     await expect(page.getByText("編集後の所感文です。")).toBeVisible();
     await expect(page.getByText("編集前の所感文です。")).not.toBeVisible();
   });

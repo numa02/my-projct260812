@@ -43,14 +43,19 @@ export function useClassOptions(initialClassId: string | null = null) {
     },
   });
 
+  const classes = classesQuery.data ?? [];
+  // 未選択(初回表示・削除等で選択中クラスが消えた場合)はクラス一覧の先頭を既定選択とする。
+  // <select>は空文字の選択肢がないと先頭を表示上選択済みにしてしまうため、実際の状態もそれに合わせる
+  const effectiveClassId = selectedClassId ?? classes[0]?.id ?? null;
+
   const studentsQuery = useQuery({
-    queryKey: ["students", selectedClassId],
+    queryKey: ["students", effectiveClassId],
     queryFn: async (): Promise<StudentOption[]> => {
-      if (!selectedClassId) return [];
+      if (!effectiveClassId) return [];
       const { data, error } = await supabase
         .from("student")
         .select("id, attendance_number, name")
-        .eq("class_id", selectedClassId)
+        .eq("class_id", effectiveClassId)
         .order("attendance_number");
       if (error) throw error;
       return (data ?? []).map((s) => ({
@@ -59,13 +64,13 @@ export function useClassOptions(initialClassId: string | null = null) {
         name: s.name,
       }));
     },
-    enabled: selectedClassId !== null,
+    enabled: effectiveClassId !== null,
   });
 
   return {
-    classes: classesQuery.data ?? [],
+    classes,
     isLoadingClasses: classesQuery.isLoading,
-    selectedClassId,
+    selectedClassId: effectiveClassId,
     setSelectedClassId,
     students: studentsQuery.data ?? [],
     isLoadingStudents: studentsQuery.isLoading,

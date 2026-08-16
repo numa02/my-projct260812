@@ -45,7 +45,13 @@ export function TimetableMasterForm({
 
   const [mode, setMode] = useState<Mode>("bulk");
   const [draftSlots, setDraftSlots] = useState<MasterSlotState[]>(initialSlots);
-  const [bulkClassId, setBulkClassId] = useState<string>("");
+  // 未選択の場合、既存データがあればそのクラス、なければ一覧の先頭を既定選択とする。
+  // <select>は空文字の選択肢がないと表示上は先頭を選択済みにしてしまうため、実際の状態もそれに合わせる
+  // (常にstateから直接計算することで、classesの読み込みタイミングに関わらず正しい値になる)
+  const [bulkClassIdOverride, setBulkClassIdOverride] = useState<string | null>(null);
+  const inferredBulkClassId = draftSlots.find((s) => s.classId)?.classId ?? null;
+  const bulkClassId = bulkClassIdOverride ?? inferredBulkClassId ?? classes[0]?.id ?? "";
+  const setBulkClassId = setBulkClassIdOverride;
   const [startDateInput, setStartDateInput] = useState<string>(initialStartDate ?? "");
   const [startDateError, setStartDateError] = useState<string | null>(null);
   const [yearUpdateMode, setYearUpdateMode] = useState(false);
