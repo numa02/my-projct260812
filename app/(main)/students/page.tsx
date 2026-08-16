@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Pencil, Trash2, Check, X } from "lucide-react";
+import { Pencil, Trash2, Check, X, Sparkles } from "lucide-react";
 import { useClassOptions } from "@/hooks/useClassOptions";
 import { useStudents, type StudentRow } from "@/hooks/useStudents";
 import { Select } from "@/components/ui/Select";
@@ -164,6 +164,13 @@ export default function StudentsPage() {
           </div>
         ) : (
           <div className="flex justify-end gap-2">
+            <Link
+              href={`/comments/students/${s.id}`}
+              aria-label={`${s.name}の所感`}
+              className="rounded-sm p-1 text-gray-500 hover:bg-gray-100"
+            >
+              <Sparkles className="h-4 w-4" aria-hidden />
+            </Link>
             <button
               type="button"
               onClick={() => startEdit(s)}

@@ -62,7 +62,7 @@ test.describe("生徒別メモ一覧画面(T-064)", () => {
 
     await page.goto("/students");
     await page.getByLabel("クラス").selectOption({ label: "1年1組" });
-    await page.getByRole("link", { name: /生徒A/ }).click();
+    await page.getByRole("link", { name: "生徒A", exact: true }).click();
 
     await expect(page).toHaveURL(/\/memos\/students\/[0-9a-f-]+\?from=/);
     await expect(page.getByLabel("クラス")).toHaveValue(/./);
@@ -86,7 +86,7 @@ test.describe("生徒別メモ一覧画面(T-064)", () => {
 
     await page.goto("/students");
     await page.getByLabel("クラス").selectOption({ label: "1年1組" });
-    await page.getByRole("link", { name: /生徒A/ }).click();
+    await page.getByRole("link", { name: "生徒A", exact: true }).click();
 
     // 日付順(初期表示): 両方のメモが表示される
     await expect(page.getByText("国語メモ")).toBeVisible();
