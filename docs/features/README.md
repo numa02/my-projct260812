@@ -18,7 +18,8 @@
 - [所感生成(直接呼び出し・プロンプトコピー運用)](./comments-generate/test-cases.md)(T-066a, T-066b。F11の保存・上書き確認も含む)
 - [所感履歴タブ](./comments-history/test-cases.md)(T-067)
 - [AIプロバイダ設定](./settings-ai-provider/test-cases.md)(T-068)
+- [プロンプトひな形編集](./settings-prompt-template/test-cases.md)(T-069)
 
 ## 未実装(今後追加)
 
-- 設定画面・プロンプトひな形編集/データエクスポート(T-069, T-070)
+- 設定画面・データエクスポート(T-070)
