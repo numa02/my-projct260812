@@ -1,7 +1,16 @@
 "use client";
 
 import { usePathname, useRouter } from "next/navigation";
-import { LayoutGrid, Users, BookOpen, CalendarDays, CalendarRange, KeyRound, NotebookPen } from "lucide-react";
+import {
+  LayoutGrid,
+  Users,
+  BookOpen,
+  CalendarDays,
+  CalendarRange,
+  KeyRound,
+  NotebookPen,
+  Download,
+} from "lucide-react";
 import { GlobalNav, type NavItem } from "@/components/ui/GlobalNav";
 import { createSupabaseBrowserClient } from "@/lib/supabase-browser";
 
@@ -14,6 +23,7 @@ const NAV_ITEMS: NavItem[] = [
   { href: "/timetable/weekly", label: "週次時間割", icon: CalendarRange },
   { href: "/settings/ai-provider", label: "AIプロバイダ設定", icon: KeyRound },
   { href: "/settings/prompt-template", label: "プロンプトひな形編集", icon: NotebookPen },
+  { href: "/settings/export", label: "データエクスポート", icon: Download },
 ];
 
 export default function MainLayout({ children }: { children: React.ReactNode }) {

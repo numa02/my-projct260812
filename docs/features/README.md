@@ -19,7 +19,6 @@
 - [所感履歴タブ](./comments-history/test-cases.md)(T-067)
 - [AIプロバイダ設定](./settings-ai-provider/test-cases.md)(T-068)
 - [プロンプトひな形編集](./settings-prompt-template/test-cases.md)(T-069)
+- [データエクスポート](./settings-export/test-cases.md)(T-070)
 
-## 未実装(今後追加)
-
-- 設定画面・データエクスポート(T-070)
+全画面(T-049〜T-070)の実装が完了。次は`docs/tasks.md`の「仕上げ」セクション(全画面横断のエラー表示・空状態・ローディング状態の統一確認等)。
