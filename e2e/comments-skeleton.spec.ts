@@ -68,7 +68,7 @@ test.describe("所感画面の骨格(T-065)", () => {
     // 生徒を切り替えてからタブを切り替える
     await page.getByLabel("生徒").selectOption({ label: "生徒B" });
     await page.getByRole("radio", { name: "履歴" }).click();
-    await expect(page.getByText("所感の履歴機能は準備中です")).toBeVisible();
+    await expect(page.getByText("まだ所感が保存されていません")).toBeVisible();
 
     // タブを切り替えてもクラス・生徒の選択状態は変わらない
     await expect(page.getByLabel("クラス")).toHaveValue(/./);

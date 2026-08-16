@@ -7,6 +7,7 @@ import { Select } from "@/components/ui/Select";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { CommentGenerateTab } from "@/components/comment/CommentGenerateTab";
+import { CommentHistoryTab } from "@/components/comment/CommentHistoryTab";
 import { computePseudonymCode } from "@/shared/pseudonym";
 
 type Tab = "generate" | "history";
@@ -93,7 +94,10 @@ export function CommentsContent({ initialClassId, initialStudentId }: CommentsCo
       ) : tab === "generate" ? (
         <CommentGenerateTab studentId={selectedStudentId} pseudonymCode={pseudonymCode} />
       ) : (
-        <EmptyState message="所感の履歴機能は準備中です" />
+        <CommentHistoryTab
+          studentId={selectedStudentId}
+          onSwitchToGenerate={() => setTab("generate")}
+        />
       )}
     </div>
   );
