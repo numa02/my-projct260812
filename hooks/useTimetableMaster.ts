@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createSupabaseBrowserClient } from "@/lib/supabase-browser";
+import { useTeacherProfile } from "./useTeacherProfile";
 
 export interface MasterSlotState {
   weekday: number;
@@ -48,14 +49,7 @@ export function useTimetableMaster() {
     },
   });
 
-  const profileQuery = useQuery({
-    queryKey: ["teacher-profile"],
-    queryFn: async (): Promise<{ startDate: string | null }> => {
-      const { data, error } = await supabase.from("teacher_profile").select("start_date").single();
-      if (error) throw error;
-      return { startDate: data.start_date };
-    },
-  });
+  const { startDate, isLoading: isProfileLoading } = useTeacherProfile();
 
   const hasMemoQuery = useQuery({
     queryKey: ["has-any-memo"],
@@ -92,8 +86,8 @@ export function useTimetableMaster() {
 
   return {
     slots: slotsQuery.data ?? emptySlots(),
-    isLoading: slotsQuery.isLoading || profileQuery.isLoading || hasMemoQuery.isLoading,
-    startDate: profileQuery.data?.startDate ?? null,
+    isLoading: slotsQuery.isLoading || isProfileLoading || hasMemoQuery.isLoading,
+    startDate,
     hasAnyMemo: hasMemoQuery.data ?? false,
     saveMaster,
     updateStartDate,

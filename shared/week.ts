@@ -1,4 +1,4 @@
-import { differenceInCalendarDays, startOfWeek } from "date-fns";
+import { addDays, differenceInCalendarDays, format, startOfWeek } from "date-fns";
 import { toZonedTime } from "date-fns-tz";
 
 const JST_TIME_ZONE = "Asia/Tokyo";
@@ -15,4 +15,19 @@ export function computeWeekNumber(startDate: Date, targetDate: Date): number {
   const targetMonday = jstMonday(targetDate);
   const diffDays = differenceInCalendarDays(targetMonday, startMonday);
   return Math.floor(diffDays / 7) + 1;
+}
+
+/** dateが属する月曜始まりの週の月曜日(JST固定)を返す */
+export function getWeekStartDate(date: Date): Date {
+  return jstMonday(date);
+}
+
+/** weekStartDate(月曜日)からweekday(1=月〜5=金)だけ進めた日付を返す */
+export function addWeekdayOffset(weekStartDate: Date, weekday: number): Date {
+  return addDays(weekStartDate, weekday - 1);
+}
+
+/** Date(またはJST変換済みDate)を "yyyy-MM-dd" 形式に整形する */
+export function formatISODate(date: Date): string {
+  return format(date, "yyyy-MM-dd");
 }
