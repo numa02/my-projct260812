@@ -6,6 +6,8 @@ import { useClassOptions } from "@/hooks/useClassOptions";
 import { Select } from "@/components/ui/Select";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { CommentGenerateTab } from "@/components/comment/CommentGenerateTab";
+import { computePseudonymCode } from "@/shared/pseudonym";
 
 type Tab = "generate" | "history";
 
@@ -20,6 +22,17 @@ export function CommentsContent({ initialClassId, initialStudentId }: CommentsCo
     useClassOptions(initialClassId);
   const [selectedStudentId, setSelectedStudentId] = useState<string | null>(initialStudentId);
   const [tab, setTab] = useState<Tab>("generate");
+
+  const selectedClass = classes.find((c) => c.id === selectedClassId);
+  const selectedStudent = students.find((s) => s.id === selectedStudentId);
+  const pseudonymCode =
+    selectedClass && selectedStudent
+      ? computePseudonymCode({
+          grade: selectedClass.grade,
+          groupNumber: selectedClass.groupNumber,
+          attendanceNumber: selectedStudent.attendanceNumber,
+        })
+      : null;
 
   if (!isLoadingClasses && classes.length === 0) {
     return (
@@ -75,10 +88,10 @@ export function CommentsContent({ initialClassId, initialStudentId }: CommentsCo
         />
       )}
 
-      {!selectedClassId ? null : !selectedStudentId ? (
+      {!selectedClassId ? null : !selectedStudentId || !pseudonymCode ? (
         <EmptyState message="生徒を選択してください" />
       ) : tab === "generate" ? (
-        <EmptyState message="所感の生成機能は準備中です" />
+        <CommentGenerateTab studentId={selectedStudentId} pseudonymCode={pseudonymCode} />
       ) : (
         <EmptyState message="所感の履歴機能は準備中です" />
       )}

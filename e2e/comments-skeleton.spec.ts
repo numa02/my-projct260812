@@ -63,7 +63,7 @@ test.describe("所感画面の骨格(T-065)", () => {
 
     await expect(page).toHaveURL(/\/comments\/students\//);
     await expect(page.getByRole("radio", { name: "生成" })).toBeVisible();
-    await expect(page.getByText("所感の生成機能は準備中です")).toBeVisible();
+    await expect(page.getByText("仮名コード")).toBeVisible();
 
     // 生徒を切り替えてからタブを切り替える
     await page.getByLabel("生徒").selectOption({ label: "生徒B" });
@@ -77,7 +77,7 @@ test.describe("所感画面の骨格(T-065)", () => {
     await expect(studentSelect.locator("option:checked")).toHaveText("生徒B");
 
     await page.getByRole("radio", { name: "生成" }).click();
-    await expect(page.getByText("所感の生成機能は準備中です")).toBeVisible();
+    await expect(page.getByText("仮名コード")).toBeVisible();
     await expect(studentSelect.locator("option:checked")).toHaveText("生徒B");
   });
 
