@@ -102,7 +102,7 @@ export function SlotEditModal({
   };
 
   const handleRecord = () => {
-    router.push(`/memos/record?date=${dateISO}&period=${period}`);
+    router.push(`/memos/record?date=${dateISO}&period=${period}&from=/timetable/weekly`);
   };
 
   return (

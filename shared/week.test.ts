@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { addWeekdayOffset, computeWeekNumber, formatISODate, getWeekStartDate } from "./week";
+import {
+  addWeekdayOffset,
+  computeWeekNumber,
+  formatISODate,
+  getWeekdayNumber,
+  getWeekStartDate,
+} from "./week";
 
 describe("computeWeekNumber", () => {
   it("起算日と同じ週は第1週になる", () => {
@@ -54,5 +60,22 @@ describe("addWeekdayOffset", () => {
     const monday = getWeekStartDate(new Date("2026-04-06T00:00:00+09:00"));
     expect(formatISODate(addWeekdayOffset(monday, 1))).toBe("2026-04-06"); // 月
     expect(formatISODate(addWeekdayOffset(monday, 5))).toBe("2026-04-10"); // 金
+  });
+});
+
+describe("getWeekdayNumber", () => {
+  it("月曜日は1、金曜日は5になる", () => {
+    expect(getWeekdayNumber(new Date("2026-04-06T00:00:00+09:00"))).toBe(1);
+    expect(getWeekdayNumber(new Date("2026-04-10T00:00:00+09:00"))).toBe(5);
+  });
+
+  it("土曜日は6、日曜日は0になる(時間割の対象外)", () => {
+    expect(getWeekdayNumber(new Date("2026-04-11T00:00:00+09:00"))).toBe(6);
+    expect(getWeekdayNumber(new Date("2026-04-12T00:00:00+09:00"))).toBe(0);
+  });
+
+  it("UTC時刻でJST日付境界をまたいでも正しい曜日になる", () => {
+    // UTC 2026-04-05T15:30:00Z は JSTで2026-04-06 00:30(月曜日)
+    expect(getWeekdayNumber(new Date("2026-04-05T15:30:00Z"))).toBe(1);
   });
 });

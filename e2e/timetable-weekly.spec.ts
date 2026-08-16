@@ -133,11 +133,9 @@ test.describe("週次時間割画面(T-061, T-062)", () => {
     await expect(page.getByRole("gridcell").filter({ hasText: "国語" })).toBeVisible();
   });
 
-  test("「この授業を記録する」でその日付・時限を指定して授業記録画面へ遷移しようとする", async ({
+  test("「この授業を記録する」でその日付・時限を指定して授業記録画面へ遷移し、「戻る」で週次時間割画面に戻れる", async ({
     page,
   }) => {
-    // 注記: 授業記録画面自体はT-063で実装するため、実際に正しい画面が表示されることの
-    // 確認はT-063実装時に行う。ここでは遷移先URLのdate/periodパラメータのみ検証する。
     await signUpAndLogin(page);
     await createClass(page, "1", "1年1組");
     await createSubject(page, "国語");
@@ -148,6 +146,11 @@ test.describe("週次時間割画面(T-061, T-062)", () => {
     await page.getByLabel("週を指定").fill("2026-04-06");
     await page.getByRole("gridcell").filter({ hasText: "国語" }).click();
     await page.getByRole("button", { name: "この授業を記録する" }).click();
-    await expect(page).toHaveURL(/\/memos\/record\?date=2026-04-06&period=1$/);
+
+    await expect(page).toHaveURL(/\/memos\/record\?date=2026-04-06&period=1&from=/);
+    await expect(page.getByText("国語 / 1年1組")).toBeVisible();
+
+    await page.getByRole("button", { name: "戻る" }).click();
+    await expect(page).toHaveURL(/\/timetable\/weekly$/);
   });
 });

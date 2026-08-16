@@ -31,3 +31,13 @@ export function addWeekdayOffset(weekStartDate: Date, weekday: number): Date {
 export function formatISODate(date: Date): string {
   return format(date, "yyyy-MM-dd");
 }
+
+/** dateのJST基準の曜日番号を返す(0=日, 1=月, ..., 5=金, 6=土)。時間割は1〜5(月〜金)のみが対象 */
+export function getWeekdayNumber(date: Date): number {
+  return toZonedTime(date, JST_TIME_ZONE).getDay();
+}
+
+/** 現在時刻をJST基準の "yyyy-MM-dd" 文字列で返す */
+export function getTodayISO(): string {
+  return formatISODate(toZonedTime(new Date(), JST_TIME_ZONE));
+}

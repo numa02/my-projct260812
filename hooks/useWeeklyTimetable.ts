@@ -16,6 +16,8 @@ export function useWeeklyTimetable(weekStartDateISO: string) {
 
   const masterQuery = useQuery({
     queryKey: ["timetable-master-slots-raw"],
+    // マスタはほぼ変化しないため、週の切り替えごとに再取得しないよう長めにキャッシュする
+    staleTime: 5 * 60 * 1000,
     queryFn: async (): Promise<MasterSlot[]> => {
       const { data, error } = await supabase
         .from("timetable_master_slot")
