@@ -105,7 +105,7 @@ flowchart LR
 │   │   │   ├── record/page.tsx         # 授業記録(F6)
 │   │   │   └── students/[[...id]]/page.tsx  # 生徒別メモ一覧(F7)。クラス選択は画面内state、[[...id]]は生徒名簿からの初期選択ヒント(任意)。ナビゲーションメニューから直接開く場合はIDなし(`/memos/students`)
 │   │   ├── comments/
-│   │   │   └── students/[id]/page.tsx  # 所感画面(F9-F11)。生成/履歴はページ内タブ(別ルートに分割しない)。クラス・生徒選択はタブ間で共有
+│   │   │   └── class/[[...id]]/page.tsx  # 所感管理(F9-F11)。クラス+対象期間単位の一覧画面。[[...id]]は生徒名簿からの初期選択クラスのヒント(任意)。生徒ごとのAI生成・履歴閲覧は行内の折りたたみセクション
 │   │   └── settings/
 │   │       ├── ai-provider/page.tsx
 │   │       ├── prompt-template/page.tsx
@@ -836,24 +836,17 @@ export function useSaveMemo() {
 //    30マス分をクライアント側でマージする(1週間の表示につきクエリは常に3回、マス数に比例しない)
 ```
 
-例:所感の上書き確認(既存有無のチェック→確認ダイアログ→保存、の2ステップ)。
+例:クラス削除時の確認(使用状況のチェック→確認ダイアログ→削除、の2ステップ)。
 
 ```ts
-// 1. 既存チェック
-const { data: existing } = await supabase
-  .from("student_comment")
-  .select("id, updated_at")
-  .eq("student_id", studentId)
-  .eq("period_start_date", start)
-  .eq("period_end_date", end)
-  .maybeSingle();
+// 1. 既存チェック(生徒登録数・時間割での使用有無)
+const usage = await checkClassUsage(classId); // useClasses.ts
 
-// 2. existing があれば ConfirmDialog を表示し、続行時のみ upsert を実行
-await supabase.from("student_comment").upsert(
-  { student_id: studentId, period_start_date: start, period_end_date: end, ...rest },
-  { onConflict: "student_id,period_start_date,period_end_date" }
-);
+// 2. 生徒が1人以上いれば削除不可、時間割で使用中なら ConfirmDialog を表示し、続行時のみ delete_class を実行
+await supabase.rpc("delete_class", { p_class_id: classId });
 ```
+
+**補足(所感の保存について)**: 所感(`student_comment`)は生徒×対象期間の組み合わせが一意キーであり、`upsert`(`onConflict: "student_id,period_start_date,period_end_date"`)で新規作成・更新の両方を1回の呼び出しでまかなう。所感管理画面は画面上部で対象期間を1つ確定させたうえで生徒ごとの行を描画するため(§画面設計は`docs/design/screens.md`参照)、保存時点で「その生徒・その対象期間」は一意に定まっており、既存有無の事前チェック→上書き確認ダイアログという2ステップは不要(直接upsertするだけでよい)。
 
 ### 5.5 主要な純粋関数(`shared/`、変更なし)
 
@@ -918,12 +911,13 @@ export class AiProviderError extends Error {
 | `<MemoEntryGrid>` | 授業記録画面。生徒一覧+メモ入力欄。保存は各行を直接upsert |
 | `<StudentRoster>` | 生徒名簿画面。`useClassOptions()`によるクラス選択(クラス0件時はクラス管理画面への導線を表示)+CSV/貼り付けインポート+一覧 |
 | `<StudentMemoList>` | 生徒別メモ一覧(日付順/教科別)。`useClassOptions()`によるクラス選択で生徒候補を絞り込む |
-| `<CommentTabs>` | 所感画面のタブ切り替え(生成/履歴)。`useClassOptions()`によるクラス選択+生徒選択をタブ間で共有する状態として保持する |
-| `<CommentGenerator>` | 「生成」タブの中身。期間・目安文字数指定→(APIキー未設定ならプロンプト表示、設定済みなら`/api/comments/generate`呼び出し) |
-| `<CommentHistoryList>` | 「履歴」タブの中身。所感履歴一覧+詳細編集+手動作成 |
+| `<ClassCommentsContent>` | 所感管理画面。`useClassOptions()`によるクラス選択+画面全体で1つの対象期間(開始日・終了日)を持ち、クラスの生徒一覧を`<StudentCommentRow>`で行ごとに描画する |
+| `<StudentCommentRow>` | 所感管理画面の1行。氏名+所感入力欄(常時表示、`useStudentComments()`でその生徒・対象期間の既存所感を初期表示)+保存ボタン+「AIで生成する」「過去の所感を見る」の折りたたみトグル |
+| `<CommentAiAssist>` | 行内の「AIで生成する」の中身。目安文字数指定→(APIキー未設定ならプロンプト表示+貼り付け欄、設定済みなら`/api/comments/generate`呼び出し)→結果は行の所感入力欄にコールバックで反映するのみで、保存自体は行う側(`<StudentCommentRow>`)の責務 |
 | `<ConfirmDialog>` | 汎用確認ダイアログ(RPC関数が投げる例外メッセージ、または既存チェック結果を受けて表示) |
 | `useClasses()` / `useWeeklyTimetable()` / `useStudentMemos()` 等 | TanStack Queryベース。`queryFn`が直接`supabase-js`を呼ぶ |
-| `useClassOptions()` | 生徒名簿・生徒別メモ一覧・所感画面で共通利用する画面内クラス選択フック。教員のクラス一覧取得+選択中クラスの生徒一覧取得をまとめて提供し、4画面での重複実装を避ける |
+| `useClassOptions()` | 生徒名簿・生徒別メモ一覧・所感管理画面で共通利用する画面内クラス選択フック。教員のクラス一覧取得+選択中クラスの生徒一覧取得をまとめて提供し、重複実装を避ける |
+| `useStudentComments(studentId)` | 生徒1人分の所感(全期間)の取得・upsert保存。所感管理画面では行ごとに呼び出し、対象期間に一致する既存所感の初期表示と、それ以外の期間の履歴一覧の両方に使う |
 | `<ToastProvider>` / `useToast()` | 保存成功・失敗等のトースト通知(`components.md` Toast)。`app/providers.tsx`でアプリ全体をラップし、`useToast().showToast(variant, message)`でどこからでも呼び出せる |
 
 `useClassOptions()`の返り値:
@@ -975,8 +969,8 @@ export class AiProviderError extends Error {
 | 単体テスト | Vitest | `shared/`の純粋関数(仮名コード生成、週番号計算、プロンプト組み立て、`resolveWeeklySlots`) | 通常投資。副作用がなくテストしやすいため費用対効果が高い |
 | 単体テスト(Hono) | Vitest + `app.fetch` | `/settings/ai-provider`、`/comments/generate`の2系統3エンドポイント | エンドポイント数が少ないため全パスを軽く網羅する |
 | DB結合テスト | Vitest + Supabase CLIローカルスタック(`supabase start`) | §5.2のRPC関数8つ(正常系+例外系)、RLSポリシーのクロステナント拒否 | **縮小しない。** 初版で懸念したTOCTOU・非アトミック性の問題を「Postgres関数に集約する」ことで解消した以上、その関数自体が正しくロールバックすることを検証しなければ設計上の解消が絵に描いた餅になる。RLSのクロステナントテストも同様に、ここだけは規模によらず必須と判断する |
-| コンポーネントテスト | Vitest + React Testing Library | フォームバリデーション、確認ダイアログの表示条件分岐 | 縮小。主要な分岐(F1学年変更確認、F11上書き確認)のみ |
-| E2E | Playwright | ゴールデンパス1本(サインアップ→クラス作成→CSV登録→時間割設定→メモ記録→所感生成・保存)+ 上書き確認ダイアログ2〜3本 | 大幅縮小。初版で構想していた全確認ダイアログの網羅的シナリオ化はやめ、残りは手動確認で許容する |
+| コンポーネントテスト | Vitest + React Testing Library | フォームバリデーション、確認ダイアログの表示条件分岐 | 縮小。主要な分岐(F1学年変更確認、F4一括モード上書き確認)のみ |
+| E2E | Playwright | ゴールデンパス1本(サインアップ→クラス作成→CSV登録→時間割設定→メモ記録→所感生成・保存)+ 確認ダイアログ2〜3本 | 大幅縮小。初版で構想していた全確認ダイアログの網羅的シナリオ化はやめ、残りは手動確認で許容する。なお所感の保存(F11)は実装時に対象期間を画面上部で一意に確定させる設計にしたため、上書き確認ダイアログ自体が不要になった(§5.4補足参照) |
 
 CI上でのAIプロバイダ実呼び出しは行わない(`AiAdapter`をモックに差し替え、Playwrightは`page.route()`でインターセプト)。この方針は変更なし。
 
