@@ -191,9 +191,14 @@ export function StudentMemosContent({
           <div className="w-64">
             <Select
               label="生徒"
-              options={students.map((s) => ({ value: s.id, label: s.name }))}
+              options={[
+                // 未選択状態を<select>の見た目にも正しく反映するためのプレースホルダー
+                // (これがないと未選択でもブラウザが先頭の生徒を表示上選択済みにしてしまう)
+                { value: "", label: "選択してください" },
+                ...students.map((s) => ({ value: s.id, label: s.name })),
+              ]}
               value={selectedStudentId ?? ""}
-              onChange={setSelectedStudentId}
+              onChange={(id) => setSelectedStudentId(id || null)}
               emptyMessage="このクラスにはまだ生徒が登録されていません"
             />
           </div>

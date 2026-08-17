@@ -129,7 +129,7 @@ test.describe("所感画面・履歴タブ(T-067)", () => {
     ).toBeVisible();
     await page.getByRole("button", { name: "続行" }).click();
 
-    await expect(page.getByText("所感を保存しました")).toBeVisible();
+    await expect(page.getByText("所感を保存しました").last()).toBeVisible();
     await expect(page.getByText("同じ期間の2件目の所感文です。")).toBeVisible();
     await expect(page.getByText("1件目の所感文です。")).not.toBeVisible();
   });

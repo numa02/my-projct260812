@@ -97,6 +97,6 @@ test.describe("所感画面の骨格(T-065)", () => {
     await expect(page).toHaveURL(/\/comments\/students\//);
     await page.getByLabel("クラス").selectOption({ label: "2年1組" });
     await expect(page.getByText("生徒を選択してください")).toBeVisible();
-    await expect(page.getByLabel("生徒").locator("option")).toHaveText(["生徒B"]);
+    await expect(page.getByLabel("生徒").locator("option")).toHaveText(["選択してください", "生徒B"]);
   });
 });
