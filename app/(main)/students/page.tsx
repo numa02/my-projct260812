@@ -165,7 +165,7 @@ export default function StudentsPage() {
         ) : (
           <div className="flex justify-end gap-2">
             <Link
-              href={`/comments/students/${s.id}`}
+              href={`/comments/class/${selectedClassId}?student=${s.id}`}
               aria-label={`${s.name}の所感`}
               className="flex h-11 w-11 items-center justify-center rounded-sm text-gray-500 hover:bg-gray-100"
             >
