@@ -115,4 +115,22 @@ test.describe("生徒別メモ一覧画面(T-064)", () => {
     await expect(page.getByText("メモを削除しました")).toBeVisible();
     await expect(page.getByText("算数メモ(改訂)")).not.toBeVisible();
   });
+
+  test("メニューから直接開くと、クラスは既定選択・生徒は未選択の状態で表示され、生徒を選ぶとメモが見られる", async ({
+    page,
+  }) => {
+    await signUpAndLogin(page);
+    await createClass(page, "1", "1年1組");
+    await importStudents(page, "1年1組", "1,生徒A");
+
+    await page.goto("/classes");
+    await page.getByRole("link", { name: "生徒別メモ一覧" }).click();
+
+    await expect(page).toHaveURL(/\/memos\/students$/);
+    await expect(page.getByLabel("クラス")).toHaveValue(/./);
+    await expect(page.getByText("生徒を選択してください")).toBeVisible();
+
+    await page.getByLabel("生徒").selectOption({ label: "生徒A" });
+    await expect(page.getByText("まだメモがありません")).toBeVisible();
+  });
 });

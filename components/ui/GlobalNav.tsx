@@ -24,7 +24,8 @@ export function GlobalNav({ navItems, currentPath, onLogout }: GlobalNavProps) {
     <aside className="flex h-screen w-60 shrink-0 flex-col overflow-y-auto border-r border-gray-200 bg-white">
       <nav aria-label="メインナビゲーション" className="flex flex-1 flex-col gap-1 p-4">
         {navItems.map((item) => {
-          const active = currentPath === item.href;
+          const active =
+            currentPath === item.href || currentPath.startsWith(`${item.href}/`);
           const Icon = item.icon;
           return (
             <a
