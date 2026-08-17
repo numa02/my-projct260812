@@ -13,10 +13,9 @@
 - [x] **T-004** Supabaseプロジェクトを作成し、Supabase CLIをローカルに連携する
   - DoD: `supabase start` でローカルスタックが起動し、Studioにアクセスできる
   - 注記: 今回はローカルスタックの連携のみ実施。クラウド側のSupabaseプロジェクト作成・`supabase link`は未実施(要ダッシュボード操作のため別途)
-- [ ] **T-005** Cloudflare Pagesへのデプロイ設定を行う
+- [ ] **T-005** Vercelへのデプロイ設定を行う
   - DoD: mainブランチの変更が自動デプロイされ、疎通確認(トップページ表示)ができる
-  - 注記: T-079実施時に判明したブロッカーあり。詳細はT-079の注記を参照
-  - 進捗: `@opennextjs/cloudflare` + `wrangler` の設定ファイル(`open-next.config.ts`, `wrangler.jsonc`)を用意し、`npm run build`→`opennextjs-cloudflare build`→ローカルpreview(`wrangler dev`)まで疎通確認済み。GitHub連携・Cloudflareアカウントでの自動デプロイ設定は未実施(要ダッシュボード操作のため別途)。DoD未達のため未チェック
+  - 注記(2026-08-17): 当初Cloudflare Pagesを対象にしていたが、T-079で判明したNext.js 16の`proxy.ts`(Node.jsランタイム固定)と`@opennextjs/cloudflare`アダプタの非互換ブロッカーが解消の見込みが立たなかったため、Vercelへ変更した。Vercelはmiddleware/proxyのNode.jsランタイムをネイティブサポートしているため、このブロッカー自体が発生しない。あわせて、Hono側で秘密鍵取得にCloudflare Workers専用API(`getCloudflareContext()`)を使っていた箇所を`process.env`ベースに修正済み(`lib/hono-server/routes/ai.ts`)。Cloudflare関連の設定ファイル(`wrangler.jsonc`, `open-next.config.ts`, `lib/hono-server/cloudflare-env.secrets.d.ts`)と`package.json`のCloudflare専用scripts/devDependenciesは現時点では未整理(削除しても実害はないが、Vercelデプロイ自体の可否には影響しないため後回し)。GitHub連携・Vercelアカウントでの自動デプロイ設定は未実施(要ダッシュボード操作のため別途)。DoD未達のため未チェック
 - [x] **T-006** Vitest・React Testing Library・Playwrightをセットアップする
   - DoD: それぞれのサンプルテストが1本ずつ通る
 
@@ -143,6 +142,7 @@
   - 注記: 「戻る」導線は遷移元を`from`クエリパラメータで受け取る簡易的な仕組みとして実装(design.mdに実装パターンの明記なし)。週次時間割画面・生徒名簿画面からの遷移では`from`を付与済み。要件定義書F7は「授業記録画面から生徒別メモ一覧画面に遷移した場合の戻る」にも言及しているが、screens.mdの授業記録画面の構成要素には生徒別メモ一覧への遷移導線が明記されていないため、本実装では追加していない(ドキュメント間の未解消の食い違いとして記録)
 - [x] **T-064** 生徒別メモ一覧画面(F7)
   - DoD: 画面内のクラス選択で生徒選択の候補が絞り込まれる(`useClassOptions()`、T-024bを利用)。日付順/教科別表示切替、編集・削除・共有区分切替が動作する
+  - 追記(2026-08-17): ナビゲーションメニューにも項目を追加し、`/memos/students`(IDなし)で直接開けるようにした。ルートを`students/[id]`から`students/[[...id]]`(オプショナルキャッチオール)に変更し、IDがない場合はクラス・生徒とも未選択(先頭のクラスのみ既定選択)から始まる。生徒名簿からの遷移時のみ表示される「戻る」導線は、メニューからの直接遷移時は表示されない
 - [x] **T-065** 所感画面の骨格(タブ切替・共通クラス/生徒選択)(F9, F10, F11)
   - DoD: 「生成」「履歴」の2タブを持つ1画面として実装され、画面内のクラス選択・生徒選択がタブ間で共有される(タブを切り替えても選択状態が保持される)。`useClassOptions()`(T-024b)を利用する
   - 注記: 画面への入口として、生徒名簿画面の各行に所感アイコンリンク(`/comments/students/[id]`、生徒別メモ一覧のリンクと同じ「[id]は初期選択のヒント」パターン)を追加した。screens.md/user-flow.mdには本画面への遷移導線が明記されていなかったため、design.mdのルーティング定義([id]付きの単一ルート)から妥当な入口として実装時に補った。生成・履歴タブの中身は準備中のプレースホルダーで、実装はT-066a/T-066b/T-067で行う
@@ -182,9 +182,11 @@
   - 注記: 週次時間割画面の「この授業を記録する」から授業記録画面への遷移も経由させ、画面間連携を含めた一連の流れとして実装した(`e2e/golden-path.spec.ts`)。design.mdの方針通りAIプロバイダ呼び出しは`page.route()`でモック
 - [x] **T-078** 上書き確認ダイアログ系のE2Eを2〜3本実装する
   - 注記: 所感生成タブの上書き確認(T-066a)・所感履歴タブの上書き確認(T-067)に加え、時間割マスタ設定・一括モードでの「マスごとのクラス設定を統一しますか」確認(T-058)を新規に追加し、計3本とした。この3本目の追加により、一括モード保存成功後にdraftSlotsがサーバー保存内容と同期されず、教科担任制モードに切り替えると古いクラス値が表示される状態管理バグを発見・修正した(`TimetableMasterForm.tsx`のdoSave)
-- [ ] **T-079** 本番ビルド・Cloudflare Pages最終デプロイを確認する
-  - DoD: 本番ビルド(`npm run build`)は継続してグリーン。実デプロイはブロッカーのため未達
-  - **ブロッカー(要対応方針決定)**: `npm run preview`(`opennextjs-cloudflare build`)がビルド段階で失敗する。原因はNext.js 16.3.1の`proxy.ts`(旧`middleware.ts`)がNode.jsランタイム専用に固定されたこと(`export const runtime = "edge"`を付与するとNext.js自身が「Proxyは常にNode.jsランタイムで動作する」とビルドエラーにする)と、`@opennextjs/cloudflare`(現時点の最新1.20.2)がNode.js middlewareを明示的に拒否する(`Node.js middleware is not currently supported`)ことの組み合わせによる。`@opennextjs/cloudflare`の`package.json`は`next: ">=16.2.11"`をpeerDependencyとして許容範囲に含めており対応意図はあるようだが、実際のビルド時チェックは追いついていない模様(アップストリームの既知ギャップの可能性)。調査の過程で`esbuild`が`@opennextjs/cloudflare`のビルドに必要な直接依存として不足していた点は補った(devDependenciesに追加、`npm install-scripts approve`でesbuild/fsevents/unrs-resolver/workerdの postinstall を許可済み)ため、依存関係自体は解決済み。対応方針(a. `@opennextjs/cloudflare`の将来アップデートを待つ、b. `proxy.ts`をやめてページ/レイアウト側の認証ガードに置き換える大規模リファクタ、c. 他のデプロイ手段を検討、等)は保留し、次回着手時にユーザーと相談する
+- [ ] **T-079** 本番ビルド・Vercel最終デプロイを確認する
+  - DoD: 本番ビルド(`npm run build`)は継続してグリーン。実デプロイの疎通確認(Vercel上でログイン・所感生成まで一通り動作すること)
+  - 経緯(2026-08-17更新): 当初Cloudflare Pagesでの本番デプロイを試みたが、`npm run preview`(`opennextjs-cloudflare build`)がビルド段階で失敗するブロッカーが判明していた。原因はNext.js 16.3.1の`proxy.ts`(旧`middleware.ts`)がNode.jsランタイム専用に固定されたこと(`export const runtime = "edge"`を付与するとNext.js自身が「Proxyは常にNode.jsランタイムで動作する」とビルドエラーにする)と、`@opennextjs/cloudflare`(当時の最新1.20.2)がNode.js middlewareを明示的に拒否する(`Node.js middleware is not currently supported`)ことの組み合わせによるもので、アップストリームの既知ギャップの可能性が高く自己解決の見込みが立たなかった。ユーザーと相談の上、ホスティングをVercelに変更した(CLAUDE.md・docs/requirements.md・docs/design.md・T-005も合わせて更新済み)。VercelはNode.jsランタイムのmiddleware/proxyをネイティブサポートしているため、このブロッカーは発生しない
+  - デプロイ前チェックで判明した追加の修正: Hono側の秘密鍵取得(`lib/hono-server/routes/ai.ts`の`getMasterKey()`)がCloudflare Workers専用API `getCloudflareContext()` に依存しており、Vercel上では動作しない状態だった。`process.env.ENCRYPTION_MASTER_KEY`を直接参照する実装に修正済み。Vercel側の環境変数(`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `ENCRYPTION_MASTER_KEY`)の設定、および本番用Supabaseプロジェクトの用意・マイグレーション適用はダッシュボード操作が必要なため未実施
+  - 残タスク: Cloudflare関連ファイル(`wrangler.jsonc`, `open-next.config.ts`, `lib/hono-server/cloudflare-env.secrets.d.ts`)と`package.json`のCloudflare専用scripts(`preview`/`deploy`/`upload`/`cf-typegen`)・devDependencies(`@opennextjs/cloudflare`, `wrangler`)の削除(実害はないが紛らわしいため整理推奨、Vercelデプロイの可否とは無関係)
 
 ## 後回し(MVP後)
 

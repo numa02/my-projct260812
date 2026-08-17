@@ -1,6 +1,6 @@
 # 技術設計書:週間時間割・生徒メモ・所感自動生成ツール
 
-`docs/requirements.md`(要件定義書)と`docs/data-model.md`(データモデル案)をもとにした技術設計書。データモデルはdata-model.mdの内容を正とし、本書ではそれをDDLレベルまで具体化する。要件が実装方式を明示していない箇所は、非機能要件(RLSによるテナント分離、Cloudflare/Supabase無料プラン運用、JST固定等)から逆算して選定し、理由を明記する。
+`docs/requirements.md`(要件定義書)と`docs/data-model.md`(データモデル案)をもとにした技術設計書。データモデルはdata-model.mdの内容を正とし、本書ではそれをDDLレベルまで具体化する。要件が実装方式を明示していない箇所は、非機能要件(RLSによるテナント分離、Vercel/Supabase無料プラン運用、JST固定等)から逆算して選定し、理由を明記する。
 
 本書は初版に対するシニアレビューを受け、以下の4点をユーザーに再ヒアリングした上での改訂版である。
 
@@ -21,11 +21,11 @@
 - `teacher_profile`行の作成契機が未定義だった点 → `auth.users`へのINSERTトリガーで自動作成するよう明記(§4)
 - data-model.mdの`TEACHER.email`とdesign.mdの`teacher_profile`テーブルの不整合 → `email`は`auth.users`側にのみ持たせ、アプリ側テーブルには複製しないと明記(§4)
 - APIキー暗号化のIV・AAD(コンテキストバインディング)が未定義だった点 → 実装方針を明記(§4)
-- CORS方針が未定義だった点 → Honoを別Workersではなく同一Next.jsアプリ内にマウントする構成にしたことで、そもそもクロスオリジンにならず問題自体が消滅(§1)
+- CORS方針が未定義だった点 → Honoを別のバックエンドサービスではなく同一Next.jsアプリ内にマウントする構成にしたことで、そもそもクロスオリジンにならず問題自体が消滅(§1)
 
 ## 1. アーキテクチャ概要
 
-**Next.js単体アプリケーション**として構成する。Honoは別デプロイのCloudflare Workersではなく、Next.js App RouterのRoute Handler(`app/api/[[...route]]/route.ts`)内にマウントする。Pages Functionsの実行基盤自体がCloudflare Workers runtimeであるため、要件が指定する「Cloudflare Pages/Workersを用いる」は満たしたまま、デプロイ単位を1つに減らせる。
+**Next.js単体アプリケーション**として構成する。Honoは別デプロイのバックエンドサービスではなく、Next.js App RouterのRoute Handler(`app/api/[[...route]]/route.ts`)内にマウントする。これによりフロントエンド・バックエンドを1つのVercelデプロイに統合できる(当初はCloudflare Pages/Workersを想定していたが、Next.js 16の`proxy.ts`がNode.jsランタイム固定になったことに伴う非互換のためVercelに変更。`docs/tasks.md` T-005/T-079参照。この節の構成自体は変わらない)。
 
 原則は次の1文に集約される:**秘密情報に触れる操作だけがHonoを経由し、それ以外の全CRUDはブラウザから`supabase-js`で直接Supabaseへアクセスする。**
 
@@ -35,7 +35,7 @@ flowchart LR
         UI["Next.js App Router"]
     end
 
-    subgraph Pages["Cloudflare Pages (単一デプロイ)"]
+    subgraph Pages["Vercel (単一デプロイ)"]
         Route["Next.js Route Handler\n(= Hono, /api/settings/ai-provider, /api/comments/generate のみ)"]
     end
 
@@ -61,7 +61,7 @@ flowchart LR
 - **認証はSupabase Authに委譲し、Cookieベースセッションを使う。** `@supabase/ssr`を用いてセッションをCookieに保持することで、Next.jsのServer ComponentsやEdge Middleware(`proxy.ts`。Next.js 16でmiddleware.tsから改名)からもログイン状態を判定できる。初版ではブラウザのみが把握するセッション(localStorage相当)を前提にmiddlewareでガードする設計になっており、Edge側からlocalStorageは読めないため実際にはガードが機能しない矛盾があった。Cookieベースにすることでこの矛盾を解消し、F8(未ログイン時のリダイレクト)を実際にサーバー側で保証する。
 - **単純CRUDはHonoを経由しない。** クラス・生徒・科目・時間割・メモ・所感の読み書きは、ブラウザの`supabase-js`クライアントがユーザーのセッション(JWT)を使って直接PostgRESTへアクセスする。RLSポリシーがテナント分離の最終防衛線であり、かつ唯一の防衛線になる(アプリ層のフィルタ漏れという回避不能な依存を作らない)。
 - **複数テーブルにまたがる操作はPostgres関数(RPC)に集約する。** 組番号の発行とクラス作成、クラス削除に伴う時間割参照のクリーンアップ、CSV一括登録、時間割マスタ保存時の週次個別変更の巻き戻し判定、データエクスポートは、いずれも複数行・複数テーブルを一貫性を保ったまま更新する必要がある。これらをHonoハンドラ内での複数回のAPI呼び出しとして実装すると、途中で失敗した場合に部分的な更新が残ってしまう(初版の問題点)。Postgres関数として実装すれば、1回の呼び出しが1つのDBトランザクションになり、この問題が構造的に起きない。Postgres関数はデフォルトで`SECURITY INVOKER`(呼び出し元の権限で実行)であるため、Honoを経由しなくてもRLSはそのまま効く。したがってこれらもブラウザから`supabase.rpc()`で直接呼び出せる。
-- **Honoが担当するのは、秘密情報が絡む処理だけに絞る。** 具体的には(a)AIプロバイダのAPIキーをサーバー側で暗号化して保存する処理、(b)保存済みのAPIキーを復号して外部AIプロバイダを呼び出す処理、の2系統のみ。暗号化鍵(Workers Secrets)はPostgres側には一切置かず、DBが仮に全件漏洩してもこの鍵だけは漏れない、という多層防御を維持するため、この2つだけは今後もHono(Workers runtime)側に残す。
+- **Honoが担当するのは、秘密情報が絡む処理だけに絞る。** 具体的には(a)AIプロバイダのAPIキーをサーバー側で暗号化して保存する処理、(b)保存済みのAPIキーを復号して外部AIプロバイダを呼び出す処理、の2系統のみ。暗号化鍵(Vercelの環境変数)はPostgres側には一切置かず、DBが仮に全件漏洩してもこの鍵だけは漏れない、という多層防御を維持するため、この2つだけは今後もHono側に残す。
 - **同一オリジンになるためCORS設定が不要になる。** 初版はフロント(Cloudflare Pages)とAPI(別のCloudflare Workers)が別オリジンになる想定で、CORS方針が未定義のまま残っていた。Honoを同一Next.jsアプリ内にマウントする本構成では、そもそもクロスオリジンリクエストが発生しないためこの問題は解消される。
 - **最低限のCSPヘッダーを設定する。** メモ・所感の本文は自由記述のテキストで、Reactの自動エスケープによりXSSは基本的に防がれるが、`default-src 'self'`を基本としたCSPヘッダーをNext.jsのレスポンスに付与し、多層防御としておく(将来Markdownレンダリングや`dangerouslySetInnerHTML`を追加する際の保険にもなる)。
 
@@ -71,7 +71,7 @@ flowchart LR
 |---|---|---|
 | フロントエンド | Next.js (App Router) + TypeScript | 要件定義書で指定。認証必須のCRUD画面が中心でSEO要件がないため、ほぼ全画面をクライアントコンポーネントとして実装し、SSR/RSCには依存しない。ファイルベースルーティングでF1〜F14の画面数に素直に対応させる |
 | バックエンド(最小構成) | Hono + TypeScript(Next.jsのRoute Handlerとしてマウント) | 要件定義書で「バックエンドはHono」と指定されているため、独立したフレームワークとして残すが、担当範囲は§1の通り最小化した。`app.fetch`がWeb標準のFetch API形状(Request→Response)に一致するため、Next.jsのRoute HandlerのGET/POST/PUTハンドラにそのまま割り当てられる |
-| ホスティング | Cloudflare Pages(Next.js本体+Hono両方を含む単一デプロイ)。ビルドアダプタは`@opennextjs/cloudflare`(実装時点でCloudflare公式が推奨する後継ツール。`@cloudflare/next-on-pages`は不採用) | 要件定義書で指定。初版は「フロント用Pages」「API用Workers」の2デプロイだったが、Honoの担当範囲縮小により1デプロイに統合し、運用対象を減らした。`@opennextjs/cloudflare`はNext.js App Routerとの互換性が高く、`next-on-pages`と異なり全ルートでのedge runtime指定が不要 |
+| ホスティング | Vercel(Next.js本体+Hono両方を含む単一デプロイ) | 要件定義書は当初Cloudflare Pages/Workersを指定していたが、初版で「フロント用Pages」「API用Workers」の2デプロイだったものをHonoの担当範囲縮小により1デプロイに統合した後、実装時点でNext.js 16の`proxy.ts`がNode.jsランタイム固定になったことと`@opennextjs/cloudflare`アダプタの対応が追いつかない非互換が判明したため、Vercelに変更した(`docs/tasks.md` T-005/T-079参照)。Next.js本体の開発元でもあり追加のビルドアダプタが不要で、単一デプロイという方針自体は変わらない |
 | DB・認証 | Supabase (PostgreSQL + Supabase Auth + RLS) | 要件定義書で指定 |
 | DBアクセス方式 | `@supabase/supabase-js`(PostgREST経由、ブラウザから直接) + **Postgres関数(RPC)** | 単純CRUDはPostgRESTへの直接アクセス、複数テーブルにまたがる操作やビジネスロジックはPostgres関数に寄せる。これによりHonoというアプリケーション層を経由せずに「RLSで保護されたアトミックな操作」が実現でき、初版で懸念だった非アトミック性とAPI層の肥大化を同時に解消する。代償として、ビジネスロジックの一部がTypeScriptではなくPL/pgSQLで書かれることになり、DB側のロジックのテスト・デバッグには別スキルセットが要る(§7で許容コストとして明記) |
 | 認証セッション管理 | `@supabase/ssr`(Cookieベース) | Next.jsのMiddleware・Server Componentからもログイン状態を判定できる必要があるため。ブラウザのみが保持するセッションでは§1で述べた矛盾が生じる |
@@ -79,7 +79,7 @@ flowchart LR
 | フォーム・バリデーション | react-hook-form + zod | `packages/`ではなく単一アプリ内の`shared/schemas`にzodスキーマを置き、フロントのバリデーション(`zodResolver`)とRPC呼び出し前のクライアント側事前チェックの両方で使い回す。DB側の制約(NOT NULL、CHECK、RLS)が最終防衛線であることに変わりはない |
 | 日付・週番号計算 | date-fns + date-fns-tz | 非機能要件で日付計算を常にJST固定と定めているため、サーバー実行環境のTZに依存しないライブラリが必要 |
 | AIプロバイダ呼び出し | 各プロバイダ公式REST APIへの`fetch`直呼び出し(共通アダプタ層でラップ、Hono側のみ) | ストリーミング等の高度機能は不要で、「プロンプトを送って完成文を1回受け取る」だけの単純な呼び出しのため、SDK依存を増やさない。3社分のリクエスト/レスポンス形式・エラー形式の変更に自前で追従するコストは継続的に発生する点は許容する |
-| APIキー暗号化 | Web Crypto API (`crypto.subtle`, AES-256-GCM、IVは`crypto.getRandomValues`で暗号化ごとに12byte生成、AADに`teacher_id`を付与) | Workers runtime標準のWeb Crypto APIのみで完結。AADに`teacher_id`を付与することで、万一暗号文が別の行にコピーされても(DBバグ・SQLインジェクション等)本来の所有者以外では復号時の認証タグ検証が失敗し復号できない、というコンテキストバインディングを持たせた(初版で欠けていた対策) |
+| APIキー暗号化 | Web Crypto API (`crypto.subtle`, AES-256-GCM、IVは`crypto.getRandomValues`で暗号化ごとに12byte生成、AADに`teacher_id`を付与) | Node.js/Edge双方のランタイムで利用できるWeb標準のWeb Crypto APIのみで完結。AADに`teacher_id`を付与することで、万一暗号文が別の行にコピーされても(DBバグ・SQLインジェクション等)本来の所有者以外では復号時の認証タグ検証が失敗し復号できない、というコンテキストバインディングを持たせた(初版で欠けていた対策) |
 | プロジェクト構成 | **単一Next.jsアプリ(モノレポ・pnpm workspacesは廃止)** | 初版はapps/web・apps/api・packages/sharedの3分割モノレポだったが、Honoの担当範囲が3エンドポイントまで縮小したため、独立デプロイを分ける理由がなくなった。想定規模(個人〜身内数人)に対してモノレポ管理コストは見合わないという再ヒアリングの結論を反映し、単一アプリ内のディレクトリ分割(`shared/`)で十分とした |
 | 単体・結合テスト | Vitest + React Testing Library | 変更なし |
 | E2Eテスト | Playwright(スコープを縮小、§7参照) | 変更なし。ただし網羅範囲は絞る |
@@ -103,7 +103,7 @@ flowchart LR
 │   │   │   └── weekly/page.tsx
 │   │   ├── memos/
 │   │   │   ├── record/page.tsx         # 授業記録(F6)
-│   │   │   └── students/[id]/page.tsx  # 生徒別メモ一覧(F7)。クラス選択は画面内state、[id]は初期選択のヒントとして使う
+│   │   │   └── students/[[...id]]/page.tsx  # 生徒別メモ一覧(F7)。クラス選択は画面内state、[[...id]]は生徒名簿からの初期選択ヒント(任意)。ナビゲーションメニューから直接開く場合はIDなし(`/memos/students`)
 │   │   ├── comments/
 │   │   │   └── students/[id]/page.tsx  # 所感画面(F9-F11)。生成/履歴はページ内タブ(別ルートに分割しない)。クラス・生徒選択はタブ間で共有
 │   │   └── settings/
@@ -985,7 +985,7 @@ CI上でのAIプロバイダ実呼び出しは行わない(`AiAdapter`をモッ�
 再ヒアリングで「対策しない」と決めたリスクを、実装時に再度議論が蒸し返されないよう明記しておく。
 
 - **Supabase無料プランの自動一時停止**: 一定期間アクセスがないとプロジェクトが一時停止し、次回アクセス時に起動遅延が発生しうる。学期末に利用が集中し閑散期がある、という本ツールの利用パターンでは実際に起こりうるが、対策コード(定期ping等)は実装しない。教員向けに「久しぶりにアクセスした場合は表示に時間がかかることがある」旨を注記するかどうかは、実装時の余力に応じて判断する。
-- **単一の暗号化マスターキー漏洩時のブラストラディウス**: 全教員のAPIキー暗号化に単一のWorkers Secretsを使う(要件通り)。AAD付与によりciphertextの入れ替えには対策したが、マスターキー自体が漏洩すれば全教員分が同時に復号可能になる点は変わらない。ローテーション手順は設計しない(想定利用規模でのリスク受容)。
+- **単一の暗号化マスターキー漏洩時のブラストラディウス**: 全教員のAPIキー暗号化に単一のVercel環境変数を使う(要件通り)。AAD付与によりciphertextの入れ替えには対策したが、マスターキー自体が漏洩すれば全教員分が同時に復号可能になる点は変わらない。ローテーション手順は設計しない(想定利用規模でのリスク受容)。
 - **手動SQL・マイグレーション運用の事故防止プロセス**: ステージング環境やCI経由でのマイグレーション適用手順は本書のスコープ外とする。物理削除+自動バックアップなしという要件を踏まえると、本来は運用手順として明文化すべきだが、個人開発の範囲では都度の注意に委ねる。
 - **AIプロバイダのデータ保持・学習利用ポリシーの教員への周知**: 仮名化しているとはいえ、生徒に関する会話文(メモ内容)を外部AIプロバイダへ送信する。各社のAPI利用規約(学習への不使用等)を教員が事前に確認できるよう、設定画面にプロバイダ公式ポリシーへのリンクを掲示する程度の対応は望ましいが、規約内容の代弁・保証は行わない。本書では実装内容として設計せず、公開前に確認すべきTODOとして残す。
 - **利用規模が拡大した場合に最初に壊れる箇所の見通し**: 単一の暗号化マスターキー、レート制限の不在、AIプロバイダ許可リストの手動運用などは、想定規模(個人〜身内数人)では問題にならないが、利用者が大きく増えた場合はいずれも作り直しが必要になる。現時点では深掘りしておらず、拡大の兆しが出た時点で個別に再設計する。

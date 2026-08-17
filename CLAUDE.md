@@ -9,7 +9,7 @@
 - フロントエンド: Next.js (App Router) + TypeScript。ほぼ全画面をクライアントコンポーネントとして実装
 - バックエンド: Hono(Next.jsのRoute Handler `app/api/[[...route]]/route.ts` にマウント。秘密情報を扱う2系統3エンドポイントのみ担当)
 - DB・認証: Supabase (PostgreSQL + Supabase Auth + RLS)、セッションは `@supabase/ssr` のCookieベース
-- ホスティング: Cloudflare Pages(単一デプロイ)
+- ホスティング: Vercel(単一デプロイ。当初Cloudflare Pagesを検討したが、Next.js 16の`proxy.ts`がNode.jsランタイム固定になったこととOpenNext Cloudflareアダプタの対応が追いつかない非互換があったため変更。詳細は`docs/tasks.md` T-005/T-079参照)
 - 状態管理: TanStack Query(`supabase-js` の呼び出し結果のキャッシュ用途)
 - フォーム: react-hook-form + zod(`shared/schemas`)
 - 日付・週番号: date-fns + date-fns-tz(JST固定)
