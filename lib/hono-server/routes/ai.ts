@@ -1,5 +1,4 @@
 import { Hono } from "hono";
-import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { aiProviderSettingInputSchema } from "@/shared/schemas";
 import { isSupportedModel, type AiProvider } from "@/shared/ai-models";
@@ -9,8 +8,7 @@ import { aiAdapters, AiProviderError } from "../services/ai-adapters";
 export const aiRoutes = new Hono();
 
 async function getMasterKey(): Promise<string> {
-  const { env } = await getCloudflareContext({ async: true });
-  const masterKey = env.ENCRYPTION_MASTER_KEY;
+  const masterKey = process.env.ENCRYPTION_MASTER_KEY;
   if (!masterKey) {
     throw new Error("ENCRYPTION_MASTER_KEY is not configured");
   }
