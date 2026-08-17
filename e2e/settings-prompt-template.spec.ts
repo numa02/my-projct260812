@@ -51,11 +51,14 @@ async function recordMemo(page: Page, dateISO: string, period: number, content: 
   await expect(page.getByText("メモを保存しました")).toBeVisible();
 }
 
-async function openCommentsForStudentA(page: Page): Promise<void> {
+async function openCommentsForStudentA(page: Page) {
   await page.goto("/students");
   await page.getByLabel("クラス").selectOption({ label: "1年1組" });
   await page.getByRole("link", { name: "生徒Aの所感" }).click();
-  await expect(page).toHaveURL(/\/comments\/students\//);
+  await expect(page).toHaveURL(/\/comments\/class\//);
+  await page.getByLabel("開始日").fill("2026-04-01");
+  await page.getByLabel("終了日").fill("2026-04-30");
+  return page.getByRole("group", { name: "生徒Aの行" });
 }
 
 test.describe("設定画面・プロンプトひな形編集(T-069)", () => {
@@ -101,11 +104,10 @@ test.describe("設定画面・プロンプトひな形編集(T-069)", () => {
       await route.fulfill({ json: { rawText: "生成結果" } });
     });
 
-    await openCommentsForStudentA(page);
-    await page.getByLabel("開始日").fill("2026-04-01");
-    await page.getByLabel("終了日").fill("2026-04-30");
-    await page.getByRole("button", { name: "生成" }).click();
-    await expect(page.getByLabel("生成結果")).toHaveValue("生成結果");
+    const row = await openCommentsForStudentA(page);
+    await row.getByRole("button", { name: "AIで生成する" }).click();
+    await row.getByRole("button", { name: "生成して所感欄に反映" }).click();
+    await expect(row.getByLabel("生徒Aの所感")).toHaveValue("生成結果");
 
     expect(capturedPrompt).toContain("カスタムひな形マーカー");
   });
@@ -125,10 +127,9 @@ test.describe("設定画面・プロンプトひな形編集(T-069)", () => {
     await page.getByRole("button", { name: "保存" }).click();
     await expect(page.getByText("プロンプトひな形を保存しました")).toBeVisible();
 
-    await openCommentsForStudentA(page);
-    await page.getByLabel("開始日").fill("2026-04-01");
-    await page.getByLabel("終了日").fill("2026-04-30");
+    const row = await openCommentsForStudentA(page);
+    await row.getByRole("button", { name: "AIで生成する" }).click();
 
-    await expect(page.getByLabel("プロンプト")).toHaveValue(/コピー運用用カスタムマーカー/);
+    await expect(row.getByLabel("プロンプト")).toHaveValue(/コピー運用用カスタムマーカー/);
   });
 });

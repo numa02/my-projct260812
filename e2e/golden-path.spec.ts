@@ -74,20 +74,21 @@ test("サインアップからクラス作成・生徒登録・時間割設定�
   await page.goto("/students");
   await page.getByLabel("クラス").selectOption({ label: "1年1組" });
   await page.getByRole("link", { name: "生徒Aの所感" }).click();
-  await expect(page).toHaveURL(/\/comments\/students\//);
+  await expect(page).toHaveURL(/\/comments\/class\//);
 
   await page.getByLabel("開始日").fill("2026-04-01");
   await page.getByLabel("終了日").fill("2026-04-30");
-  await page.getByRole("button", { name: "生成" }).click();
-  await expect(page.getByLabel("生成結果")).toHaveValue(
+
+  const row = page.getByRole("group", { name: "生徒Aの行" });
+  await row.getByRole("button", { name: "AIで生成する" }).click();
+  await row.getByRole("button", { name: "生成して所感欄に反映" }).click();
+  await expect(row.getByLabel("生徒Aの所感")).toHaveValue(
     "授業に積極的に取り組み、着実に成長が見られました。",
   );
 
-  await page.getByRole("button", { name: "保存" }).click();
-  await expect(page.getByText("所感を保存しました")).toBeVisible();
+  await row.getByRole("button", { name: "保存" }).click();
+  await expect(page.getByText("生徒Aの所感を保存しました")).toBeVisible();
 
-  // 履歴タブに反映されていることを確認して一連の流れを締める
-  await page.getByRole("radio", { name: "履歴" }).click();
-  await expect(page.getByText("2026-04-01 〜 2026-04-30")).toBeVisible();
-  await expect(page.getByText("AI生成(直接呼び出し)")).toBeVisible();
+  // 保存後、作成方法バッジに反映されていることを確認して一連の流れを締める
+  await expect(row.getByText("AI生成(直接呼び出し)")).toBeVisible();
 });
