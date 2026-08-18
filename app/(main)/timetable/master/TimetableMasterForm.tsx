@@ -43,7 +43,14 @@ export function TimetableMasterForm({
   const { subjects } = useSubjects();
   const { showToast } = useToast();
 
-  const [mode, setMode] = useState<Mode>("bulk");
+  // 保存済みのマスに2件以上の異なるクラスがまたがっている場合は、一括モードでは
+  // 表現できない(一括モードは常に全マスへ単一のクラスを書き込む)ため、教科担任制モードで
+  // 登録されたものと判断し、その状態を初期表示に反映する
+  const initialMode: Mode =
+    new Set(initialSlots.map((s) => s.classId).filter((id): id is string => id !== null)).size > 1
+      ? "per-class"
+      : "bulk";
+  const [mode, setMode] = useState<Mode>(initialMode);
   const [draftSlots, setDraftSlots] = useState<MasterSlotState[]>(initialSlots);
   // 未選択の場合、既存データがあればそのクラス、なければ一覧の先頭を既定選択とする。
   // <select>は空文字の選択肢がないと表示上は先頭を選択済みにしてしまうため、実際の状態もそれに合わせる

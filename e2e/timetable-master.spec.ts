@@ -121,6 +121,33 @@ test.describe("時間割マスタ設定画面(T-058, T-059, T-060)", () => {
     await expect(page.getByLabel("月曜1限のクラス")).toHaveValue(/./);
   });
 
+  test("教科担任制モードで登録したユーザーが再度開くと、教科担任制モードのまま表示される(`docs/bugs.md` BUG-004再発防止)", async ({
+    page,
+  }) => {
+    await signUpAndLogin(page);
+    await createClass(page, "1", "1年1組");
+    await createClass(page, "2", "2年1組");
+    await createSubject(page, "国語");
+    await createSubject(page, "算数");
+
+    await page.goto("/timetable/master");
+    await page.getByRole("radio", { name: "教科担任制モード" }).click();
+    await page.getByLabel("月曜1限の科目").selectOption({ label: "国語" });
+    await page.getByLabel("月曜1限のクラス").selectOption({ label: "1年1組" });
+    await page.getByLabel("火曜2限の科目").selectOption({ label: "算数" });
+    await page.getByLabel("火曜2限のクラス").selectOption({ label: "2年1組" });
+    await page.getByLabel("起算日").fill("2026-04-06");
+    await page.getByRole("button", { name: "保存" }).click();
+    await expect(page.getByText("時間割マスタを保存しました")).toBeVisible();
+
+    // ページを再読み込みして改めて開くと、保存済みデータ(マスごとに異なるクラス)から
+    // 教科担任制モードだったと判断され、一括モードにリセットされずそのまま表示される
+    await page.reload();
+    await expect(page.getByRole("radio", { name: "教科担任制モード", checked: true })).toBeVisible();
+    await expect(page.getByLabel("月曜1限のクラス").locator("option:checked")).toHaveText("1年1組");
+    await expect(page.getByLabel("火曜2限のクラス").locator("option:checked")).toHaveText("2年1組");
+  });
+
   test("一括モードで保存すると、既存のマスごとのクラス設定と異なる場合は上書き確認ダイアログが表示される", async ({
     page,
   }) => {
