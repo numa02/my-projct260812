@@ -178,6 +178,67 @@ test.describe("所感管理画面(クラス単位一覧)", () => {
     await expect(row.getByText("AI生成(直接呼び出し)")).toBeVisible();
   });
 
+  test("APIキー設定済みでも、教員が選べば「プロンプトを作成」を使える", async ({ page, context }) => {
+    await context.grantPermissions(["clipboard-read", "clipboard-write"]);
+
+    await signUpAndLogin(page);
+    await createClass(page, "1", "1年1組");
+    await createSubject(page, "国語");
+    await importStudents(page, "1年1組", "1,生徒A");
+    await setUpMaster(page, "2026-04-06");
+    await recordMemo(page, "2026-04-06", 1, "音読が上手にできました");
+    await setApiKey(page);
+
+    await page.goto("/comments/class");
+    await openPeriod(page, "2026-04-01", "2026-04-30");
+
+    const row = page.getByRole("group", { name: "生徒Aの行" });
+    await row.getByRole("button", { name: "AIで生成する" }).click();
+
+    // 既定は「AIで直接生成」だが、教員が「プロンプトを作成」に切り替えられる
+    await expect(row.getByRole("radio", { name: "AIで直接生成", checked: true })).toBeVisible();
+    await row.getByRole("radio", { name: "プロンプトを作成" }).click();
+
+    const promptField = row.getByLabel("プロンプト");
+    await expect(promptField).toBeVisible();
+    await expect(promptField).toHaveValue(/1-01-01/);
+
+    await row.getByLabel("AIの応答を貼り付け").fill("プロンプトコピー運用で得た所感文です。");
+    await row.getByRole("button", { name: "所感欄に反映" }).click();
+    await expect(row.getByLabel("生徒Aの所感")).toHaveValue("プロンプトコピー運用で得た所感文です。");
+
+    await row.getByRole("button", { name: "保存" }).click();
+    await expect(page.getByText("生徒Aの所感を保存しました")).toBeVisible();
+    await expect(row.getByText("AI生成(プロンプトコピー運用)")).toBeVisible();
+  });
+
+  test("APIキー未設定で「AIで直接生成」を選ぶと、設定を促す案内が表示され生成はできない", async ({
+    page,
+  }) => {
+    await signUpAndLogin(page);
+    await createClass(page, "1", "1年1組");
+    await createSubject(page, "国語");
+    await importStudents(page, "1年1組", "1,生徒A");
+    await setUpMaster(page, "2026-04-06");
+    await recordMemo(page, "2026-04-06", 1, "音読が上手にできました");
+
+    await page.goto("/comments/class");
+    await openPeriod(page, "2026-04-01", "2026-04-30");
+
+    const row = page.getByRole("group", { name: "生徒Aの行" });
+    await row.getByRole("button", { name: "AIで生成する" }).click();
+
+    // 既定は「プロンプトを作成」だが、教員が「AIで直接生成」に切り替えられる
+    await expect(row.getByRole("radio", { name: "プロンプトを作成", checked: true })).toBeVisible();
+    await row.getByRole("radio", { name: "AIで直接生成" }).click();
+
+    await expect(
+      row.getByText("APIキーが未設定のため、直接生成はできません"),
+    ).toBeVisible();
+    await expect(row.getByRole("link", { name: "AIプロバイダ設定へ" })).toBeVisible();
+    await expect(row.getByRole("button", { name: "生成して所感欄に反映" })).not.toBeVisible();
+  });
+
   test("対象期間内に共有メモが1件もない場合、AI生成セクションで送信可能なメモが存在しない旨が表示される", async ({
     page,
   }) => {
