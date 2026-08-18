@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import { useAiProviderSettings } from "@/hooks/useAiProviderSettings";
 import { usePromptTemplate } from "@/hooks/usePromptTemplate";
 import { useSharedMemosForPeriod } from "@/hooks/useSharedMemosForPeriod";
@@ -129,6 +130,9 @@ export function CommentAiAssist({
             variant="info"
             message="APIキーが未設定のため、プロンプトをコピーして外部のAIサービスに貼り付けてください。「共有する」区分のメモは仮名化された状態でプロンプトに含まれます"
           />
+          <Link href="/settings/ai-provider" className="text-sm text-gray-700 underline hover:text-gray-900">
+            APIキーを登録すると、ここから直接生成できるようになります(AIプロバイダ設定へ)
+          </Link>
           <Textarea label="プロンプト" value={prompt} readOnly rows={6} />
           <Button variant="outline" size="sm" className="self-start" onClick={handleCopyPrompt}>
             プロンプトをコピー
