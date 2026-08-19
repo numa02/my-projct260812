@@ -187,7 +187,8 @@
   - DoD: 本番ビルド(`npm run build`)は継続してグリーン。実デプロイの疎通確認(Vercel上でログイン・所感生成まで一通り動作すること)
   - 経緯(2026-08-17更新): 当初Cloudflare Pagesでの本番デプロイを試みたが、`npm run preview`(`opennextjs-cloudflare build`)がビルド段階で失敗するブロッカーが判明していた。原因はNext.js 16.3.1の`proxy.ts`(旧`middleware.ts`)がNode.jsランタイム専用に固定されたこと(`export const runtime = "edge"`を付与するとNext.js自身が「Proxyは常にNode.jsランタイムで動作する」とビルドエラーにする)と、`@opennextjs/cloudflare`(当時の最新1.20.2)がNode.js middlewareを明示的に拒否する(`Node.js middleware is not currently supported`)ことの組み合わせによるもので、アップストリームの既知ギャップの可能性が高く自己解決の見込みが立たなかった。ユーザーと相談の上、ホスティングをVercelに変更した(CLAUDE.md・docs/requirements.md・docs/design.md・T-005も合わせて更新済み)。VercelはNode.jsランタイムのmiddleware/proxyをネイティブサポートしているため、このブロッカーは発生しない
   - デプロイ前チェックで判明した追加の修正: Hono側の秘密鍵取得(`lib/hono-server/routes/ai.ts`の`getMasterKey()`)がCloudflare Workers専用API `getCloudflareContext()` に依存しており、Vercel上では動作しない状態だった。`process.env.ENCRYPTION_MASTER_KEY`を直接参照する実装に修正済み。Vercel側の環境変数(`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `ENCRYPTION_MASTER_KEY`)の設定、および本番用Supabaseプロジェクトの用意・マイグレーション適用はダッシュボード操作が必要なため未実施
-  - 残タスク: Cloudflare関連ファイル(`wrangler.jsonc`, `open-next.config.ts`, `lib/hono-server/cloudflare-env.secrets.d.ts`)と`package.json`のCloudflare専用scripts(`preview`/`deploy`/`upload`/`cf-typegen`)・devDependencies(`@opennextjs/cloudflare`, `wrangler`)の削除(実害はないが紛らわしいため整理推奨、Vercelデプロイの可否とは無関係)
+  - 残タスク(2026-08-19解消): Cloudflare関連ファイル(`wrangler.jsonc`, `open-next.config.ts`, `lib/hono-server/cloudflare-env.secrets.d.ts`)と`package.json`のCloudflare専用scripts(`preview`/`deploy`/`upload`/`cf-typegen`)・devDependencies(`@opennextjs/cloudflare`, `wrangler`)を削除済み(`npm install`で277パッケージ削減)。ビルド・lint・vitest・E2E再確認済み
+  - デプロイ環境(2026-08-19時点): GitHubリポジトリ(`numa02/my-projct260812`)は連携済み。Vercelアカウント・本番用Supabaseプロジェクトはまだ未作成で、ユーザーとダッシュボード作業を分担しながら進める
 
 ## 画面再設計
 

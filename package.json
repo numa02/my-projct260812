@@ -10,11 +10,7 @@
     "test": "vitest run",
     "test:db": "vitest run --config vitest.config.db.mts",
     "test:e2e": "playwright test",
-    "format": "prettier --write .",
-    "preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
-    "deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
-    "upload": "opennextjs-cloudflare build && opennextjs-cloudflare upload",
-    "cf-typegen": "wrangler types --env-interface CloudflareEnv cloudflare-env.d.ts"
+    "format": "prettier --write ."
   },
   "dependencies": {
     "@hookform/resolvers": "^5.9.0",
@@ -32,7 +28,6 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
-    "@opennextjs/cloudflare": "^1.20.2",
     "@playwright/test": "^1.62.1",
     "@tailwindcss/postcss": "^4",
     "@tanstack/react-query-devtools": "^5.101.4",
@@ -54,8 +49,7 @@
     "supabase": "^2.114.0",
     "tailwindcss": "^4",
     "typescript": "^5",
-    "vitest": "^4.1.10",
-    "wrangler": "^4.123.0"
+    "vitest": "^4.1.10"
   },
   "allowScripts": {
     "esbuild@0.25.4": true,
@@ -63,7 +57,6 @@
     "esbuild@0.28.1": true,
     "fsevents@2.3.3": true,
     "fsevents@2.3.2": true,
-    "unrs-resolver@1.12.2": true,
-    "workerd@1.20260811.1": true
+    "unrs-resolver@1.12.2": true
   }
 }
