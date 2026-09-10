@@ -337,6 +337,13 @@ function ComponentGallery() {
         <div className="w-[28rem]">
           <PasteOrUploadArea
             onImport={() => {}}
+            reasonLabels={{
+              MISSING_FIELD: "出席番号または氏名が空です",
+              DUPLICATE_IN_BATCH: "取り込みデータ内で出席番号が重複しています",
+            }}
+            pasteLabel="出席番号,氏名 の形式で貼り付けてください(ヘッダー行なし)"
+            fileInputAriaLabel="生徒名簿CSVファイル"
+            segmentedControlAriaLabel="生徒名簿の取り込み方法"
             errorRows={[
               { rowIndex: 3, reason: "MISSING_FIELD", name: null },
               { rowIndex: 5, reason: "DUPLICATE_IN_BATCH", name: "生徒C" },

@@ -17,6 +17,12 @@ import { useToast } from "@/components/ui/Toast";
 import { computePseudonymCode } from "@/shared/pseudonym";
 import { parseStudentRows } from "@/shared/parse-student-rows";
 
+const STUDENT_IMPORT_REASON_LABEL: Record<string, string> = {
+  MISSING_FIELD: "出席番号または氏名が空です",
+  DUPLICATE_IN_BATCH: "取り込みデータ内で出席番号が重複しています",
+  DUPLICATE_EXISTING: "既存の生徒と出席番号が重複しています",
+};
+
 export default function StudentsPage() {
   const router = useRouter();
   const { classes, isLoadingClasses, selectedClassId, setSelectedClassId } = useClassOptions();
@@ -216,6 +222,10 @@ export default function StudentsPage() {
             onImport={handleImport}
             errorRows={importErrors}
             loading={importStudents.isPending}
+            reasonLabels={STUDENT_IMPORT_REASON_LABEL}
+            pasteLabel="出席番号,氏名 の形式で貼り付けてください(ヘッダー行なし)"
+            fileInputAriaLabel="生徒名簿CSVファイル"
+            segmentedControlAriaLabel="生徒名簿の取り込み方法"
           />
 
           {isLoadingStudents ? (
