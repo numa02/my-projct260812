@@ -16,13 +16,16 @@ export const anthropicAdapter: AiAdapter = {
       }),
     });
 
-    if (response.status === 401 || response.status === 403) {
-      throw new AiProviderError("AUTH_ERROR", "Anthropicの認証に失敗しました");
-    }
-    if (response.status === 429) {
-      throw new AiProviderError("RATE_LIMIT", "Anthropicのレート制限に達しました");
-    }
     if (!response.ok) {
+      const errorBody = await response.text();
+      console.error(`Anthropic API error (${response.status}):`, errorBody);
+
+      if (response.status === 401 || response.status === 403) {
+        throw new AiProviderError("AUTH_ERROR", "Anthropicの認証に失敗しました");
+      }
+      if (response.status === 429) {
+        throw new AiProviderError("RATE_LIMIT", "Anthropicのレート制限に達しました");
+      }
       throw new AiProviderError(
         "PROVIDER_ERROR",
         `Anthropic呼び出しに失敗しました(${response.status})`,

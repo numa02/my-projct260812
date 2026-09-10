@@ -13,13 +13,16 @@ export const geminiAdapter: AiAdapter = {
       },
     );
 
-    if (response.status === 401 || response.status === 403) {
-      throw new AiProviderError("AUTH_ERROR", "Geminiの認証に失敗しました");
-    }
-    if (response.status === 429) {
-      throw new AiProviderError("RATE_LIMIT", "Geminiのレート制限に達しました");
-    }
     if (!response.ok) {
+      const errorBody = await response.text();
+      console.error(`Gemini API error (${response.status}):`, errorBody);
+
+      if (response.status === 401 || response.status === 403) {
+        throw new AiProviderError("AUTH_ERROR", "Geminiの認証に失敗しました");
+      }
+      if (response.status === 429) {
+        throw new AiProviderError("RATE_LIMIT", "Geminiのレート制限に達しました");
+      }
       throw new AiProviderError(
         "PROVIDER_ERROR",
         `Gemini呼び出しに失敗しました(${response.status})`,
