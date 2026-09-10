@@ -9,6 +9,8 @@ export interface SubjectRow {
   name: string;
 }
 
+export type SchoolLevel = "elementary" | "middle";
+
 export function useSubjects() {
   const supabase = useMemo(() => createSupabaseBrowserClient(), []);
   const queryClient = useQueryClient();
@@ -54,11 +56,23 @@ export function useSubjects() {
     onSuccess: invalidate,
   });
 
+  const seedStandardSubjects = useMutation({
+    mutationFn: async (schoolLevel: SchoolLevel) => {
+      const { data, error } = await supabase.rpc("seed_standard_subjects", {
+        p_school_level: schoolLevel,
+      });
+      if (error) throw error;
+      return data as { inserted: string[] };
+    },
+    onSuccess: invalidate,
+  });
+
   return {
     subjects: subjectsQuery.data ?? [],
     isLoading: subjectsQuery.isLoading,
     createSubject,
     updateSubject,
     deleteSubject,
+    seedStandardSubjects,
   };
 }

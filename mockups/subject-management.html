@@ -84,6 +84,24 @@
       <h2 class="text-sm font-medium text-gray-500">正常状態</h2>
 
       <div class="bg-white rounded-lg border border-gray-200 shadow-sm p-4 tablet:p-6 space-y-6">
+        <!-- 標準科目セットを追加(折りたたみ、初期状態は閉) -->
+        <div class="border border-gray-200 rounded-md p-4 space-y-3">
+          <button class="flex items-center gap-1 text-sm font-medium text-gray-700">
+            <span>▶</span> 標準科目セットを追加
+          </button>
+          <!-- 開いた状態の例(通常は閉じている) -->
+          <div class="flex items-end gap-3 pl-5">
+            <div class="space-y-1.5 w-40">
+              <label class="text-xs text-gray-500">学校区分</label>
+              <select class="w-full h-10 px-3 rounded-sm border border-gray-300 text-sm">
+                <option>小学校</option>
+                <option>中学校</option>
+              </select>
+            </div>
+            <button class="h-10 px-5 rounded-sm bg-primary-500 text-white text-sm font-medium hover:bg-primary-600">追加する</button>
+          </div>
+        </div>
+
         <div class="flex items-end gap-3">
           <div class="space-y-1.5 flex-1">
             <label class="text-xs text-gray-500">科目名</label>
