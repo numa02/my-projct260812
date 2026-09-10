@@ -104,7 +104,7 @@ async function importCsvViaPaste(page: Page, csvText: string): Promise<void> {
   await page.getByRole("button", { name: "CSV/貼り付けで取り込む" }).click();
   await page.getByRole("radio", { name: "テキスト貼り付け" }).click();
   await page.getByLabel(/曜日,時限,科目名/).fill(csvText);
-  await page.getByRole("button", { name: "取り込む" }).click();
+  await page.getByRole("button", { name: "取り込む", exact: true }).click();
 }
 
 test.describe("時間割マスタ設定画面(T-058, T-059, T-060)", () => {
@@ -307,7 +307,10 @@ test.describe("時間割マスタ設定画面(T-058, T-059, T-060)", () => {
 
     await page.goto("/timetable/master");
     await page.getByLabel("クラス(全マスに適用)").selectOption({ label: "1年1組" });
-    await importCsvViaPaste(page, build30RowCsv("bulk", "存在しない科目"));
+    // 30行中1行だけ科目名を不正にする(残り29行は正しい「国語」)
+    const rows = build30RowCsv("bulk", "国語").split("\n");
+    rows[1] = rows[1].replace("国語", "存在しない科目");
+    await importCsvViaPaste(page, rows.join("\n"));
 
     await expect(page.getByText("1件のエラーがあります")).toBeVisible();
     await expect(page.getByText(/科目名が登録済みの科目と一致しません/)).toBeVisible();
