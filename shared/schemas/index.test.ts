@@ -42,8 +42,6 @@ describe("memoInputSchema", () => {
 describe("commentSaveInputSchema", () => {
   it("有効な入力を受け付ける", () => {
     const result = commentSaveInputSchema.safeParse({
-      periodStartDate: "2026-04-01",
-      periodEndDate: "2026-07-20",
       content: "所感文",
       creationMethod: "manual",
     });
@@ -52,8 +50,6 @@ describe("commentSaveInputSchema", () => {
 
   it("creationMethodが許可リスト外の場合は拒否する", () => {
     const result = commentSaveInputSchema.safeParse({
-      periodStartDate: "2026-04-01",
-      periodEndDate: "2026-07-20",
       content: "所感文",
       creationMethod: "auto",
     });

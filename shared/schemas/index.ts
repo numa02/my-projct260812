@@ -71,8 +71,6 @@ export const memoInputSchema = z.object({
 export type MemoInput = z.infer<typeof memoInputSchema>;
 
 export const commentSaveInputSchema = z.object({
-  periodStartDate: z.string().date(),
-  periodEndDate: z.string().date(),
   content: z.string().min(1),
   targetCharCount: z.number().int().positive().optional(),
   creationMethod: z.enum(["direct_ai", "prompt_copy", "manual"]),
