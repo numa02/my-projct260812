@@ -3,12 +3,14 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useClassOptions } from "@/hooks/useClassOptions";
+import { useClassCommentPeriod } from "@/hooks/useClassCommentPeriod";
 import { StudentCommentRow } from "@/components/comment/StudentCommentRow";
 import { Select } from "@/components/ui/Select";
 import { Input } from "@/components/ui/Input";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { InlineMessage } from "@/components/ui/InlineMessage";
 import { Skeleton } from "@/components/ui/Skeleton";
+import { useToast } from "@/components/ui/Toast";
 import { computePseudonymCode } from "@/shared/pseudonym";
 
 export interface ClassCommentsContentProps {
@@ -18,15 +20,27 @@ export interface ClassCommentsContentProps {
 
 export function ClassCommentsContent({ initialClassId, highlightStudentId }: ClassCommentsContentProps) {
   const router = useRouter();
+  const { showToast } = useToast();
   const { classes, isLoadingClasses, selectedClassId, setSelectedClassId, students, isLoadingStudents } =
     useClassOptions(initialClassId);
-
-  const [periodStartDate, setPeriodStartDate] = useState("");
-  const [periodEndDate, setPeriodEndDate] = useState("");
+  const { periodStartDate, periodEndDate, updatePeriod } = useClassCommentPeriod(selectedClassId);
+  const [endDateError, setEndDateError] = useState<string | null>(null);
 
   const selectedClass = classes.find((c) => c.id === selectedClassId);
   const hasPeriod = periodStartDate !== "" && periodEndDate !== "";
   const periodKey = `${periodStartDate}|${periodEndDate}`;
+
+  const savePeriod = (nextStart: string, nextEnd: string) => {
+    if (nextStart && nextEnd && nextStart > nextEnd) {
+      setEndDateError("開始日は終了日より前の日付にしてください");
+      return;
+    }
+    setEndDateError(null);
+    updatePeriod.mutate(
+      { periodStartDate: nextStart, periodEndDate: nextEnd },
+      { onError: () => showToast("error", "対象期間の保存に失敗しました") },
+    );
+  };
 
   if (!isLoadingClasses && classes.length === 0) {
     return (
@@ -58,13 +72,14 @@ export function ClassCommentsContent({ initialClassId, highlightStudentId }: Cla
           label="開始日"
           type="date"
           value={periodStartDate}
-          onChange={(e) => setPeriodStartDate(e.target.value)}
+          onChange={(e) => savePeriod(e.target.value, periodEndDate)}
         />
         <Input
           label="終了日"
           type="date"
           value={periodEndDate}
-          onChange={(e) => setPeriodEndDate(e.target.value)}
+          onChange={(e) => savePeriod(periodStartDate, e.target.value)}
+          error={endDateError ?? undefined}
         />
       </div>
 
