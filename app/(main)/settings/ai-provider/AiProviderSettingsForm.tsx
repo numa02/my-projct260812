@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/Button";
 import { InlineMessage } from "@/components/ui/InlineMessage";
 import { Badge } from "@/components/ui/Badge";
 import { useToast } from "@/components/ui/Toast";
-import { SUPPORTED_MODELS, DEFAULT_MODEL, type AiProvider } from "@/shared/ai-models";
+import { SUPPORTED_MODELS, DEFAULT_MODEL, isSupportedModel, type AiProvider } from "@/shared/ai-models";
 import type { AiProviderSettingData } from "@/hooks/useAiProviderSettings";
 
 const PROVIDER_OPTIONS: { value: AiProvider; label: string }[] = [
@@ -31,7 +31,12 @@ export function AiProviderSettingsForm({ initialSetting, saveSetting }: AiProvid
   const { showToast } = useToast();
 
   const [provider, setProvider] = useState<AiProvider>(initialSetting.provider ?? "openai");
-  const [model, setModel] = useState(initialSetting.model ?? DEFAULT_MODEL[initialSetting.provider ?? "openai"]);
+  const initialProvider = initialSetting.provider ?? "openai";
+  const [model, setModel] = useState(
+    initialSetting.model && isSupportedModel(initialProvider, initialSetting.model)
+      ? initialSetting.model
+      : DEFAULT_MODEL[initialProvider],
+  );
   const [apiKey, setApiKey] = useState("");
   const [hasKey, setHasKey] = useState(initialSetting.hasKey);
 
