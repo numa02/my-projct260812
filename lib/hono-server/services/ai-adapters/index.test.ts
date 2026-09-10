@@ -42,7 +42,7 @@ describe("aiAdapters", () => {
     mockFetchOnce(200, { candidates: [{ content: { parts: [{ text: "生成された所感" }] } }] });
     const text = await aiAdapters.gemini.generateComment({
       apiKey: "key",
-      model: "gemini-2.5-flash",
+      model: "gemini-3.5-flash",
       prompt: "プロンプト",
     });
     expect(text).toBe("生成された所感");

@@ -54,6 +54,6 @@ test.describe("AIプロバイダ設定画面(T-068)", () => {
 
     await expect(page.getByLabel("モデル")).toHaveValue("gpt-5-mini");
     await page.getByLabel("AIプロバイダ").selectOption({ label: "Google Gemini" });
-    await expect(page.getByLabel("モデル")).toHaveValue("gemini-2.5-flash");
+    await expect(page.getByLabel("モデル")).toHaveValue("gemini-3.5-flash");
   });
 });
