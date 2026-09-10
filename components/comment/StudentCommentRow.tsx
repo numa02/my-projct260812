@@ -1,14 +1,13 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Sparkles, History } from "lucide-react";
+import { Sparkles } from "lucide-react";
 import { useStudentComments, type CommentCreationMethod } from "@/hooks/useStudentComments";
 import { CommentAiAssist } from "./CommentAiAssist";
 import { Textarea } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { CodeBadge } from "@/components/ui/CodeBadge";
-import { Card } from "@/components/ui/Card";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { useToast } from "@/components/ui/Toast";
 import { cn } from "@/lib/cn";
@@ -30,10 +29,9 @@ export interface StudentCommentRowProps {
 }
 
 /**
- * 所感管理画面の1行。氏名と所感入力欄は常時表示し、AI生成(F9, F10)・過去の所感の閲覧(F11)は
- * 折りたたみで必要なときだけ開く。対象期間は画面上部でクラス単位に固定されているため、
- * 行を開いた時点でその生徒・その期間の既存所感があれば初期表示し、なければ空欄から始まる
- * (期間切り替え時は呼び出し側でkeyを変えて本コンポーネントごと再マウントする想定)
+ * 所感管理画面の1行。氏名と所感入力欄は常時表示し、AI生成(F9, F10)は折りたたみで
+ * 必要なときだけ開く。所感は生徒につき常に最新1件のみを保持するため、行を開いた時点で
+ * その生徒の既存所感があれば初期表示し、なければ空欄から始まる
  */
 export function StudentCommentRow({
   studentId,
@@ -44,7 +42,7 @@ export function StudentCommentRow({
   highlighted,
 }: StudentCommentRowProps) {
   const { showToast } = useToast();
-  const { comments, isLoading, saveComment } = useStudentComments(studentId);
+  const { comment, isLoading, saveComment } = useStudentComments(studentId);
   const rowRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -64,13 +62,6 @@ export function StudentCommentRow({
     );
   }
 
-  const existing = comments.find(
-    (c) => c.periodStartDate === periodStartDate && c.periodEndDate === periodEndDate,
-  );
-  const history = comments.filter(
-    (c) => !(c.periodStartDate === periodStartDate && c.periodEndDate === periodEndDate),
-  );
-
   return (
     <div
       ref={rowRef}
@@ -87,8 +78,7 @@ export function StudentCommentRow({
         pseudonymCode={pseudonymCode}
         periodStartDate={periodStartDate}
         periodEndDate={periodEndDate}
-        existing={existing}
-        history={history}
+        existing={comment}
         saveComment={saveComment}
         showToast={showToast}
       />
@@ -102,8 +92,7 @@ interface RowBodyProps {
   pseudonymCode: string;
   periodStartDate: string;
   periodEndDate: string;
-  existing: ReturnType<typeof useStudentComments>["comments"][number] | undefined;
-  history: ReturnType<typeof useStudentComments>["comments"];
+  existing: ReturnType<typeof useStudentComments>["comment"];
   saveComment: ReturnType<typeof useStudentComments>["saveComment"];
   showToast: (variant: "success" | "error", message: string) => void;
 }
@@ -115,7 +104,6 @@ function RowBody({
   periodStartDate,
   periodEndDate,
   existing,
-  history,
   saveComment,
   showToast,
 }: RowBodyProps) {
@@ -124,7 +112,6 @@ function RowBody({
     existing?.creationMethod ?? "manual",
   );
   const [aiOpen, setAiOpen] = useState(false);
-  const [historyOpen, setHistoryOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const handleApply = (appliedContent: string, method: CommentCreationMethod) => {
@@ -140,8 +127,6 @@ function RowBody({
     setError(null);
     try {
       await saveComment.mutateAsync({
-        periodStartDate,
-        periodEndDate,
         content: content.trim(),
         creationMethod,
       });
@@ -189,17 +174,6 @@ function RowBody({
           <Sparkles className="h-4 w-4" aria-hidden />
           AIで生成する
         </Button>
-        {history.length > 0 && (
-          <Button
-            variant="outline"
-            size="sm"
-            aria-expanded={historyOpen}
-            onClick={() => setHistoryOpen((v) => !v)}
-          >
-            <History className="h-4 w-4" aria-hidden />
-            過去の所感を見る({history.length}件)
-          </Button>
-        )}
       </div>
 
       {aiOpen && (
@@ -210,24 +184,6 @@ function RowBody({
           periodEndDate={periodEndDate}
           onApply={handleApply}
         />
-      )}
-
-      {historyOpen && (
-        <div className="flex flex-col gap-2">
-          {history.map((c) => (
-            <Card
-              key={c.id}
-              title={`${c.periodStartDate} 〜 ${c.periodEndDate}`}
-              meta={
-                <div className="flex items-center gap-2">
-                  <Badge variant={c.creationMethod} label={CREATION_METHOD_LABEL[c.creationMethod]} />
-                  <span>{new Date(c.updatedAt).toLocaleString("ja-JP")}</span>
-                </div>
-              }
-              body={c.content}
-            />
-          ))}
-        </div>
       )}
     </div>
   );
