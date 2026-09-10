@@ -299,6 +299,11 @@ create table prompt_template (
 
 `subject`の削除制限(F3:メモで使用中は削除不可)は`memo.subject_id on delete restrict`で保証する。`timetable_master_slot`/`weekly_subject_override`側は`on delete set null`とし、「時間割でのみ使用中」の場合は削除自体は成功させ未設定に戻す(要件通り)。「メモで使用中」の場合だけを事前チェックしエラーメッセージを出すロジックは、後述の`delete_subject`関数に集約する。
 
+**未反映の変更点(2026-09時点)**: 上記のDDLは実装時点(2026-08)のものであり、以下の追加機能による変更を反映していない。マイグレーション適用時に各設計書を参照して更新すること。
+
+- `class`テーブルへの`comment_period_start_date date`/`comment_period_end_date date`(いずれもnullable)の追加、および`student_comment`テーブルの`period_start_date`/`period_end_date`カラム削除・ユニーク制約変更(`(student_id, period_start_date, period_end_date)`→`(student_id)`のみ): `docs/features/comments/design.md`を参照
+- `seed_standard_subjects(school_level)`Postgres関数の新規追加: `docs/features/subjects/design.md`を参照
+
 ### 4.3 RLSポリシー(変更なし、方針のみ再掲)
 
 ```sql
@@ -764,6 +769,7 @@ export const POST = app.fetch;
 | `save_timetable_master(slots, confirm_overwrite)` | 時間割マスタ保存 | F4 |
 | `update_timetable_start_date(new_start_date, force)` | 起算日変更・年度更新 | F4 |
 | `export_teacher_data()` | 全データエクスポート | F14 |
+| `seed_standard_subjects(school_level)`(未実装、2026-09時点) | 標準科目セット投入 | F3。詳細は`docs/features/subjects/design.md` |
 
 これ以外の単純なCRUD(クラス表示名編集、生徒編集・削除、科目名編集、週次個別変更の保存・revert、メモの保存・編集・削除、所感の保存・編集)は、単一テーブルへの`insert`/`update`/`delete`/`upsert`で完結するため、RPC化せず`supabase-js`から直接呼ぶ(§5.4)。
 
@@ -846,7 +852,7 @@ const usage = await checkClassUsage(classId); // useClasses.ts
 await supabase.rpc("delete_class", { p_class_id: classId });
 ```
 
-**補足(所感の保存について)**: 所感(`student_comment`)は生徒×対象期間の組み合わせが一意キーであり、`upsert`(`onConflict: "student_id,period_start_date,period_end_date"`)で新規作成・更新の両方を1回の呼び出しでまかなう。所感管理画面は画面上部で対象期間を1つ確定させたうえで生徒ごとの行を描画するため(§画面設計は`docs/design/screens.md`参照)、保存時点で「その生徒・その対象期間」は一意に定まっており、既存有無の事前チェック→上書き確認ダイアログという2ステップは不要(直接upsertするだけでよい)。
+**補足(所感の保存について、2026-09時点で未実装の変更あり)**: 実装時点(2026-08)では所感(`student_comment`)は生徒×対象期間の組み合わせが一意キーであり、`upsert`(`onConflict: "student_id,period_start_date,period_end_date"`)で新規作成・更新の両方を1回の呼び出しでまかなっていた。所感管理画面の再設計(`docs/features/comments/design.md`)により、一意キーは`student_id`のみに変更され、`onConflict: "student_id"`へ変更する(生徒ごとに常に最新の1件のみを保持する方式に変更するため)。所感管理画面は画面上部で対象期間を1つ確定させたうえで生徒ごとの行を描画するため(§画面設計は`docs/design/screens.md`参照)、保存時点で対象の生徒は一意に定まっており、既存有無の事前チェック→上書き確認ダイアログという2ステップは不要(直接upsertするだけでよい)という結論自体は変更後も変わらない。
 
 ### 5.5 主要な純粋関数(`shared/`、変更なし)
 
@@ -911,13 +917,15 @@ export class AiProviderError extends Error {
 | `<MemoEntryGrid>` | 授業記録画面。生徒一覧+メモ入力欄。保存は各行を直接upsert |
 | `<StudentRoster>` | 生徒名簿画面。`useClassOptions()`によるクラス選択(クラス0件時はクラス管理画面への導線を表示)+CSV/貼り付けインポート+一覧 |
 | `<StudentMemoList>` | 生徒別メモ一覧(日付順/教科別)。`useClassOptions()`によるクラス選択で生徒候補を絞り込む |
-| `<ClassCommentsContent>` | 所感管理画面。`useClassOptions()`によるクラス選択+画面全体で1つの対象期間(開始日・終了日)を持ち、クラスの生徒一覧を`<StudentCommentRow>`で行ごとに描画する |
-| `<StudentCommentRow>` | 所感管理画面の1行。氏名+所感入力欄(常時表示、`useStudentComments()`でその生徒・対象期間の既存所感を初期表示)+保存ボタン+「AIで生成する」「過去の所感を見る」の折りたたみトグル |
+| `<TimetableMasterForm>` | 時間割マスタ設定画面。グリッド手入力に加え、CSV/貼り付け一括取り込みセクションを持つ(2026-09時点で未実装。詳細は`docs/features/timetable-master/design.md`) |
+| `<ClassCommentsContent>` | 所感管理画面。`useClassOptions()`によるクラス選択+クラスごとにDB保存される対象期間(開始日・終了日、2026-09時点で未実装。詳細は`docs/features/comments/design.md`)を持ち、クラスの生徒一覧を`<StudentCommentRow>`で行ごとに描画する |
+| `<StudentCommentRow>` | 所感管理画面の1行。氏名+所感入力欄(常時表示、`useStudentComments()`でその生徒の既存所感を初期表示)+保存ボタン+「AIで生成する」の折りたたみトグル。「過去の所感を見る」は2026-09時点で廃止予定(`docs/features/comments/design.md`参照) |
 | `<CommentAiAssist>` | 行内の「AIで生成する」の中身。目安文字数指定→(APIキー未設定ならプロンプト表示+貼り付け欄、設定済みなら`/api/comments/generate`呼び出し)→結果は行の所感入力欄にコールバックで反映するのみで、保存自体は行う側(`<StudentCommentRow>`)の責務 |
 | `<ConfirmDialog>` | 汎用確認ダイアログ(RPC関数が投げる例外メッセージ、または既存チェック結果を受けて表示) |
 | `useClasses()` / `useWeeklyTimetable()` / `useStudentMemos()` 等 | TanStack Queryベース。`queryFn`が直接`supabase-js`を呼ぶ |
 | `useClassOptions()` | 生徒名簿・生徒別メモ一覧・所感管理画面で共通利用する画面内クラス選択フック。教員のクラス一覧取得+選択中クラスの生徒一覧取得をまとめて提供し、重複実装を避ける |
-| `useStudentComments(studentId)` | 生徒1人分の所感(全期間)の取得・upsert保存。所感管理画面では行ごとに呼び出し、対象期間に一致する既存所感の初期表示と、それ以外の期間の履歴一覧の両方に使う |
+| `useStudentComments(studentId)` | 生徒1人分の所感(1件)の取得・upsert保存(2026-09時点で単一化予定。詳細は`docs/features/comments/design.md`) |
+| `useClassCommentPeriod(classId)`(未実装、2026-09時点) | クラスごとの所感対象期間の取得・自動保存。詳細は`docs/features/comments/design.md` |
 | `<ToastProvider>` / `useToast()` | 保存成功・失敗等のトースト通知(`components.md` Toast)。`app/providers.tsx`でアプリ全体をラップし、`useToast().showToast(variant, message)`でどこからでも呼び出せる |
 
 `useClassOptions()`の返り値:
