@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useClassOptions } from "@/hooks/useClassOptions";
 import { useClassCommentPeriod } from "@/hooks/useClassCommentPeriod";
@@ -23,8 +23,25 @@ export function ClassCommentsContent({ initialClassId, highlightStudentId }: Cla
   const { showToast } = useToast();
   const { classes, isLoadingClasses, selectedClassId, setSelectedClassId, students, isLoadingStudents } =
     useClassOptions(initialClassId);
-  const { periodStartDate, periodEndDate, updatePeriod } = useClassCommentPeriod(selectedClassId);
+  const {
+    periodStartDate: confirmedStart,
+    periodEndDate: confirmedEnd,
+    updatePeriod,
+  } = useClassCommentPeriod(selectedClassId);
   const [endDateError, setEndDateError] = useState<string | null>(null);
+  // 開始日・終了日の表示値。クラス切替・初回読み込み時はサーバー確認済みの値に同期するが、
+  // 教員の入力自体は(サーバーへの保存が完了する前でも)即座に反映する。こうしないと、
+  // 開始日を変更した直後に終了日を変更した場合、サーバーからの再取得が完了する前に
+  // 「変更していないはずの開始日」の古い値を終了日の保存と一緒に送ってしまい、
+  // 直前の開始日の変更を上書きしてしまう恐れがあるため
+  const [periodStartDate, setPeriodStartDate] = useState(confirmedStart);
+  const [periodEndDate, setPeriodEndDate] = useState(confirmedEnd);
+
+  useEffect(() => {
+    setPeriodStartDate(confirmedStart);
+    setPeriodEndDate(confirmedEnd);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedClassId, confirmedStart, confirmedEnd]);
 
   const selectedClass = classes.find((c) => c.id === selectedClassId);
   const hasPeriod = periodStartDate !== "" && periodEndDate !== "";
@@ -38,8 +55,24 @@ export function ClassCommentsContent({ initialClassId, highlightStudentId }: Cla
     setEndDateError(null);
     updatePeriod.mutate(
       { periodStartDate: nextStart, periodEndDate: nextEnd },
-      { onError: () => showToast("error", "対象期間の保存に失敗しました") },
+      {
+        onError: () => {
+          showToast("error", "対象期間の保存に失敗しました");
+          setPeriodStartDate(confirmedStart);
+          setPeriodEndDate(confirmedEnd);
+        },
+      },
     );
+  };
+
+  const handleStartChange = (value: string) => {
+    setPeriodStartDate(value);
+    savePeriod(value, periodEndDate);
+  };
+
+  const handleEndChange = (value: string) => {
+    setPeriodEndDate(value);
+    savePeriod(periodStartDate, value);
   };
 
   if (!isLoadingClasses && classes.length === 0) {
@@ -72,13 +105,13 @@ export function ClassCommentsContent({ initialClassId, highlightStudentId }: Cla
           label="開始日"
           type="date"
           value={periodStartDate}
-          onChange={(e) => savePeriod(e.target.value, periodEndDate)}
+          onChange={(e) => handleStartChange(e.target.value)}
         />
         <Input
           label="終了日"
           type="date"
           value={periodEndDate}
-          onChange={(e) => savePeriod(periodStartDate, e.target.value)}
+          onChange={(e) => handleEndChange(e.target.value)}
           error={endDateError ?? undefined}
         />
       </div>
