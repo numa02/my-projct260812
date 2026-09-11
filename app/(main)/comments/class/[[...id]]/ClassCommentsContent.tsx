@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useClassOptions } from "@/hooks/useClassOptions";
 import { useClassCommentPeriod } from "@/hooks/useClassCommentPeriod";
@@ -20,60 +20,15 @@ export interface ClassCommentsContentProps {
 
 export function ClassCommentsContent({ initialClassId, highlightStudentId }: ClassCommentsContentProps) {
   const router = useRouter();
-  const { showToast } = useToast();
   const { classes, isLoadingClasses, selectedClassId, setSelectedClassId, students, isLoadingStudents } =
     useClassOptions(initialClassId);
-  const {
-    periodStartDate: confirmedStart,
-    periodEndDate: confirmedEnd,
-    updatePeriod,
-  } = useClassCommentPeriod(selectedClassId);
-  const [endDateError, setEndDateError] = useState<string | null>(null);
-  // 開始日・終了日の表示値。クラス切替・初回読み込み時はサーバー確認済みの値に同期するが、
-  // 教員の入力自体は(サーバーへの保存が完了する前でも)即座に反映する。こうしないと、
-  // 開始日を変更した直後に終了日を変更した場合、サーバーからの再取得が完了する前に
-  // 「変更していないはずの開始日」の古い値を終了日の保存と一緒に送ってしまい、
-  // 直前の開始日の変更を上書きしてしまう恐れがあるため
-  const [periodStartDate, setPeriodStartDate] = useState(confirmedStart);
-  const [periodEndDate, setPeriodEndDate] = useState(confirmedEnd);
-
-  useEffect(() => {
-    setPeriodStartDate(confirmedStart);
-    setPeriodEndDate(confirmedEnd);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedClassId, confirmedStart, confirmedEnd]);
+  // 生徒一覧の表示可否・AI生成の集計範囲は、入力中の未確定値ではなく
+  // サーバー確認済みの対象期間を基準にする
+  const { periodStartDate, periodEndDate } = useClassCommentPeriod(selectedClassId);
 
   const selectedClass = classes.find((c) => c.id === selectedClassId);
   const hasPeriod = periodStartDate !== "" && periodEndDate !== "";
   const periodKey = `${periodStartDate}|${periodEndDate}`;
-
-  const savePeriod = (nextStart: string, nextEnd: string) => {
-    if (nextStart && nextEnd && nextStart > nextEnd) {
-      setEndDateError("開始日は終了日より前の日付にしてください");
-      return;
-    }
-    setEndDateError(null);
-    updatePeriod.mutate(
-      { periodStartDate: nextStart, periodEndDate: nextEnd },
-      {
-        onError: () => {
-          showToast("error", "対象期間の保存に失敗しました");
-          setPeriodStartDate(confirmedStart);
-          setPeriodEndDate(confirmedEnd);
-        },
-      },
-    );
-  };
-
-  const handleStartChange = (value: string) => {
-    setPeriodStartDate(value);
-    savePeriod(value, periodEndDate);
-  };
-
-  const handleEndChange = (value: string) => {
-    setPeriodEndDate(value);
-    savePeriod(periodStartDate, value);
-  };
 
   if (!isLoadingClasses && classes.length === 0) {
     return (
@@ -101,19 +56,11 @@ export function ClassCommentsContent({ initialClassId, highlightStudentId }: Cla
             onChange={setSelectedClassId}
           />
         </div>
-        <Input
-          label="開始日"
-          type="date"
-          value={periodStartDate}
-          onChange={(e) => handleStartChange(e.target.value)}
-        />
-        <Input
-          label="終了日"
-          type="date"
-          value={periodEndDate}
-          onChange={(e) => handleEndChange(e.target.value)}
-          error={endDateError ?? undefined}
-        />
+        {selectedClassId && (
+          // classIdが切り替わるたびにキーを変えて再マウントし、入力欄のローカルstateを
+          // 前クラスの値を引きずらないよう確実にリセットする
+          <CommentPeriodInputs key={selectedClassId} classId={selectedClassId} />
+        )}
       </div>
 
       {!hasPeriod ? (
@@ -156,5 +103,97 @@ export function ClassCommentsContent({ initialClassId, highlightStudentId }: Cla
         </div>
       )}
     </div>
+  );
+}
+
+interface CommentPeriodInputsProps {
+  classId: string;
+}
+
+/**
+ * 対象期間(開始日・終了日)の入力欄。classIdごとにキーを変えて再マウントされる前提で、
+ * ローカルstateはこのクラス専用として扱ってよい(前クラスの値の混入を心配しなくてよい)
+ */
+function CommentPeriodInputs({ classId }: CommentPeriodInputsProps) {
+  const { showToast } = useToast();
+  const {
+    periodStartDate: confirmedStart,
+    periodEndDate: confirmedEnd,
+    updatePeriod,
+    isLoading: isLoadingPeriod,
+  } = useClassCommentPeriod(classId);
+  const [endDateError, setEndDateError] = useState<string | null>(null);
+  // 開始日・終了日の表示値。教員の入力自体は(サーバーへの保存が完了する前でも)即座に反映する
+  const [periodStartDate, setPeriodStartDate] = useState("");
+  const [periodEndDate, setPeriodEndDate] = useState("");
+  // 保存時に「変更していない方のフィールド」の値を読むためのref。Reactのstate更新は
+  // 非同期のため、開始日・終了日を連続して素早く変更すると、2回目のonChangeハンドラが
+  // 1回目の変更によるstate更新をまだ反映していない古いクロージャで実行される恐れがある
+  // (2つの変更の間で再レンダリングが挟まる保証がないため)。refへの代入は同期的かつ
+  // 即座に反映されるため、この順序に依存しない
+  const startRef = useRef("");
+  const endRef = useRef("");
+  // このクラスの確定値をローカルstate・refに一度だけ取り込み済みかどうか
+  const hasSeededRef = useRef(false);
+
+  useEffect(() => {
+    if (hasSeededRef.current || isLoadingPeriod) return;
+    hasSeededRef.current = true;
+    startRef.current = confirmedStart;
+    endRef.current = confirmedEnd;
+    setPeriodStartDate(confirmedStart);
+    setPeriodEndDate(confirmedEnd);
+  }, [isLoadingPeriod, confirmedStart, confirmedEnd]);
+
+  const savePeriod = (nextStart: string, nextEnd: string) => {
+    if (nextStart && nextEnd && nextStart > nextEnd) {
+      setEndDateError("開始日は終了日より前の日付にしてください");
+      return;
+    }
+    setEndDateError(null);
+    updatePeriod.mutate(
+      { periodStartDate: nextStart, periodEndDate: nextEnd },
+      {
+        onError: () => {
+          showToast("error", "対象期間の保存に失敗しました");
+          startRef.current = confirmedStart;
+          endRef.current = confirmedEnd;
+          setPeriodStartDate(confirmedStart);
+          setPeriodEndDate(confirmedEnd);
+        },
+      },
+    );
+  };
+
+  const handleStartChange = (value: string) => {
+    startRef.current = value;
+    setPeriodStartDate(value);
+    savePeriod(value, endRef.current);
+  };
+
+  const handleEndChange = (value: string) => {
+    endRef.current = value;
+    setPeriodEndDate(value);
+    savePeriod(startRef.current, value);
+  };
+
+  return (
+    <>
+      <Input
+        label="開始日"
+        type="date"
+        value={periodStartDate}
+        onChange={(e) => handleStartChange(e.target.value)}
+        disabled={isLoadingPeriod}
+      />
+      <Input
+        label="終了日"
+        type="date"
+        value={periodEndDate}
+        onChange={(e) => handleEndChange(e.target.value)}
+        error={endDateError ?? undefined}
+        disabled={isLoadingPeriod}
+      />
+    </>
   );
 }
