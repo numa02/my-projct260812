@@ -6,51 +6,46 @@ import { createSupabaseBrowserClient } from "@/lib/supabase-browser";
 
 export type CommentCreationMethod = "direct_ai" | "prompt_copy" | "manual";
 
-export interface StudentCommentRow {
+export interface StudentComment {
   id: string;
-  periodStartDate: string;
-  periodEndDate: string;
   content: string;
   targetCharCount: number | null;
   creationMethod: CommentCreationMethod;
   updatedAt: string;
 }
 
-/** F11向け。生徒ごとの所感(期間別)の一覧取得・保存(新規/上書き)を行う */
+/** F11向け。生徒ごとに常に最新1件のみを保持する所感の取得・保存(新規/上書き)を行う */
 export function useStudentComments(studentId: string | null) {
   const supabase = useMemo(() => createSupabaseBrowserClient(), []);
   const queryClient = useQueryClient();
 
-  const commentsQuery = useQuery({
+  const commentQuery = useQuery({
     queryKey: ["student-comments", studentId],
-    queryFn: async (): Promise<StudentCommentRow[]> => {
-      if (!studentId) return [];
+    queryFn: async (): Promise<StudentComment | null> => {
+      if (!studentId) return null;
       const { data, error } = await supabase
         .from("student_comment")
-        .select("id, period_start_date, period_end_date, content, target_char_count, creation_method, updated_at")
+        .select("id, content, target_char_count, creation_method, updated_at")
         .eq("student_id", studentId)
-        .order("period_start_date", { ascending: false });
+        .maybeSingle();
       if (error) throw error;
-      return (data ?? []).map((c) => ({
-        id: c.id,
-        periodStartDate: c.period_start_date,
-        periodEndDate: c.period_end_date,
-        content: c.content,
-        targetCharCount: c.target_char_count,
-        creationMethod: c.creation_method,
-        updatedAt: c.updated_at,
-      }));
+      if (!data) return null;
+      return {
+        id: data.id,
+        content: data.content,
+        targetCharCount: data.target_char_count,
+        creationMethod: data.creation_method,
+        updatedAt: data.updated_at,
+      };
     },
     enabled: studentId !== null,
   });
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ["student-comments", studentId] });
 
-  /** 生徒・期間の組み合わせにつき1件、upsertで新規保存/上書きする(F11) */
+  /** 生徒につき1件、upsertで新規保存/上書きする(F11) */
   const saveComment = useMutation({
     mutationFn: async (input: {
-      periodStartDate: string;
-      periodEndDate: string;
       content: string;
       targetCharCount?: number;
       creationMethod: CommentCreationMethod;
@@ -58,13 +53,11 @@ export function useStudentComments(studentId: string | null) {
       const { error } = await supabase.from("student_comment").upsert(
         {
           student_id: studentId,
-          period_start_date: input.periodStartDate,
-          period_end_date: input.periodEndDate,
           content: input.content,
           target_char_count: input.targetCharCount ?? null,
           creation_method: input.creationMethod,
         },
-        { onConflict: "student_id,period_start_date,period_end_date" },
+        { onConflict: "student_id" },
       );
       if (error) throw error;
     },
@@ -72,8 +65,8 @@ export function useStudentComments(studentId: string | null) {
   });
 
   return {
-    comments: commentsQuery.data ?? [],
-    isLoading: commentsQuery.isLoading,
+    comment: commentQuery.data ?? null,
+    isLoading: commentQuery.isLoading,
     saveComment,
   };
 }

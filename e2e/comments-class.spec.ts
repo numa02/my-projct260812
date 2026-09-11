@@ -123,7 +123,9 @@ test.describe("所感管理画面(クラス単位一覧)", () => {
     );
   });
 
-  test("対象期間を切り替えると、その期間の既存所感(なければ空欄)に切り替わる", async ({ page }) => {
+  test("対象期間を切り替えても、生徒の所感の内容は保持される(所感は生徒ごとに常に1件のみ)", async ({
+    page,
+  }) => {
     await signUpAndLogin(page);
     await createClass(page, "1", "1年1組");
     await importStudents(page, "1年1組", "1,生徒A");
@@ -135,13 +137,58 @@ test.describe("所感管理画面(クラス単位一覧)", () => {
     await row.getByRole("button", { name: "保存" }).click();
     await expect(page.getByText("生徒Aの所感を保存しました")).toBeVisible();
 
-    // 別の期間に切り替えると空欄になる
+    // 別の期間に切り替えても、所感は期間に紐付かないため同じ内容がそのまま表示される
     await openPeriod(page, "2026-05-01", "2026-05-31");
-    await expect(row.getByLabel("生徒Aの所感")).toHaveValue("");
-
-    // 元の期間に戻すと内容が復元される
-    await openPeriod(page, "2026-04-01", "2026-04-30");
     await expect(row.getByLabel("生徒Aの所感")).toHaveValue("4月分の所感");
+  });
+
+  test("対象期間はクラスごとに自動保存され、再読み込みしても復元される", async ({ page }) => {
+    await signUpAndLogin(page);
+    await createClass(page, "1", "1年1組");
+
+    await page.goto("/comments/class");
+    await openPeriod(page, "2026-04-01", "2026-04-30");
+
+    await page.reload();
+    await expect(page.getByLabel("開始日")).toHaveValue("2026-04-01");
+    await expect(page.getByLabel("終了日")).toHaveValue("2026-04-30");
+  });
+
+  test("クラスを切り替えると、そのクラスに保存された対象期間が復元される", async ({ page }) => {
+    await signUpAndLogin(page);
+    await createClass(page, "1", "1年1組");
+    await createClass(page, "2", "2年1組");
+
+    await page.goto("/comments/class");
+    await page.getByLabel("クラス").selectOption({ label: "1年1組" });
+    await openPeriod(page, "2026-04-01", "2026-04-30");
+
+    await page.getByLabel("クラス").selectOption({ label: "2年1組" });
+    await openPeriod(page, "2026-09-01", "2026-10-14");
+
+    await page.getByLabel("クラス").selectOption({ label: "1年1組" });
+    await expect(page.getByLabel("開始日")).toHaveValue("2026-04-01");
+    await expect(page.getByLabel("終了日")).toHaveValue("2026-04-30");
+
+    await page.getByLabel("クラス").selectOption({ label: "2年1組" });
+    await expect(page.getByLabel("開始日")).toHaveValue("2026-09-01");
+    await expect(page.getByLabel("終了日")).toHaveValue("2026-10-14");
+  });
+
+  test("開始日が終了日より後の場合、終了日欄にエラーが表示され保存されない", async ({ page }) => {
+    await signUpAndLogin(page);
+    await createClass(page, "1", "1年1組");
+
+    await page.goto("/comments/class");
+    await page.getByLabel("開始日").fill("2026-05-01");
+    await page.getByLabel("終了日").fill("2026-04-30");
+
+    await expect(page.getByText("開始日は終了日より前の日付にしてください")).toBeVisible();
+
+    // 不正な終了日は保存されておらず、開始日のみが保存された状態で復元される
+    await page.reload();
+    await expect(page.getByLabel("開始日")).toHaveValue("2026-05-01");
+    await expect(page.getByLabel("終了日")).toHaveValue("");
   });
 
   test("APIキー設定済みの場合、AI生成した内容が所感欄に反映され保存できる", async ({ page }) => {
@@ -293,24 +340,5 @@ test.describe("所感管理画面(クラス単位一覧)", () => {
     await row.getByRole("button", { name: "保存" }).click();
     await expect(page.getByText("生徒Aの所感を保存しました")).toBeVisible();
     await expect(row.getByText("AI生成(プロンプトコピー運用)")).toBeVisible();
-  });
-
-  test("過去の所感を見るセクションで、別期間の保存済み所感が閲覧できる", async ({ page }) => {
-    await signUpAndLogin(page);
-    await createClass(page, "1", "1年1組");
-    await importStudents(page, "1年1組", "1,生徒A");
-
-    await page.goto("/comments/class");
-    await openPeriod(page, "2026-04-01", "2026-04-30");
-    const row = page.getByRole("group", { name: "生徒Aの行" });
-    await row.getByLabel("生徒Aの所感").fill("4月分の所感");
-    await row.getByRole("button", { name: "保存" }).click();
-    await expect(page.getByText("生徒Aの所感を保存しました")).toBeVisible();
-
-    await openPeriod(page, "2026-05-01", "2026-05-31");
-    await expect(row.getByRole("button", { name: /過去の所感を見る/ })).toBeVisible();
-    await row.getByRole("button", { name: /過去の所感を見る/ }).click();
-    await expect(row.getByText("2026-04-01 〜 2026-04-30")).toBeVisible();
-    await expect(row.getByText("4月分の所感")).toBeVisible();
   });
 });

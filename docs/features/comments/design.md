@@ -261,7 +261,9 @@ psql "$SUPABASE_DB_URL" -c "truncate table student_comment;"
 psql "$SUPABASE_DB_URL" -f student_comment_backup.sql
 ```
 
-**この手順は本番適用前に、ローカルのSupabaseスタック(`supabase start`)に対して実際にバックアップ→データ変更→リストアの一連を実行し、動作を検証すること。** ここに書いたコマンドは`pg_dump`/`psql`の一般的な用法から組み立てたものであり、本ドキュメント作成時点でこのプロジェクトの実データに対する実行検証はしていない。
+**この手順は本番適用前に、ローカルのSupabaseスタック(`supabase start`)に対して実際にバックアップ→データ変更→リストアの一連を実行し、動作を検証すること(CM-001でリハーサル済み。同一生徒に複数期間のテストデータを投入した状態でバックアップ→truncate→リストアを行い、件数・内容(`md5(string_agg(content,...))`)が完全一致することを確認した)。**
+
+**注意(CM-001リハーサルで判明): `pg_dump`/`psql`のクライアントバージョンがサーバーのPostgresバージョンより古いと`pg_dump: error: server version: 17.6; pg_dump version: 14.7`のようなエラーで即座に失敗する。** Homebrewで`brew install postgresql`しただけでは古いバージョン(例: 14.x)が入ることがあり、Supabaseのサーバー(2026-09時点でPostgres 17.6)と噛み合わない。本番バックアップ実行時は、事前に`pg_dump --version`で手元のクライアントバージョンがサーバー以上であることを確認すること。ローカル検証時にクライアントバージョンを揃えられない場合は、`docker exec <supabase_db_のコンテナ名> pg_dump -U postgres ...`のようにSupabaseのPostgresコンテナ内蔵の`pg_dump`/`psql`(サーバーと同一バージョン)を使う代替手段がある(`docker cp`でホストにファイルを持ち出す)。
 
 ## 段階リリース戦略
 
