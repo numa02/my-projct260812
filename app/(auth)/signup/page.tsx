@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { useForm } from "react-hook-form";
+import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import Link from "next/link";
 import { signupInputSchema, type SignupInput } from "@/shared/schemas";
@@ -10,20 +10,30 @@ import { createSupabaseBrowserClient } from "@/lib/supabase-browser";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { InlineMessage } from "@/components/ui/InlineMessage";
+import { Select } from "@/components/ui/Select";
+import { useToast } from "@/components/ui/Toast";
+
+const SCHOOL_LEVEL_OPTIONS = [
+  { value: "", label: "選択しない" },
+  { value: "elementary", label: "小学校" },
+  { value: "middle", label: "中学校" },
+];
 
 export default function SignupPage() {
   const router = useRouter();
+  const { showToast } = useToast();
   const [submitError, setSubmitError] = useState<string | null>(null);
   const {
     register,
+    control,
     handleSubmit,
     formState: { errors, isSubmitting },
   } = useForm<SignupInput>({ resolver: zodResolver(signupInputSchema) });
 
-  const onSubmit = async (data: SignupInput) => {
+  const onSubmit = async ({ email, password, schoolLevel }: SignupInput) => {
     setSubmitError(null);
     const supabase = createSupabaseBrowserClient();
-    const { data: signUpData, error } = await supabase.auth.signUp(data);
+    const { data: signUpData, error } = await supabase.auth.signUp({ email, password });
 
     if (error) {
       if (error.message.toLowerCase().includes("already registered")) {
@@ -40,6 +50,17 @@ export default function SignupPage() {
     if (signUpData.user && signUpData.user.identities?.length === 0) {
       setSubmitError("このメールアドレスは既に登録されています");
       return;
+    }
+
+    // 標準科目セットの投入はサインアップの成否とは切り離す。失敗してもサインアップ自体は
+    // 成功として扱い、教員は科目管理画面から改めて投入をやり直せる(docs/features/subjects/design.md)
+    if (schoolLevel) {
+      const { error: seedError } = await supabase.rpc("seed_standard_subjects", {
+        p_school_level: schoolLevel,
+      });
+      if (seedError) {
+        showToast("error", "標準科目の登録に失敗しました。科目管理画面から再度お試しください");
+      }
     }
 
     router.push("/");
@@ -66,6 +87,18 @@ export default function SignupPage() {
           autoComplete="new-password"
           error={errors.password?.message}
           {...register("password")}
+        />
+        <Controller
+          name="schoolLevel"
+          control={control}
+          render={({ field }) => (
+            <Select
+              label="学校区分(任意)"
+              options={SCHOOL_LEVEL_OPTIONS}
+              value={field.value ?? ""}
+              onChange={(v) => field.onChange(v === "" ? undefined : v)}
+            />
+          )}
         />
         <Button type="submit" variant="primary" size="lg" loading={isSubmitting}>
           サインアップ

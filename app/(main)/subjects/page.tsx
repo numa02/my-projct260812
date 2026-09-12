@@ -2,23 +2,41 @@
 
 import { useState } from "react";
 import { Pencil, Trash2, X, Check } from "lucide-react";
-import { useSubjects, type SubjectRow } from "@/hooks/useSubjects";
+import { useSubjects, type SubjectRow, type SchoolLevel } from "@/hooks/useSubjects";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
+import { Select } from "@/components/ui/Select";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { useToast } from "@/components/ui/Toast";
 import { parseRpcError } from "@/lib/rpc-error";
 
+const SCHOOL_LEVEL_OPTIONS = [
+  { value: "elementary", label: "小学校" },
+  { value: "middle", label: "中学校" },
+];
+
 export default function SubjectsPage() {
-  const { subjects, isLoading, createSubject, updateSubject, deleteSubject } = useSubjects();
+  const { subjects, isLoading, createSubject, updateSubject, deleteSubject, seedStandardSubjects } =
+    useSubjects();
   const { showToast } = useToast();
 
   const [newName, setNewName] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState("");
   const [deleteTarget, setDeleteTarget] = useState<SubjectRow | null>(null);
+  const [seedOpen, setSeedOpen] = useState(false);
+  const [seedSchoolLevel, setSeedSchoolLevel] = useState<SchoolLevel>("elementary");
+
+  const handleSeed = async () => {
+    try {
+      await seedStandardSubjects.mutateAsync(seedSchoolLevel);
+      showToast("success", "標準科目セットを追加しました");
+    } catch {
+      showToast("error", "標準科目セットの追加に失敗しました");
+    }
+  };
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -64,6 +82,37 @@ export default function SubjectsPage() {
   return (
     <div className="flex flex-col gap-6 p-8">
       <h1 className="text-2xl font-semibold text-gray-900">科目管理</h1>
+
+      <div className="flex flex-col gap-3 rounded-md border border-gray-200 p-4">
+        <button
+          type="button"
+          onClick={() => setSeedOpen((v) => !v)}
+          className="flex items-center gap-1 self-start text-sm font-medium text-gray-700"
+        >
+          <span aria-hidden>{seedOpen ? "▼" : "▶"}</span>
+          標準科目セットを追加
+        </button>
+        {seedOpen && (
+          <div className="flex items-end gap-3">
+            <div className="w-40">
+              <Select
+                label="学校区分"
+                options={SCHOOL_LEVEL_OPTIONS}
+                value={seedSchoolLevel}
+                onChange={(v) => setSeedSchoolLevel(v as SchoolLevel)}
+              />
+            </div>
+            <Button
+              type="button"
+              variant="primary"
+              loading={seedStandardSubjects.isPending}
+              onClick={handleSeed}
+            >
+              追加する
+            </Button>
+          </div>
+        )}
+      </div>
 
       <form onSubmit={handleCreate} className="flex items-end gap-3">
         <div className="w-64">

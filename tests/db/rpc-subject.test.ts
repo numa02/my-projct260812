@@ -74,3 +74,107 @@ describe("delete_subject", () => {
     expect(slot?.subject_id).toBeNull();
   });
 });
+
+describe("seed_standard_subjects", () => {
+  let teacher: TestTeacher | undefined;
+  let teacherB: TestTeacher | undefined;
+
+  afterEach(async () => {
+    if (teacher) await deleteTestTeacher(teacher.id);
+    if (teacherB) await deleteTestTeacher(teacherB.id);
+    teacher = undefined;
+    teacherB = undefined;
+  });
+
+  it("小学校セット(10科目)が投入される", async () => {
+    teacher = await createTestTeacher();
+
+    const { error } = await teacher.client.rpc("seed_standard_subjects", {
+      p_school_level: "elementary",
+    });
+    expect(error).toBeNull();
+
+    const { data: subjects } = await teacher.client.from("subject").select("name");
+    const names = (subjects ?? []).map((s) => s.name).sort();
+    expect(names).toEqual(
+      ["国語", "算数", "理科", "社会", "英語", "図画工作", "体育", "音楽", "総合", "学活"].sort(),
+    );
+  });
+
+  it("中学校セット(11科目)が投入される", async () => {
+    teacher = await createTestTeacher();
+
+    const { error } = await teacher.client.rpc("seed_standard_subjects", {
+      p_school_level: "middle",
+    });
+    expect(error).toBeNull();
+
+    const { data: subjects } = await teacher.client.from("subject").select("name");
+    expect(subjects).toHaveLength(11);
+    expect(subjects?.map((s) => s.name)).toContain("技術・家庭");
+    expect(subjects?.map((s) => s.name)).toContain("保健体育");
+  });
+
+  it("既存科目と重複する項目はスキップされる", async () => {
+    teacher = await createTestTeacher();
+    await teacher.client.from("subject").insert({ teacher_id: teacher.id, name: "国語" });
+
+    const { error } = await teacher.client.rpc("seed_standard_subjects", {
+      p_school_level: "elementary",
+    });
+    expect(error).toBeNull();
+
+    const { data: subjects } = await teacher.client.from("subject").select("id, name").eq("name", "国語");
+    expect(subjects).toHaveLength(1); // 重複登録されていない
+  });
+
+  it("同一学校区分を2回連続実行しても2回目は0件追加される(冪等性)", async () => {
+    teacher = await createTestTeacher();
+
+    await teacher.client.rpc("seed_standard_subjects", { p_school_level: "elementary" });
+    const { data: firstResult } = await teacher.client
+      .rpc("seed_standard_subjects", { p_school_level: "elementary" })
+      .single<{ inserted: string[] }>();
+    expect(firstResult?.inserted).toEqual([]);
+
+    const { count } = await teacher.client
+      .from("subject")
+      .select("id", { count: "exact", head: true });
+    expect(count).toBe(10);
+  });
+
+  it("2つの呼び出しを同時実行しても合計で重複登録されない(advisory lockの検証)", async () => {
+    teacher = await createTestTeacher();
+
+    await Promise.all([
+      teacher.client.rpc("seed_standard_subjects", { p_school_level: "elementary" }),
+      teacher.client.rpc("seed_standard_subjects", { p_school_level: "elementary" }),
+    ]);
+
+    const { data: subjects } = await teacher.client.from("subject").select("name");
+    const names = (subjects ?? []).map((s) => s.name);
+    // 件数が10件ちょうどであること(2重登録されていないこと)
+    expect(names).toHaveLength(10);
+    // 各科目名が1件ずつであること
+    expect(new Set(names).size).toBe(10);
+  });
+
+  it("不正な学校区分はINVALID_SCHOOL_LEVELエラーになる", async () => {
+    teacher = await createTestTeacher();
+
+    const { error } = await teacher.client.rpc("seed_standard_subjects", {
+      p_school_level: "high",
+    });
+    expect(error?.message).toContain("INVALID_SCHOOL_LEVEL");
+  });
+
+  it("他教員の科目一覧には影響しない", async () => {
+    teacher = await createTestTeacher();
+    teacherB = await createTestTeacher();
+
+    await teacher.client.rpc("seed_standard_subjects", { p_school_level: "elementary" });
+
+    const { data: teacherBSubjects } = await teacherB.client.from("subject").select("id");
+    expect(teacherBSubjects).toHaveLength(0);
+  });
+});

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { commentSaveInputSchema, memoInputSchema } from "./index";
+import { commentSaveInputSchema, memoInputSchema, signupInputSchema } from "./index";
 
 describe("memoInputSchema", () => {
   it("有効な入力を受け付ける", () => {
@@ -52,6 +52,46 @@ describe("commentSaveInputSchema", () => {
     const result = commentSaveInputSchema.safeParse({
       content: "所感文",
       creationMethod: "auto",
+    });
+    expect(result.success).toBe(false);
+  });
+});
+
+describe("signupInputSchema", () => {
+  it("schoolLevelを指定しなくても有効(未選択がデフォルト)", () => {
+    const result = signupInputSchema.safeParse({
+      email: "teacher@example.com",
+      password: "password123",
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.schoolLevel).toBeUndefined();
+    }
+  });
+
+  it("schoolLevelにelementaryを指定できる", () => {
+    const result = signupInputSchema.safeParse({
+      email: "teacher@example.com",
+      password: "password123",
+      schoolLevel: "elementary",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("schoolLevelにmiddleを指定できる", () => {
+    const result = signupInputSchema.safeParse({
+      email: "teacher@example.com",
+      password: "password123",
+      schoolLevel: "middle",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("schoolLevelに不正な値を指定すると拒否する", () => {
+    const result = signupInputSchema.safeParse({
+      email: "teacher@example.com",
+      password: "password123",
+      schoolLevel: "high",
     });
     expect(result.success).toBe(false);
   });

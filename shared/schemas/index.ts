@@ -14,6 +14,8 @@ export const signupInputSchema = z.object({
   password: z
     .string()
     .min(PASSWORD_MIN_LENGTH, `パスワードは${PASSWORD_MIN_LENGTH}文字以上で入力してください`),
+  // 標準科目セットの自動投入のトリガーとしてのみ使う一時的な選択値。DBには永続化しない
+  schoolLevel: z.enum(["elementary", "middle"]).optional(),
 });
 export type SignupInput = z.infer<typeof signupInputSchema>;
 
