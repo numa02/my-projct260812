@@ -23,6 +23,8 @@ export interface PasteOrUploadAreaProps {
   reasonLabels: Record<string, string>;
   /** テキスト貼り付け欄(Textarea)のlabel文言 */
   pasteLabel: string;
+  /** 列数が多い・値の形式が複雑なフォーマットで、教員が形式を推測しにくい場合に例を示す(任意) */
+  pasteExample?: string;
   /** ファイル選択inputのaria-label */
   fileInputAriaLabel: string;
   /** アップロード/貼り付け切り替えSegmentedControlのaria-label */
@@ -36,6 +38,7 @@ export function PasteOrUploadArea({
   loading,
   reasonLabels,
   pasteLabel,
+  pasteExample,
   fileInputAriaLabel,
   segmentedControlAriaLabel,
 }: PasteOrUploadAreaProps) {
@@ -108,6 +111,11 @@ export function PasteOrUploadArea({
             onChange={(e) => setPastedText(e.target.value)}
             rows={6}
           />
+          {pasteExample && (
+            <pre className="whitespace-pre-wrap rounded-sm border border-gray-200 bg-gray-50 px-3 py-2 text-xs text-gray-600">
+              {pasteExample}
+            </pre>
+          )}
           <Button
             variant="primary"
             onClick={() => onImport(pastedText)}

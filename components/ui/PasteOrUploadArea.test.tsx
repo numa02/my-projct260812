@@ -57,4 +57,24 @@ describe("PasteOrUploadArea", () => {
     );
     expect(screen.getByText("30マス分のデータが必要です")).toBeInTheDocument();
   });
+
+  it("pasteExampleを指定すると、テキスト貼り付けモードで例が表示される", async () => {
+    render(
+      <PasteOrUploadArea
+        onImport={() => {}}
+        {...defaultProps}
+        pasteExample={"曜日,時限,科目名\n月,1,国語"}
+      />,
+    );
+
+    await userEvent.click(screen.getByRole("radio", { name: "テキスト貼り付け" }));
+    expect(screen.getByText(/月,1,国語/)).toBeInTheDocument();
+  });
+
+  it("pasteExampleを指定しない場合は例が表示されない", async () => {
+    render(<PasteOrUploadArea onImport={() => {}} {...defaultProps} />);
+
+    await userEvent.click(screen.getByRole("radio", { name: "テキスト貼り付け" }));
+    expect(screen.queryByText(/曜日,時限,科目名/)).not.toBeInTheDocument();
+  });
 });

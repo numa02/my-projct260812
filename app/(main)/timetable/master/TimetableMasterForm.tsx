@@ -199,6 +199,11 @@ export function TimetableMasterForm({
                 ? "「曜日,時限,科目名」の形式で貼り付けてください(1行目はヘッダー行)"
                 : "「曜日,時限,科目名,クラス名」の形式で貼り付けてください(1行目はヘッダー行)"
             }
+            pasteExample={
+              mode === "bulk"
+                ? "曜日,時限,科目名\n月,1,国語\n火,2,算数"
+                : "曜日,時限,科目名,クラス名\n月,1,国語,1年1組\n火,2,算数,2年1組"
+            }
             fileInputAriaLabel="時間割マスタCSVファイル"
             segmentedControlAriaLabel="時間割マスタの取り込み方法"
           />
