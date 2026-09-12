@@ -10,11 +10,23 @@ import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { InlineMessage } from "@/components/ui/InlineMessage";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { PasteOrUploadArea, type ImportErrorRow } from "@/components/ui/PasteOrUploadArea";
 import { useToast } from "@/components/ui/Toast";
 import { parseRpcError } from "@/lib/rpc-error";
+import { parseTimetableRows } from "@/shared/parse-timetable-rows";
+import { validateTimetableCsvRows } from "@/shared/timetable-csv-validation";
 
 const WEEKDAY_LABELS = ["月", "火", "水", "木", "金"];
 const PERIODS = [1, 2, 3, 4, 5, 6];
+
+const TIMETABLE_CSV_REASON_LABEL: Record<string, string> = {
+  INVALID_WEEKDAY: "曜日は「月」「火」「水」「木」「金」のいずれかで指定してください",
+  INVALID_PERIOD: "時限は1〜6の数値で指定してください",
+  SUBJECT_NOT_FOUND: "科目名が登録済みの科目と一致しません",
+  CLASS_NOT_FOUND: "クラス名が登録済みのクラスと一致しません",
+  DUPLICATE_SLOT: "同じ曜日・時限の組み合わせが重複しています",
+  INCOMPLETE: "30マス(曜日5日×時限6)分のデータが必要です",
+};
 
 type Mode = "bulk" | "per-class";
 
@@ -65,6 +77,10 @@ export function TimetableMasterForm({
   const [yearUpdateConfirmOpen, setYearUpdateConfirmOpen] = useState(false);
   const [overwriteConfirmOpen, setOverwriteConfirmOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
+  const [importErrors, setImportErrors] = useState<ImportErrorRow[]>([]);
+  // 取り込み成功後に貼り付け欄をクリアするため、キーを変えてPasteOrUploadAreaを再マウントする
+  const [importAreaKey, setImportAreaKey] = useState(0);
 
   const isStartDateEditable = !hasAnyMemo || yearUpdateMode;
 
@@ -82,6 +98,19 @@ export function TimetableMasterForm({
       ...s,
       classId: mode === "bulk" ? bulkClassId || null : s.classId,
     }));
+
+  const handleCsvImport = (rawText: string) => {
+    const parsed = parseTimetableRows(rawText, mode);
+    const result = validateTimetableCsvRows(parsed, mode, subjects, classes);
+    if (!result.ok) {
+      setImportErrors(result.errors);
+      return;
+    }
+    setImportErrors([]);
+    setDraftSlots(result.slots);
+    setImportAreaKey((k) => k + 1);
+    showToast("success", "時間割マスタの取り込みが完了しました(保存ボタンを押すまで確定しません)");
+  };
 
   const doSave = async (confirmOverwrite: boolean) => {
     if (startDateInput.trim().length === 0) {
@@ -149,6 +178,32 @@ export function TimetableMasterForm({
           message="科目が登録されていません。先に科目管理画面で科目を登録してください"
         />
       )}
+
+      <div className="flex flex-col gap-3 rounded-md border border-gray-200 p-4">
+        <button
+          type="button"
+          onClick={() => setImportOpen((v) => !v)}
+          className="flex items-center gap-1 self-start text-sm font-medium text-gray-700"
+        >
+          <span aria-hidden>{importOpen ? "▼" : "▶"}</span>
+          CSV/貼り付けで取り込む
+        </button>
+        {importOpen && (
+          <PasteOrUploadArea
+            key={importAreaKey}
+            onImport={handleCsvImport}
+            errorRows={importErrors}
+            reasonLabels={TIMETABLE_CSV_REASON_LABEL}
+            pasteLabel={
+              mode === "bulk"
+                ? "「曜日,時限,科目名」の形式で貼り付けてください(1行目はヘッダー行)"
+                : "「曜日,時限,科目名,クラス名」の形式で貼り付けてください(1行目はヘッダー行)"
+            }
+            fileInputAriaLabel="時間割マスタCSVファイル"
+            segmentedControlAriaLabel="時間割マスタの取り込み方法"
+          />
+        )}
+      </div>
 
       {mode === "bulk" && (
         <div className="w-64">

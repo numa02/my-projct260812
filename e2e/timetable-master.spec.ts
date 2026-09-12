@@ -77,6 +77,36 @@ async function createSubject(page: Page, name: string): Promise<void> {
   await expect(page.getByText("科目を登録しました")).toBeVisible();
 }
 
+const WEEKDAYS = ["月", "火", "水", "木", "金"];
+const PERIODS = [1, 2, 3, 4, 5, 6];
+
+/** 30マス分のCSVテキストを組み立てる(テスト用)。bulkモードは3列、per-classモードは4列 */
+function build30RowCsv(
+  mode: "bulk" | "per-class",
+  subjectName: string,
+  className?: string,
+): string {
+  const header = mode === "bulk" ? "曜日,時限,科目名" : "曜日,時限,科目名,クラス名";
+  const rows: string[] = [header];
+  for (const weekday of WEEKDAYS) {
+    for (const period of PERIODS) {
+      rows.push(
+        mode === "bulk"
+          ? `${weekday},${period},${subjectName}`
+          : `${weekday},${period},${subjectName},${className}`,
+      );
+    }
+  }
+  return rows.join("\n");
+}
+
+async function importCsvViaPaste(page: Page, csvText: string): Promise<void> {
+  await page.getByRole("button", { name: "CSV/貼り付けで取り込む" }).click();
+  await page.getByRole("radio", { name: "テキスト貼り付け" }).click();
+  await page.getByLabel(/曜日,時限,科目名/).fill(csvText);
+  await page.getByRole("button", { name: "取り込む", exact: true }).click();
+}
+
 test.describe("時間割マスタ設定画面(T-058, T-059, T-060)", () => {
   test("一括モード: クラス選択+マスごとの科目選択で全マスタが保存される", async ({ page }) => {
     await signUpAndLogin(page);
@@ -230,5 +260,75 @@ test.describe("時間割マスタ設定画面(T-058, T-059, T-060)", () => {
 
     await page.reload();
     await expect(page.getByLabel("起算日")).toHaveValue("2027-04-05");
+  });
+
+  test("CSV取り込み(一括モード): 30マス分の3列CSVを貼り付けると全マスが反映され保存できる", async ({
+    page,
+  }) => {
+    await signUpAndLogin(page);
+    await createClass(page, "1", "1年1組");
+    await createSubject(page, "国語");
+
+    await page.goto("/timetable/master");
+    await page.getByLabel("クラス(全マスに適用)").selectOption({ label: "1年1組" });
+    await importCsvViaPaste(page, build30RowCsv("bulk", "国語"));
+
+    await expect(page.getByText("時間割マスタの取り込みが完了しました")).toBeVisible();
+    await expect(page.getByLabel("月曜1限の科目").locator("option:checked")).toHaveText("国語");
+    await expect(page.getByLabel("金曜6限の科目").locator("option:checked")).toHaveText("国語");
+
+    await page.getByLabel("起算日").fill("2026-04-06");
+    await page.getByRole("button", { name: "保存" }).click();
+    await expect(page.getByText("時間割マスタを保存しました")).toBeVisible();
+  });
+
+  test("CSV取り込み(教科担任制モード): 30マス分の4列CSVを貼り付けると科目・クラスが両方反映される", async ({
+    page,
+  }) => {
+    await signUpAndLogin(page);
+    await createClass(page, "1", "1年1組");
+    await createSubject(page, "国語");
+
+    await page.goto("/timetable/master");
+    await page.getByRole("radio", { name: "教科担任制モード" }).click();
+    await importCsvViaPaste(page, build30RowCsv("per-class", "国語", "1年1組"));
+
+    await expect(page.getByText("時間割マスタの取り込みが完了しました")).toBeVisible();
+    await expect(page.getByLabel("月曜1限の科目").locator("option:checked")).toHaveText("国語");
+    await expect(page.getByLabel("月曜1限のクラス").locator("option:checked")).toHaveText("1年1組");
+  });
+
+  test("CSV取り込み: 科目名が登録済み科目と一致しない場合はエラーになりグリッドは変更されない", async ({
+    page,
+  }) => {
+    await signUpAndLogin(page);
+    await createClass(page, "1", "1年1組");
+    await createSubject(page, "国語");
+
+    await page.goto("/timetable/master");
+    await page.getByLabel("クラス(全マスに適用)").selectOption({ label: "1年1組" });
+    // 30行中1行だけ科目名を不正にする(残り29行は正しい「国語」)
+    const rows = build30RowCsv("bulk", "国語").split("\n");
+    rows[1] = rows[1].replace("国語", "存在しない科目");
+    await importCsvViaPaste(page, rows.join("\n"));
+
+    await expect(page.getByText("1件のエラーがあります")).toBeVisible();
+    await expect(page.getByText(/科目名が登録済みの科目と一致しません/)).toBeVisible();
+    // エラー時はグリッドに反映されない(未設定のまま)
+    await expect(page.getByLabel("月曜1限の科目")).toHaveValue("");
+  });
+
+  test("CSV取り込み: 30マスに満たないデータはINCOMPLETEエラーになる", async ({ page }) => {
+    await signUpAndLogin(page);
+    await createClass(page, "1", "1年1組");
+    await createSubject(page, "国語");
+
+    await page.goto("/timetable/master");
+    await page.getByLabel("クラス(全マスに適用)").selectOption({ label: "1年1組" });
+
+    const incompleteCsv = "曜日,時限,科目名\n月,1,国語";
+    await importCsvViaPaste(page, incompleteCsv);
+
+    await expect(page.getByText("30マス(曜日5日×時限6)分のデータが必要です")).toBeVisible();
   });
 });

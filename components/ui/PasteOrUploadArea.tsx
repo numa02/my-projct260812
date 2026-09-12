@@ -9,26 +9,36 @@ import { SegmentedControl } from "./SegmentedControl";
 import { Textarea } from "./Input";
 
 export interface ImportErrorRow {
-  rowIndex: number;
+  rowIndex?: number;
   reason: string;
   attendanceNumber?: string | null;
   name?: string | null;
 }
 
-const REASON_LABEL: Record<string, string> = {
-  MISSING_FIELD: "出席番号または氏名が空です",
-  DUPLICATE_IN_BATCH: "取り込みデータ内で出席番号が重複しています",
-  DUPLICATE_EXISTING: "既存の生徒と出席番号が重複しています",
-};
-
 export interface PasteOrUploadAreaProps {
   onImport: (rawText: string) => void;
   errorRows?: ImportErrorRow[];
   loading?: boolean;
+  /** エラーコード→日本語文言のマップ。呼び出し元ごとに意味が異なるため既定値は持たない */
+  reasonLabels: Record<string, string>;
+  /** テキスト貼り付け欄(Textarea)のlabel文言 */
+  pasteLabel: string;
+  /** ファイル選択inputのaria-label */
+  fileInputAriaLabel: string;
+  /** アップロード/貼り付け切り替えSegmentedControlのaria-label */
+  segmentedControlAriaLabel: string;
 }
 
-/** CSVアップロード欄とテキスト貼り付け欄(列順:出席番号,氏名。区切り文字はカンマ/タブ自動判定) */
-export function PasteOrUploadArea({ onImport, errorRows = [], loading }: PasteOrUploadAreaProps) {
+/** CSVアップロード欄とテキスト貼り付け欄の汎用コンポーネント。列フォーマット・エラー文言は呼び出し元が指定する */
+export function PasteOrUploadArea({
+  onImport,
+  errorRows = [],
+  loading,
+  reasonLabels,
+  pasteLabel,
+  fileInputAriaLabel,
+  segmentedControlAriaLabel,
+}: PasteOrUploadAreaProps) {
   const [mode, setMode] = useState<"upload" | "paste">("upload");
   const [dragOver, setDragOver] = useState(false);
   const [pastedText, setPastedText] = useState("");
@@ -49,7 +59,7 @@ export function PasteOrUploadArea({ onImport, errorRows = [], loading }: PasteOr
   return (
     <div className="flex flex-col gap-4">
       <SegmentedControl
-        aria-label="生徒名簿の取り込み方法"
+        aria-label={segmentedControlAriaLabel}
         options={[
           { value: "upload", label: "ファイルアップロード" },
           { value: "paste", label: "テキスト貼り付け" },
@@ -80,7 +90,7 @@ export function PasteOrUploadArea({ onImport, errorRows = [], loading }: PasteOr
             type="file"
             accept=".csv,text/csv,text/plain"
             className="sr-only"
-            aria-label="生徒名簿CSVファイル"
+            aria-label={fileInputAriaLabel}
             onChange={(e) => {
               const file = e.target.files?.[0];
               if (file) void readFile(file);
@@ -93,7 +103,7 @@ export function PasteOrUploadArea({ onImport, errorRows = [], loading }: PasteOr
       ) : (
         <div className="flex flex-col gap-3">
           <Textarea
-            label="出席番号,氏名 の形式で貼り付けてください(ヘッダー行なし)"
+            label={pasteLabel}
             value={pastedText}
             onChange={(e) => setPastedText(e.target.value)}
             rows={6}
@@ -116,9 +126,10 @@ export function PasteOrUploadArea({ onImport, errorRows = [], loading }: PasteOr
             {errorRows.length}件のエラーがあります
           </p>
           <ul className="flex flex-col gap-1 text-sm text-gray-700">
-            {errorRows.map((row) => (
-              <li key={row.rowIndex}>
-                {row.rowIndex}行目: {REASON_LABEL[row.reason] ?? row.reason}
+            {errorRows.map((row, index) => (
+              <li key={row.rowIndex ?? `no-row-${index}`}>
+                {row.rowIndex != null ? `${row.rowIndex}行目: ` : ""}
+                {reasonLabels[row.reason] ?? row.reason}
                 {row.name ? `(${row.name})` : ""}
               </li>
             ))}
