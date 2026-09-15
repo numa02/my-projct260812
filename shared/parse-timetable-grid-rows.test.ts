@@ -1,23 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isTimetableGridText, parseTimetableGridRows } from "./parse-timetable-grid-rows";
-
-describe("isTimetableGridText", () => {
-  it("1行目が5列ならグリッド形式と判定する", () => {
-    expect(isTimetableGridText("国語\t国語\t国語\t国語\t国語")).toBe(true);
-  });
-
-  it("3列(bulk長形式)はグリッド形式と判定しない", () => {
-    expect(isTimetableGridText("曜日,時限,科目名\n月,1,国語")).toBe(false);
-  });
-
-  it("4列(per-class長形式)はグリッド形式と判定しない", () => {
-    expect(isTimetableGridText("曜日,時限,科目名,クラス名\n月,1,国語,1年1組")).toBe(false);
-  });
-
-  it("空文字列はグリッド形式と判定しない", () => {
-    expect(isTimetableGridText("")).toBe(false);
-  });
-});
+import { parseTimetableGridRows } from "./parse-timetable-grid-rows";
 
 describe("parseTimetableGridRows", () => {
   it("行=時限・列=曜日としてParsedTimetableRowへ変換する(タブ区切り)", () => {
