@@ -202,7 +202,14 @@ export function TimetableMasterForm({
             }
             pasteExample={
               mode === "bulk"
-                ? "国語\t国語\t国語\t国語\t国語\n算数\t算数\t算数\t算数\t算数"
+                ? [
+                    "国語\t国語\t国語\t国語\t国語",
+                    "算数\t算数\t算数\t算数\t算数",
+                    "理科\t理科\t理科\t理科\t理科",
+                    "社会\t社会\t社会\t社会\t社会",
+                    "英語\t英語\t英語\t英語\t英語",
+                    "図画工作\t図画工作\t図画工作\t図画工作\t図画工作",
+                  ].join("\n")
                 : "曜日,時限,科目名,クラス名\n月,1,国語,1年1組\n火,2,算数,2年1組"
             }
             fileInputAriaLabel="時間割マスタCSVファイル"
