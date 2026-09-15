@@ -14,6 +14,7 @@ import { PasteOrUploadArea, type ImportErrorRow } from "@/components/ui/PasteOrU
 import { useToast } from "@/components/ui/Toast";
 import { parseRpcError } from "@/lib/rpc-error";
 import { parseTimetableRows } from "@/shared/parse-timetable-rows";
+import { isTimetableGridText, parseTimetableGridRows } from "@/shared/parse-timetable-grid-rows";
 import { validateTimetableCsvRows } from "@/shared/timetable-csv-validation";
 
 const WEEKDAY_LABELS = ["月", "火", "水", "木", "金"];
@@ -100,7 +101,10 @@ export function TimetableMasterForm({
     }));
 
   const handleCsvImport = (rawText: string) => {
-    const parsed = parseTimetableRows(rawText, mode);
+    const parsed =
+      mode === "bulk" && isTimetableGridText(rawText)
+        ? parseTimetableGridRows(rawText)
+        : parseTimetableRows(rawText, mode);
     const result = validateTimetableCsvRows(parsed, mode, subjects, classes);
     if (!result.ok) {
       setImportErrors(result.errors);
@@ -196,12 +200,12 @@ export function TimetableMasterForm({
             reasonLabels={TIMETABLE_CSV_REASON_LABEL}
             pasteLabel={
               mode === "bulk"
-                ? "「曜日,時限,科目名」の形式で貼り付けてください(1行目はヘッダー行)"
+                ? "時間割表(曜日5列×時限6行、科目名のみ)をそのまま貼り付けるか、「曜日,時限,科目名」の形式で貼り付けてください"
                 : "「曜日,時限,科目名,クラス名」の形式で貼り付けてください(1行目はヘッダー行)"
             }
             pasteExample={
               mode === "bulk"
-                ? "曜日,時限,科目名\n月,1,国語\n火,2,算数"
+                ? "時間割表をそのまま貼り付ける場合(1行目から科目名、ヘッダー行なし):\n国語\t国語\t国語\t国語\t国語\n算数\t算数\t算数\t算数\t算数\n\n「曜日,時限,科目名」形式の場合(1行目はヘッダー行):\n曜日,時限,科目名\n月,1,国語\n火,2,算数"
                 : "曜日,時限,科目名,クラス名\n月,1,国語,1年1組\n火,2,算数,2年1組"
             }
             fileInputAriaLabel="時間割マスタCSVファイル"

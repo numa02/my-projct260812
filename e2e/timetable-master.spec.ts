@@ -100,6 +100,11 @@ function build30RowCsv(
   return rows.join("\n");
 }
 
+/** 時間割表グリッド形式(曜日5列×時限6行、科目名のみ、ヘッダー行なし)のテスト用テキストを組み立てる */
+function build30CellGrid(subjectName: string): string {
+  return PERIODS.map(() => WEEKDAYS.map(() => subjectName).join("\t")).join("\n");
+}
+
 async function importCsvViaPaste(page: Page, csvText: string): Promise<void> {
   await page.getByRole("button", { name: "CSV/貼り付けで取り込む" }).click();
   await page.getByRole("radio", { name: "テキスト貼り付け" }).click();
@@ -316,6 +321,26 @@ test.describe("時間割マスタ設定画面(T-058, T-059, T-060)", () => {
     await expect(page.getByText(/科目名が登録済みの科目と一致しません/)).toBeVisible();
     // エラー時はグリッドに反映されない(未設定のまま)
     await expect(page.getByLabel("月曜1限の科目")).toHaveValue("");
+  });
+
+  test("CSV取り込み(一括モード): 時間割表をそのまま貼り付けても(曜日5列×時限6行、科目名のみ)全マスが反映される", async ({
+    page,
+  }) => {
+    await signUpAndLogin(page);
+    await createClass(page, "1", "1年1組");
+    await createSubject(page, "国語");
+
+    await page.goto("/timetable/master");
+    await page.getByLabel("クラス(全マスに適用)").selectOption({ label: "1年1組" });
+    await importCsvViaPaste(page, build30CellGrid("国語"));
+
+    await expect(page.getByText("時間割マスタの取り込みが完了しました")).toBeVisible();
+    await expect(page.getByLabel("月曜1限の科目").locator("option:checked")).toHaveText("国語");
+    await expect(page.getByLabel("金曜6限の科目").locator("option:checked")).toHaveText("国語");
+
+    await page.getByLabel("起算日").fill("2026-04-06");
+    await page.getByRole("button", { name: "保存" }).click();
+    await expect(page.getByText("時間割マスタを保存しました")).toBeVisible();
   });
 
   test("CSV取り込み: 30マスに満たないデータはINCOMPLETEエラーになる", async ({ page }) => {
