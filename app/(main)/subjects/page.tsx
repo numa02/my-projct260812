@@ -10,7 +10,13 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { useToast } from "@/components/ui/Toast";
+import { PasteOrUploadArea } from "@/components/ui/PasteOrUploadArea";
 import { parseRpcError } from "@/lib/rpc-error";
+import { parseSubjectGridNames } from "@/shared/parse-subject-grid";
+
+const SUBJECT_PASTE_EXAMPLE = ["国語\t国語\t国語\t国語\t国語", "算数\t算数\t算数\t算数\t算数"].join(
+  "\n",
+);
 
 const SCHOOL_LEVEL_OPTIONS = [
   { value: "elementary", label: "小学校" },
@@ -18,8 +24,15 @@ const SCHOOL_LEVEL_OPTIONS = [
 ];
 
 export default function SubjectsPage() {
-  const { subjects, isLoading, createSubject, updateSubject, deleteSubject, seedStandardSubjects } =
-    useSubjects();
+  const {
+    subjects,
+    isLoading,
+    createSubject,
+    updateSubject,
+    deleteSubject,
+    seedStandardSubjects,
+    importSubjects,
+  } = useSubjects();
   const { showToast } = useToast();
 
   const [newName, setNewName] = useState("");
@@ -28,6 +41,9 @@ export default function SubjectsPage() {
   const [deleteTarget, setDeleteTarget] = useState<SubjectRow | null>(null);
   const [seedOpen, setSeedOpen] = useState(false);
   const [seedSchoolLevel, setSeedSchoolLevel] = useState<SchoolLevel>("elementary");
+  const [importOpen, setImportOpen] = useState(false);
+  // 取り込み成功後に貼り付け欄をクリアするため、キーを変えてPasteOrUploadAreaを再マウントする
+  const [importAreaKey, setImportAreaKey] = useState(0);
 
   const handleSeed = async () => {
     try {
@@ -35,6 +51,22 @@ export default function SubjectsPage() {
       showToast("success", "標準科目セットを追加しました");
     } catch {
       showToast("error", "標準科目セットの追加に失敗しました");
+    }
+  };
+
+  const handleImport = async (rawText: string) => {
+    const names = parseSubjectGridNames(rawText);
+    if (names.length === 0) return;
+    try {
+      const result = await importSubjects.mutateAsync(names);
+      if (result.inserted.length > 0) {
+        showToast("success", `${result.inserted.length}件の科目を登録しました`);
+        setImportAreaKey((k) => k + 1);
+      } else {
+        showToast("success", "登録済みの科目のみだったため、新規追加はありませんでした");
+      }
+    } catch {
+      showToast("error", "科目の一括登録に失敗しました");
     }
   };
 
@@ -111,6 +143,29 @@ export default function SubjectsPage() {
               追加する
             </Button>
           </div>
+        )}
+      </div>
+
+      <div className="flex flex-col gap-3 rounded-md border border-gray-200 p-4">
+        <button
+          type="button"
+          onClick={() => setImportOpen((v) => !v)}
+          className="flex items-center gap-1 self-start text-sm font-medium text-gray-700"
+        >
+          <span aria-hidden>{importOpen ? "▼" : "▶"}</span>
+          貼り付けで一括登録
+        </button>
+        {importOpen && (
+          <PasteOrUploadArea
+            key={importAreaKey}
+            onImport={handleImport}
+            loading={importSubjects.isPending}
+            reasonLabels={{}}
+            pasteLabel="時間割表の科目名をそのまま貼り付けてください(同じ科目名は1件にまとめて登録されます)"
+            pasteExample={SUBJECT_PASTE_EXAMPLE}
+            fileInputAriaLabel="科目一覧ファイル"
+            segmentedControlAriaLabel="科目の取り込み方法"
+          />
         )}
       </div>
 

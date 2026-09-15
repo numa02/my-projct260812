@@ -95,9 +95,9 @@
 
 - **バリエーション**: ファイルアップロード / テキスト貼り付け(同一画面内でタブまたは併記)
 - **状態**: default / dragover / エラー行あり(取り込み結果にエラー一覧を表示)
-- **使用箇所**: 生徒名簿画面のインポート
-- **入力プロパティ**: `onImport`, `errorRows`
-- **実装**: `errorRows`の各要素は `{ rowIndex, reason, attendanceNumber?, name? }`。`reason`は`import_students` RPC(design.md §4.4)が返す`MISSING_FIELD` / `DUPLICATE_IN_BATCH` / `DUPLICATE_EXISTING`とそのまま対応させ、コンポーネント側で日本語文言に変換して表示する
+- **使用箇所**: 生徒名簿画面のインポート、科目管理画面の一括登録、時間割マスタ設定画面のCSV/貼り付け取り込み
+- **入力プロパティ**: `onImport`, `errorRows`, `pasteLabel`, `pasteExample`(任意), `reasonLabels`
+- **実装**: `errorRows`の各要素は `{ rowIndex, reason, attendanceNumber?, name? }`。`reason`は呼び出し元のRPC/バリデーションが返すエラーコードとそのまま対応させ、コンポーネント側で`reasonLabels`を使って日本語文言に変換して表示する。`pasteExample`は列数が多い・値の形式が複雑で教員が形式を推測しにくい場合にのみ指定する(例: 時間割マスタ教科担任制モードの「曜日,時限,科目名,クラス名」形式)。生徒名簿の「出席番号,氏名」のように列数が少なく直感的な形式では指定不要。時間割マスタの一括モードでは、時限を行・曜日を列とする時間割表そのまま(ヘッダー行なし、科目名のみ、曜日5列×時限6行)の貼り付け・アップロードのみを受け付ける(`shared/parse-timetable-grid-rows.ts`)。旧「曜日,時限,科目名」形式(3列・ヘッダー行あり)は廃止済み
 
 ## TimetableGrid(時間割グリッド)
 

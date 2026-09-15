@@ -67,6 +67,23 @@ export function useSubjects() {
     onSuccess: invalidate,
   });
 
+  const importSubjects = useMutation({
+    mutationFn: async (names: string[]) => {
+      const { data: userData } = await supabase.auth.getUser();
+      const { data: existing, error: fetchError } = await supabase.from("subject").select("name");
+      if (fetchError) throw fetchError;
+      const existingNames = new Set((existing ?? []).map((s) => s.name));
+      const newNames = names.filter((name) => !existingNames.has(name));
+      if (newNames.length === 0) return { inserted: [] as string[] };
+      const { error } = await supabase
+        .from("subject")
+        .insert(newNames.map((name) => ({ name, teacher_id: userData.user!.id })));
+      if (error) throw error;
+      return { inserted: newNames };
+    },
+    onSuccess: invalidate,
+  });
+
   return {
     subjects: subjectsQuery.data ?? [],
     isLoading: subjectsQuery.isLoading,
@@ -74,5 +91,6 @@ export function useSubjects() {
     updateSubject,
     deleteSubject,
     seedStandardSubjects,
+    importSubjects,
   };
 }
