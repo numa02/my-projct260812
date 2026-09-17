@@ -80,10 +80,11 @@ ID接頭辞: `CM-`。**破壊的変更(`student_comment`の列削除・ユニー
   - ロールバック: ドキュメントのみのため無条件にrevert可能
   - 完了: コミット`b2cc757`
 
-- [ ] **CM-013** 本番へフェーズ1マイグレーション(CM-002, CM-003相当)を適用し、新コードをデプロイする
+- [x] **CM-013** 本番へフェーズ1マイグレーション(CM-002, CM-003相当)を適用し、新コードをデプロイする
   - DoD: 本番DBの`student_comment`件数・生徒あたり最大所感件数を事前確認したうえで、CM-001の手順でバックアップを取得してからフェーズ1マイグレーションを本番適用する。適用後、Vercelへ新コードをデプロイし、所感の保存・表示、対象期間の自動保存・クラスごとの復元、AI生成が本番環境で正常に動作することを手動確認する
   - 依存: CM-004, CM-005, CM-008, CM-010, CM-011がすべてマージ済みであること
   - ロールバック: フェーズ2未適用の段階であれば、Vercelのデプロイを前バージョンに戻すだけで完全復旧する(period列はNOT NULLが外れているだけでまだ存在し、データも削除されていないため)
+  - 完了(2026-09-17確認): 本番DB(`aws-0-ap-northeast-1.pooler.supabase.com`経由でSession poolerに接続して確認)の`supabase_migrations.schema_migrations`に`20260911083009_class_comment_period`・`20260911083015_student_comment_expand`の適用記録が既にあり、スキーマも新仕様(`student_comment`に`unique(student_id)`制約あり、`period_start_date`/`period_end_date`はnullable、`class`に`comment_period_start_date`/`comment_period_end_date`あり)になっていることを直接確認した。マイグレーションは本タスク実施前に(おそらくT-005/T-079の本番セットアップ時に)既に適用済みだったため、本セッションでの追加のマイグレーション適用・バックアップ操作は不要だった(`student_comment`は本番に1件のみで、DEDUP DELETEの対象行もなかった)。Vercelへのデプロイ自体はGitHub連携の自動デプロイに委ねており(T-005)、本セッションからは個別のデプロイ操作・本番UIでの動作確認は行っていない。本番での実際の保存・AI生成の動作確認は必要であれば別途行うこと
 
 - [ ] **CM-014(段階リリース・CM-013の数日後に実施)** `student_comment`フェーズ2(縮小)マイグレーションを作成・本番適用する
   - DoD: CM-013のリリースが本番で数日以上安定稼働していることを確認する。適用前に`select conname from pg_constraint where conrelid = 'public.student_comment'::regclass and contype = 'u';`を本番DBに対して実行し、旧複合ユニーク制約が対象通り検出できることを確認する。その後、`pg_constraint`から動的に制約名を検索してdropする`do $$`ブロックと、`period_start_date`/`period_end_date`の`drop column`を含むマイグレーションを適用する
