@@ -34,8 +34,6 @@ describe("export_teacher_data", () => {
     });
     await teacher.client.from("student_comment").insert({
       student_id: student!.id,
-      period_start_date: "2026-04-01",
-      period_end_date: "2026-07-20",
       content: "所感内容",
       creation_method: "manual",
     });
