@@ -65,7 +65,7 @@ begin
   where con.conrelid = 'public.student_comment'::regclass
     and con.contype = 'u'
     and (
-      select array_agg(a.attname order by a.attname)
+      select array_agg(a.attname::text order by a.attname)
       from unnest(con.conkey) k
       join pg_attribute a on a.attrelid = con.conrelid and a.attnum = k
     ) = array['period_end_date', 'period_start_date', 'student_id'];
@@ -82,6 +82,8 @@ alter table student_comment drop column period_end_date;
 ```
 
 フェーズ2を適用する前に、`select conname from pg_constraint where conrelid = 'public.student_comment'::regclass and contype = 'u';`を本番DBに対して実行し、上記の`do`ブロックが意図した制約を実際に見つけられるかを**適用前に確認する**こと(空振りしてもエラーにはならず`raise notice`で済むため気づきにくい)。
+
+**注意(CM-014のローカル検証で判明)**: `a.attname`は`name`型であり、`array['period_end_date', ...]`(`text[]`)とは直接`=`比較できない(`operator does not exist: name[] = text[]`)。上記のように`a.attname::text`へキャストしてから`array_agg`すること。
 
 マイグレーション適用後(フェーズ2完了後)のテーブル定義:
 
@@ -232,6 +234,14 @@ export function useClassCommentPeriod(classId: string | null) {
 | `e2e/comments-class.spec.ts` | 「履歴閲覧」に関するケースを削除。「対象期間切替」のケースは自動保存・クラスごとの記憶を検証する内容に書き換える |
 | `shared/schemas/index.test.ts` L45-46, L55-56 | `commentSaveInputSchema`のテストから`periodStartDate`/`periodEndDate`を除去する |
 | `e2e/golden-path.spec.ts` | 所感生成→保存のステップを含む場合、対象期間の入力方法が変わっていないか確認する(クラスごとの自動保存に変わるため、初回訪問時は空欄から入力する手順になる) |
+
+**追記(CM-014実装時に判明、上記表には未掲載だった項目)**: 以下はフェーズ1適用時点ではまだ動作するが、フェーズ2(列削除)を適用すると影響が出るため、フェーズ2と同じマイグレーション内(またはその直前)で対応する必要がある。
+
+| ファイル | 必要な変更 |
+|---|---|
+| `export_teacher_data()` RPC(`supabase/migrations/20260815133309_rpc_export_teacher_data.sql`) | `comments`配列の各要素が`sc.period_start_date`/`sc.period_end_date`を直接参照している。列削除後は関数呼び出し自体がエラーになるため、フェーズ2マイグレーション内で`create or replace function`により参照を除去した定義へ差し替える(`supabase/migrations/20260918013828_student_comment_contract.sql`) |
+| `tests/db/schema.test.ts`(`student_comment`のdescribeブロック、T-014) | 旧複合ユニーク制約(`student_id,period_start_date,period_end_date`)でのupsertを検証していたテストを、`unique(student_id)`でのupsert検証に置き換える |
+| `tests/db/rpc-export.test.ts` | `student_comment`への`insert`フィクスチャから`period_start_date`/`period_end_date`を除去する |
 
 ## ロールバック手順
 

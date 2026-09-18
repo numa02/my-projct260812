@@ -191,28 +191,26 @@ describe("student_comment", () => {
     teacher = undefined;
   });
 
-  it("(student_id, period_start_date, period_end_date)のユニーク制約でupsertが機能する(T-014)", async () => {
+  it("(student_id)のユニーク制約でupsertが機能する(T-014、CM-014でフェーズ2適用後の新仕様に更新)", async () => {
     teacher = await createTestTeacher();
     const { studentId } = await createClassWithStudent(teacher);
 
     const commentInput = {
       student_id: studentId,
-      period_start_date: "2026-04-01",
-      period_end_date: "2026-07-20",
       content: "最初の所感",
       creation_method: "manual" as const,
     };
 
     const { error: insertError } = await teacher.client
       .from("student_comment")
-      .upsert(commentInput, { onConflict: "student_id,period_start_date,period_end_date" });
+      .upsert(commentInput, { onConflict: "student_id" });
     expect(insertError).toBeNull();
 
     const { data: upserted, error: upsertError } = await teacher.client
       .from("student_comment")
       .upsert(
         { ...commentInput, content: "更新後の所感" },
-        { onConflict: "student_id,period_start_date,period_end_date" },
+        { onConflict: "student_id" },
       )
       .select();
     expect(upsertError).toBeNull();
