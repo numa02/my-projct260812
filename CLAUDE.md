@@ -66,6 +66,11 @@ supabase start         # ローカルSupabaseスタック起動(DB結合テス�
 supabase db push       # マイグレーション適用
 ```
 
+## Claude Codeでの作業ルール
+
+- 別ブランチ(worktree)を切って作業するのは、`.claude/skills/feature-change/SKILL.md`に該当する**機能改修(新機能追加・既存機能の仕様変更)のときのみ**でよい。ドキュメント修正・モックアップ修正・タスク表の更新・軽微なバグ修正など、それ以外の作業は現在のブランチ上で直接行ってよい
+- ただしバックグラウンドジョブとして動作している場合、`.claude/settings.json`の`worktree.bgIsolation`設定によっては、上記に関わらずツール側でworktreeでの分離が強制されることがある
+
 ## 命名規則
 
 - DBのテーブル名・カラム名: `snake_case`(例: `student_comment`, `share_flag`)
