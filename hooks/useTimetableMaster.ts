@@ -3,7 +3,6 @@
 import { useMemo } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createSupabaseBrowserClient } from "@/lib/supabase-browser";
-import { useTeacherProfile } from "./useTeacherProfile";
 
 export interface MasterSlotState {
   weekday: number;
@@ -49,19 +48,6 @@ export function useTimetableMaster() {
     },
   });
 
-  const { startDate, isLoading: isProfileLoading } = useTeacherProfile();
-
-  const hasMemoQuery = useQuery({
-    queryKey: ["has-any-memo"],
-    queryFn: async (): Promise<boolean> => {
-      const { count, error } = await supabase
-        .from("memo")
-        .select("id", { count: "exact", head: true });
-      if (error) throw error;
-      return (count ?? 0) > 0;
-    },
-  });
-
   const saveMaster = useMutation({
     mutationFn: async (input: { slots: MasterSlotState[]; confirmOverwrite: boolean }) => {
       const { error } = await supabase.rpc("save_timetable_master", {
@@ -73,23 +59,9 @@ export function useTimetableMaster() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["timetable-master-slots"] }),
   });
 
-  const updateStartDate = useMutation({
-    mutationFn: async (input: { newStartDate: string; force: boolean }) => {
-      const { error } = await supabase.rpc("update_timetable_start_date", {
-        p_new_start_date: input.newStartDate,
-        p_force: input.force,
-      });
-      if (error) throw error;
-    },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["teacher-profile"] }),
-  });
-
   return {
     slots: slotsQuery.data ?? emptySlots(),
-    isLoading: slotsQuery.isLoading || isProfileLoading || hasMemoQuery.isLoading,
-    startDate,
-    hasAnyMemo: hasMemoQuery.data ?? false,
+    isLoading: slotsQuery.isLoading,
     saveMaster,
-    updateStartDate,
   };
 }

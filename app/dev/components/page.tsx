@@ -106,7 +106,7 @@ function ComponentGallery() {
             <Input label="メールアドレス" type="email" />
             <Input label="パスワード" type="password" />
             <Input label="出席番号" type="number" />
-            <Input label="起算日" type="date" />
+            <Input label="日付" type="date" />
           </div>
         </Demo>
         <Demo label="error / disabled">

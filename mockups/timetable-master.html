@@ -89,10 +89,6 @@
             <button class="px-3 py-1.5 rounded-sm bg-white shadow-sm text-gray-900 font-medium">一括モード</button>
             <button class="px-3 py-1.5 rounded-sm text-gray-500">教科担任制モード</button>
           </div>
-          <div class="flex items-center gap-2">
-            <label class="text-xs text-gray-500">起算日</label>
-            <input type="date" value="2026-04-06" class="h-9 px-3 rounded-sm border border-gray-300 text-sm">
-          </div>
         </div>
 
         <!-- CSV/貼り付け取り込みセクション(折りたたみ、初期状態は閉) -->
@@ -371,28 +367,6 @@
           </table>
         </div>
         <p class="text-xs text-gray-400">上段=科目、下段=クラス。曜日は月〜金・時限は1〜6限まで(一括モードと同じ範囲)。モードを切り替えても保存済みの内容は変わらず、表示方法だけが変わります。</p>
-      </div>
-    </section>
-
-    <!-- 起算日ロック状態 -->
-    <section class="space-y-3">
-      <h2 class="text-sm font-medium text-gray-500">起算日ロック状態(授業記録が1件以上ある場合)</h2>
-      <div class="bg-white rounded-lg border border-gray-200 shadow-sm p-4 tablet:p-6 space-y-3 max-w-xl">
-        <div class="flex items-center gap-2">
-          <label class="text-xs text-gray-500">起算日</label>
-          <input type="date" value="2026-04-06" disabled class="h-9 px-3 rounded-sm border border-gray-300 text-sm bg-gray-50 text-gray-500">
-        </div>
-        <p class="text-xs text-gray-500">授業記録が開始されているため起算日は変更できません。</p>
-        <button class="text-sm text-primary-500 hover:underline">年度を更新する(起算日を再設定する)</button>
-      </div>
-    </section>
-
-    <!-- エラー状態 -->
-    <section class="space-y-3">
-      <h2 class="text-sm font-medium text-gray-500">エラー状態(起算日未入力のまま保存)</h2>
-      <div class="flex items-start gap-2 bg-error-500/10 border border-error-500/30 text-error-500 text-sm rounded-sm px-3 py-2.5 max-w-xl">
-        <span class="mt-0.5">⚠</span>
-        <span>起算日が入力されていません。週次時間割を表示するには起算日の設定が必要です。</span>
       </div>
     </section>
 

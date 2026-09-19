@@ -10,11 +10,7 @@ import { TimetableGrid, type TimetableCell } from "@/components/timetable/Timeta
 import { SlotEditModal } from "@/components/timetable/SlotEditModal";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { Button } from "@/components/ui/Button";
-import { addWeekdayOffset, computeWeekNumber, formatISODate, getWeekStartDate } from "@/shared/week";
-
-export interface WeeklyTimetableViewProps {
-  startDate: string;
-}
+import { addWeekdayOffset, formatISODate, getWeekStartDate } from "@/shared/week";
 
 interface EditingSlot {
   weekday: number;
@@ -25,7 +21,7 @@ function parseJstDate(dateISO: string): Date {
   return new Date(`${dateISO}T00:00:00+09:00`);
 }
 
-export function WeeklyTimetableView({ startDate }: WeeklyTimetableViewProps) {
+export function WeeklyTimetableView() {
   const [weekStartDateISO, setWeekStartDateISO] = useState(() =>
     formatISODate(getWeekStartDate(new Date())),
   );
@@ -38,10 +34,6 @@ export function WeeklyTimetableView({ startDate }: WeeklyTimetableViewProps) {
 
   const weekStartDate = useMemo(() => parseJstDate(weekStartDateISO), [weekStartDateISO]);
   const weekEndDate = useMemo(() => addWeekdayOffset(weekStartDate, 5), [weekStartDate]);
-  const weekNumber = useMemo(
-    () => computeWeekNumber(parseJstDate(startDate), weekStartDate),
-    [startDate, weekStartDate],
-  );
 
   const goToPrevWeek = () => setWeekStartDateISO(formatISODate(addDays(weekStartDate, -7)));
   const goToNextWeek = () => setWeekStartDateISO(formatISODate(addDays(weekStartDate, 7)));
@@ -98,7 +90,7 @@ export function WeeklyTimetableView({ startDate }: WeeklyTimetableViewProps) {
         </div>
 
         <p className="text-base font-medium text-gray-900">
-          第{weekNumber}週 {format(weekStartDate, "yyyy年M月d日")}(月)〜
+          {format(weekStartDate, "yyyy年M月d日")}(月)〜
           {format(weekEndDate, "M月d日")}(金)
         </p>
 

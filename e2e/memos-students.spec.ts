@@ -34,12 +34,11 @@ async function importStudents(page: Page, className: string, csv: string): Promi
   await expect(page.getByText(/件の生徒を登録しました/)).toBeVisible();
 }
 
-async function setUpMaster(page: Page, startDate: string): Promise<void> {
+async function setUpMaster(page: Page): Promise<void> {
   await page.goto("/timetable/master");
   await page.getByLabel("クラス(全マスに適用)").selectOption({ label: "1年1組" });
   await page.getByLabel("月曜1限の科目").selectOption({ label: "国語" });
   await page.getByLabel("月曜2限の科目").selectOption({ label: "算数" });
-  await page.getByLabel("起算日").fill(startDate);
   await page.getByRole("button", { name: "保存" }).click();
   await expect(page.getByText("時間割マスタを保存しました")).toBeVisible();
 }
@@ -79,7 +78,7 @@ test.describe("生徒別メモ一覧画面(T-064)", () => {
     await createSubject(page, "国語");
     await createSubject(page, "算数");
     await importStudents(page, "1年1組", "1,生徒A");
-    await setUpMaster(page, "2026-04-06");
+    await setUpMaster(page);
 
     await recordMemo(page, 1, "国語メモ");
     await recordMemo(page, 2, "算数メモ");

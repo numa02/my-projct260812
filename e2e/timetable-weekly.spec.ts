@@ -26,32 +26,29 @@ async function createSubject(page: Page, name: string): Promise<void> {
   await expect(page.getByText("科目を登録しました")).toBeVisible();
 }
 
-/** 一括モードで起算日+月曜1限・月曜2限の科目を設定する(週次時間割画面のテスト用の下準備) */
-async function setUpMaster(page: Page, startDate: string): Promise<void> {
+/** 一括モードで月曜1限・月曜2限の科目を設定する(週次時間割画面のテスト用の下準備) */
+async function setUpMaster(page: Page): Promise<void> {
   await page.goto("/timetable/master");
   await page.getByLabel("クラス(全マスに適用)").selectOption({ label: "1年1組" });
   await page.getByLabel("月曜1限の科目").selectOption({ label: "国語" });
   await page.getByLabel("月曜2限の科目").selectOption({ label: "算数" });
-  await page.getByLabel("起算日").fill(startDate);
   await page.getByRole("button", { name: "保存" }).click();
   await expect(page.getByText("時間割マスタを保存しました")).toBeVisible();
 }
 
 test.describe("週次時間割画面(T-061, T-062)", () => {
-  test("起算日が未設定の場合は参照不可で、時間割マスタ設定画面への導線が表示される", async ({
+  test("サインアップ直後(時間割マスタ未設定)でも今週の週次時間割を表示できる", async ({
     page,
   }) => {
     await signUpAndLogin(page);
     await page.goto("/timetable/weekly");
 
-    await expect(
-      page.getByText("起算日が未設定のため週次時間割を表示できません"),
-    ).toBeVisible();
-    await page.getByRole("button", { name: "時間割マスタ設定画面へ" }).click();
-    await expect(page).toHaveURL(/\/timetable\/master$/);
+    await expect(page.getByRole("heading", { name: "週次時間割" })).toBeVisible();
+    await expect(page.getByText(/^\d{4}年\d{1,2}月\d{1,2}日\(月\)〜\d{1,2}月\d{1,2}日\(金\)$/)).toBeVisible();
+    await expect(page.getByText(/第-?\d+週/)).toHaveCount(0);
   });
 
-  test("週番号・日付範囲の表示、マスタ内容の表示、週送り・週指定ナビゲーション", async ({
+  test("日付範囲の表示、マスタ内容の表示、週送り・週指定ナビゲーション", async ({
     page,
   }) => {
     await signUpAndLogin(page);
@@ -59,26 +56,23 @@ test.describe("週次時間割画面(T-061, T-062)", () => {
     await createSubject(page, "国語");
     await createSubject(page, "算数");
     // 2026-04-06は月曜日
-    await setUpMaster(page, "2026-04-06");
+    await setUpMaster(page);
 
-    // 初期表示は現在日付が属する週(今週または指定週)のため、まず起算日の週へ明示的に移動する
+    // 初期表示は現在日付が属する週のため、まずマスタの確認に使う週へ明示的に移動する
     await page.goto("/timetable/weekly");
     await page.getByLabel("週を指定").fill("2026-04-06");
-    await expect(page.getByText("第1週")).toBeVisible();
     await expect(page.getByText("2026年4月6日(月)〜4月10日(金)")).toBeVisible();
     await expect(page.getByRole("gridcell").filter({ hasText: "国語" })).toBeVisible();
     await expect(page.getByRole("gridcell").filter({ hasText: "算数" })).toBeVisible();
 
     await page.getByRole("button", { name: "次の週へ" }).click();
-    await expect(page.getByText("第2週")).toBeVisible();
     await expect(page.getByText("2026年4月13日(月)〜4月17日(金)")).toBeVisible();
 
     await page.getByRole("button", { name: "前の週へ" }).click();
     await page.getByRole("button", { name: "前の週へ" }).click();
-    await expect(page.getByText("第0週")).toBeVisible();
+    await expect(page.getByText("2026年3月30日(月)〜4月3日(金)")).toBeVisible();
 
     await page.getByLabel("週を指定").fill("2026-04-20");
-    await expect(page.getByText("第3週")).toBeVisible();
     await expect(page.getByText("2026年4月20日(月)〜4月24日(金)")).toBeVisible();
   });
 
@@ -89,7 +83,7 @@ test.describe("週次時間割画面(T-061, T-062)", () => {
     await createClass(page, "1", "1年1組");
     await createSubject(page, "国語");
     await createSubject(page, "算数");
-    await setUpMaster(page, "2026-04-06");
+    await setUpMaster(page);
 
     await page.goto("/timetable/weekly");
     await page.getByLabel("週を指定").fill("2026-04-06");
@@ -116,7 +110,7 @@ test.describe("週次時間割画面(T-061, T-062)", () => {
     await createClass(page, "1", "1年1組");
     await createSubject(page, "国語");
     await createSubject(page, "算数");
-    await setUpMaster(page, "2026-04-06");
+    await setUpMaster(page);
 
     await page.goto("/timetable/weekly");
     await page.getByLabel("週を指定").fill("2026-04-06");
@@ -140,7 +134,7 @@ test.describe("週次時間割画面(T-061, T-062)", () => {
     await createClass(page, "1", "1年1組");
     await createSubject(page, "国語");
     await createSubject(page, "算数");
-    await setUpMaster(page, "2026-04-06");
+    await setUpMaster(page);
 
     await page.goto("/timetable/weekly");
     await page.getByLabel("週を指定").fill("2026-04-06");
