@@ -27,7 +27,7 @@ test("サインアップからクラス作成・生徒登録・時間割設定�
   // 3. 科目登録
   await page.goto("/subjects");
   await page.getByLabel("科目名").fill("国語");
-  await page.getByRole("button", { name: "登録" }).click();
+  await page.getByRole("button", { name: "登録", exact: true }).click();
   await expect(page.getByText("科目を登録しました")).toBeVisible();
 
   // 4. CSV(テキスト貼り付け)で生徒登録

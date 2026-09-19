@@ -73,7 +73,7 @@ async function createClass(page: Page, grade: string, displayName: string): Prom
 async function createSubject(page: Page, name: string): Promise<void> {
   await page.goto("/subjects");
   await page.getByLabel("科目名").fill(name);
-  await page.getByRole("button", { name: "登録" }).click();
+  await page.getByRole("button", { name: "登録", exact: true }).click();
   await expect(page.getByText("科目を登録しました")).toBeVisible();
 }
 
