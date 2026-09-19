@@ -12,7 +12,7 @@
 - ホスティング: Vercel(単一デプロイ。当初Cloudflare Pagesを検討したが、Next.js 16の`proxy.ts`がNode.jsランタイム固定になったこととOpenNext Cloudflareアダプタの対応が追いつかない非互換があったため変更。詳細は`docs/tasks.md` T-005/T-079参照)
 - 状態管理: TanStack Query(`supabase-js` の呼び出し結果のキャッシュ用途)
 - フォーム: react-hook-form + zod(`shared/schemas`)
-- 日付・週番号: date-fns + date-fns-tz(JST固定)
+- 日付・週計算: date-fns + date-fns-tz(JST固定)
 - アイコン: lucide-react
 - テスト: Vitest + React Testing Library、Playwright(E2Eはゴールデンパス中心に絞る)
 
@@ -37,7 +37,7 @@ app/api/[[...route]]/  Honoアプリのマウント先
 components/            画面横断コンポーネント(timetable/, memo/, comment/, ui/)
 hooks/                 TanStack Queryベースのデータ取得・更新フック
 lib/                   supabaseクライアント、Honoサーバー本体
-shared/                zodスキーマ、仮名コード生成・週番号計算・プロンプト組み立て等の純粋関数
+shared/                zodスキーマ、仮名コード生成・週(月曜始まり)計算・プロンプト組み立て等の純粋関数
 supabase/migrations/   Supabase CLIのSQLマイグレーション(テーブル+RPC関数)
 docs/                  要件定義・データモデル・技術設計・デザイン定義
 ```

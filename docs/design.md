@@ -77,7 +77,7 @@ flowchart LR
 | 認証セッション管理 | `@supabase/ssr`(Cookieベース) | Next.jsのMiddleware・Server Componentからもログイン状態を判定できる必要があるため。ブラウザのみが保持するセッションでは§1で述べた矛盾が生じる |
 | 状態管理(サーバー state) | TanStack Query | `supabase-js`の直接呼び出し結果を画面内クラス選択・週次時間割の期間ジャンプ等の画面間でキャッシュ・再検証するために利用。保存はLWW(最後の保存が勝つ)方針のため楽観的更新は行わず(§6)、キャッシュ管理の目的に限定して使う |
 | フォーム・バリデーション | react-hook-form + zod | `packages/`ではなく単一アプリ内の`shared/schemas`にzodスキーマを置き、フロントのバリデーション(`zodResolver`)とRPC呼び出し前のクライアント側事前チェックの両方で使い回す。DB側の制約(NOT NULL、CHECK、RLS)が最終防衛線であることに変わりはない |
-| 日付・週番号計算 | date-fns + date-fns-tz | 非機能要件で日付計算を常にJST固定と定めているため、サーバー実行環境のTZに依存しないライブラリが必要 |
+| 日付・週計算 | date-fns + date-fns-tz | 非機能要件で日付計算を常にJST固定と定めているため、サーバー実行環境のTZに依存しないライブラリが必要 |
 | AIプロバイダ呼び出し | 各プロバイダ公式REST APIへの`fetch`直呼び出し(共通アダプタ層でラップ、Hono側のみ) | ストリーミング等の高度機能は不要で、「プロンプトを送って完成文を1回受け取る」だけの単純な呼び出しのため、SDK依存を増やさない。3社分のリクエスト/レスポンス形式・エラー形式の変更に自前で追従するコストは継続的に発生する点は許容する |
 | APIキー暗号化 | Web Crypto API (`crypto.subtle`, AES-256-GCM、IVは`crypto.getRandomValues`で暗号化ごとに12byte生成、AADに`teacher_id`を付与) | Node.js/Edge双方のランタイムで利用できるWeb標準のWeb Crypto APIのみで完結。AADに`teacher_id`を付与することで、万一暗号文が別の行にコピーされても(DBバグ・SQLインジェクション等)本来の所有者以外では復号時の認証タグ検証が失敗し復号できない、というコンテキストバインディングを持たせた(初版で欠けていた対策) |
 | プロジェクト構成 | **単一Next.jsアプリ(モノレポ・pnpm workspacesは廃止)** | 初版はapps/web・apps/api・packages/sharedの3分割モノレポだったが、Honoの担当範囲が3エンドポイントまで縮小したため、独立デプロイを分ける理由がなくなった。想定規模(個人〜身内数人)に対してモノレポ管理コストは見合わないという再ヒアリングの結論を反映し、単一アプリ内のディレクトリ分割(`shared/`)で十分とした |
@@ -136,7 +136,7 @@ flowchart LR
 ├── shared/
 │   ├── schemas/                    # zodスキーマ
 │   ├── pseudonym.ts                # 仮名コード生成(純粋関数)
-│   ├── week.ts                     # JST週番号計算(純粋関数)
+│   ├── week.ts                     # JSTでの週(月曜始まり)・日付計算(純粋関数)
 │   ├── prompt-builder.ts           # プロンプト組み立て(純粋関数)
 │   └── resolve-weekly-slots.ts     # マスタ+個別変更の解決(純粋関数、§5.4)
 ├── supabase/
@@ -165,7 +165,7 @@ flowchart LR
 -- (二重管理によるズレを避けるため。UI表示が必要な場合はセッションから取得する)
 create table teacher_profile (
   id uuid primary key references auth.users(id) on delete cascade,
-  start_date date,                 -- 起算日。未設定はnull
+  start_date date,                 -- 廃止予定(旧・起算日)。アプリからは参照しない。docs/features/start-date-removal/ フェーズ2で削除
   created_at timestamptz not null default now()
 );
 
@@ -594,6 +594,7 @@ begin
 end;
 $$;
 
+-- 【廃止予定】起算日の廃止によりアプリからは呼び出さない。docs/features/start-date-removal/ フェーズ2で削除する
 -- 起算日の変更: 通常保存(メモが1件でもあれば拒否) と 年度更新(強制)を1関数に集約
 create function update_timetable_start_date(p_new_start_date date, p_force boolean default false)
 returns teacher_profile
@@ -767,7 +768,7 @@ export const POST = app.fetch;
 | `delete_subject(subject_id)` | 科目削除 | F3 |
 | `import_students(class_id, rows)` | CSV/貼り付け一括登録 | F2 |
 | `save_timetable_master(slots, confirm_overwrite)` | 時間割マスタ保存 | F4 |
-| `update_timetable_start_date(new_start_date, force)` | 起算日変更・年度更新 | F4 |
+| `update_timetable_start_date(new_start_date, force)`(廃止予定。アプリからは呼ばない) | 起算日変更・年度更新 | F4。`docs/features/start-date-removal/`のフェーズ2で削除 |
 | `export_teacher_data()` | 全データエクスポート | F14 |
 | `seed_standard_subjects(school_level)`(未実装、2026-09時点) | 標準科目セット投入 | F3。詳細は`docs/features/subjects/design.md` |
 
@@ -948,7 +949,7 @@ export class AiProviderError extends Error {
 初版では「一括操作は部分保存を作らない」という単一原則を掲げていたが、これはF2(CSV一括登録)の「有効な行だけ登録し、無効・重複行はエラー行として報告する」という**意図された部分成功仕様**と矛盾していた。改訂版では原則を分離する。
 
 - **意図的な部分成功(全か無かにしない)**: CSV一括登録(`import_students`)。行単位の検証結果をそのまま`{ imported, errors }`として返す。これはRPC内の1トランザクションの中で、無効行を単にinsert対象から除外しているだけであり、「トランザクションが部分的にコミットされる」という意味での不整合とは異なる。
-- **全か無かにする(部分適用を許さない)**: `create_class`・`delete_class`・`delete_subject`・`save_timetable_master`・`update_timetable_start_date`・`export_teacher_data`。これらはRPC内で例外が発生すれば関数全体がロールバックされ、DBには何も反映されない。単一テーブルへの`insert`/`update`/`delete`/`upsert`(メモ、所見、生徒編集等)も同様に、PostgREST側で1リクエスト=1操作が原子的に成功/失敗する。
+- **全か無かにする(部分適用を許さない)**: `create_class`・`delete_class`・`delete_subject`・`save_timetable_master`・`export_teacher_data`。これらはRPC内で例外が発生すれば関数全体がロールバックされ、DBには何も反映されない。単一テーブルへの`insert`/`update`/`delete`/`upsert`(メモ、所見、生徒編集等)も同様に、PostgREST側で1リクエスト=1操作が原子的に成功/失敗する。
 
 ### 6.2 エラーの伝達方法
 
@@ -974,7 +975,7 @@ export class AiProviderError extends Error {
 
 | レベル | ツール | 対象 | 投資方針 |
 |---|---|---|---|
-| 単体テスト | Vitest | `shared/`の純粋関数(仮名コード生成、週番号計算、プロンプト組み立て、`resolveWeeklySlots`) | 通常投資。副作用がなくテストしやすいため費用対効果が高い |
+| 単体テスト | Vitest | `shared/`の純粋関数(仮名コード生成、週(月曜始まり)計算、プロンプト組み立て、`resolveWeeklySlots`) | 通常投資。副作用がなくテストしやすいため費用対効果が高い |
 | 単体テスト(Hono) | Vitest + `app.fetch` | `/settings/ai-provider`、`/comments/generate`の2系統3エンドポイント | エンドポイント数が少ないため全パスを軽く網羅する |
 | DB結合テスト | Vitest + Supabase CLIローカルスタック(`supabase start`) | §5.2のRPC関数8つ(正常系+例外系)、RLSポリシーのクロステナント拒否 | **縮小しない。** 初版で懸念したTOCTOU・非アトミック性の問題を「Postgres関数に集約する」ことで解消した以上、その関数自体が正しくロールバックすることを検証しなければ設計上の解消が絵に描いた餅になる。RLSのクロステナントテストも同様に、ここだけは規模によらず必須と判断する |
 | コンポーネントテスト | Vitest + React Testing Library | フォームバリデーション、確認ダイアログの表示条件分岐 | 縮小。主要な分岐(F1学年変更確認、F4一括モード上書き確認)のみ |

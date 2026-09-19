@@ -38,11 +38,10 @@ test("サインアップからクラス作成・生徒登録・時間割設定�
   await page.getByRole("button", { name: "取り込む" }).click();
   await expect(page.getByText("1件の生徒を登録しました")).toBeVisible();
 
-  // 5. 時間割マスタ設定(起算日は月曜日を指定)
+  // 5. 時間割マスタ設定
   await page.goto("/timetable/master");
   await page.getByLabel("クラス(全マスに適用)").selectOption({ label: "1年1組" });
   await page.getByLabel("月曜1限の科目").selectOption({ label: "国語" });
-  await page.getByLabel("起算日").fill("2026-04-06");
   await page.getByRole("button", { name: "保存" }).click();
   await expect(page.getByText("時間割マスタを保存しました")).toBeVisible();
 

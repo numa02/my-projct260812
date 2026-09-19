@@ -26,7 +26,7 @@ erDiagram
     TEACHER {
         uuid id PK "Supabase AuthのユーザーIDと同一"
         string email "概念上の項目。実テーブルにはemail列を複製しない(下記注記参照)"
-        date start_date "起算日。未設定ならnull。授業記録(メモ)が1件以上存在すると通常は変更不可だが、「年度を更新する」操作を経由すれば再設定できる"
+        date start_date "廃止予定(旧・起算日)。アプリからは参照しない。start-date-removalフェーズ2で削除"
         datetime created_at
     }
 

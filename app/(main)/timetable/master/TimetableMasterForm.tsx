@@ -6,7 +6,6 @@ import { useClasses } from "@/hooks/useClasses";
 import { useSubjects } from "@/hooks/useSubjects";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { Select } from "@/components/ui/Select";
-import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { InlineMessage } from "@/components/ui/InlineMessage";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
@@ -38,20 +37,11 @@ interface AsyncAction<T> {
 
 export interface TimetableMasterFormProps {
   initialSlots: MasterSlotState[];
-  initialStartDate: string | null;
-  hasAnyMemo: boolean;
   saveMaster: AsyncAction<{ slots: MasterSlotState[]; confirmOverwrite: boolean }>;
-  updateStartDate: AsyncAction<{ newStartDate: string; force: boolean }>;
 }
 
 /** 下書きの初期値はpropsから一度だけ受け取る(サーバーデータのロード完了後にのみ親から描画される) */
-export function TimetableMasterForm({
-  initialSlots,
-  initialStartDate,
-  hasAnyMemo,
-  saveMaster,
-  updateStartDate,
-}: TimetableMasterFormProps) {
+export function TimetableMasterForm({ initialSlots, saveMaster }: TimetableMasterFormProps) {
   const { classes } = useClasses();
   const { subjects } = useSubjects();
   const { showToast } = useToast();
@@ -72,18 +62,12 @@ export function TimetableMasterForm({
   const inferredBulkClassId = draftSlots.find((s) => s.classId)?.classId ?? null;
   const bulkClassId = bulkClassIdOverride ?? inferredBulkClassId ?? classes[0]?.id ?? "";
   const setBulkClassId = setBulkClassIdOverride;
-  const [startDateInput, setStartDateInput] = useState<string>(initialStartDate ?? "");
-  const [startDateError, setStartDateError] = useState<string | null>(null);
-  const [yearUpdateMode, setYearUpdateMode] = useState(false);
-  const [yearUpdateConfirmOpen, setYearUpdateConfirmOpen] = useState(false);
   const [overwriteConfirmOpen, setOverwriteConfirmOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
   const [importErrors, setImportErrors] = useState<ImportErrorRow[]>([]);
   // 取り込み成功後に貼り付け欄をクリアするため、キーを変えてPasteOrUploadAreaを再マウントする
   const [importAreaKey, setImportAreaKey] = useState(0);
-
-  const isStartDateEditable = !hasAnyMemo || yearUpdateMode;
 
   const updateSlot = (weekday: number, period: number, patch: Partial<MasterSlotState>) => {
     setDraftSlots((prev) =>
@@ -114,11 +98,6 @@ export function TimetableMasterForm({
   };
 
   const doSave = async (confirmOverwrite: boolean) => {
-    if (startDateInput.trim().length === 0) {
-      setStartDateError("起算日を入力してください");
-      return;
-    }
-    setStartDateError(null);
     setSaving(true);
     try {
       const payload = buildPayload();
@@ -126,15 +105,6 @@ export function TimetableMasterForm({
       // 一括モードのclassId上書きはdraftSlots自体には反映されていないため、保存成功時に同期する
       // (教科担任制モードに切り替えて確認した際に古い値が見えてしまうのを防ぐ)
       setDraftSlots(payload);
-
-      if (isStartDateEditable && startDateInput !== initialStartDate) {
-        await updateStartDate.mutateAsync({
-          newStartDate: startDateInput,
-          force: yearUpdateMode,
-        });
-        setYearUpdateMode(false);
-      }
-
       showToast("success", "時間割マスタを保存しました");
       setOverwriteConfirmOpen(false);
     } catch (err) {
@@ -297,32 +267,6 @@ export function TimetableMasterForm({
         </table>
       </div>
 
-      <div className="flex max-w-xs flex-col gap-2">
-        <Input
-          label="起算日"
-          type="date"
-          value={startDateInput}
-          onChange={(e) => setStartDateInput(e.target.value)}
-          disabled={!isStartDateEditable}
-          error={startDateError ?? undefined}
-        />
-        {!isStartDateEditable && (
-          <div className="flex flex-col gap-2">
-            <p className="text-sm text-gray-500">
-              授業記録が開始されているため起算日は変更できません
-            </p>
-            <Button
-              variant="outline"
-              size="sm"
-              className="self-start"
-              onClick={() => setYearUpdateConfirmOpen(true)}
-            >
-              年度を更新する
-            </Button>
-          </div>
-        )}
-      </div>
-
       <Button
         variant="primary"
         size="lg"
@@ -340,17 +284,6 @@ export function TimetableMasterForm({
         loading={saving}
         onConfirm={() => doSave(true)}
         onCancel={() => setOverwriteConfirmOpen(false)}
-      />
-
-      <ConfirmDialog
-        title="年度を更新しますか"
-        body="年度を更新すると、今日以降の週番号の数え方が新しい起算日を基準に変わります。過去に記録した授業記録・メモ・所見はそのまま残り、削除されません。"
-        open={yearUpdateConfirmOpen}
-        onConfirm={() => {
-          setYearUpdateMode(true);
-          setYearUpdateConfirmOpen(false);
-        }}
-        onCancel={() => setYearUpdateConfirmOpen(false)}
       />
     </div>
   );

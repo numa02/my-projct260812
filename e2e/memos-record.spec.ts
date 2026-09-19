@@ -34,12 +34,11 @@ async function importStudents(page: Page, className: string, csv: string): Promi
   await expect(page.getByText(/件の生徒を登録しました/)).toBeVisible();
 }
 
-/** 一括モードで起算日+月曜1限の科目を設定する(授業記録画面のテスト用の下準備) */
-async function setUpMaster(page: Page, startDate: string): Promise<void> {
+/** 一括モードで月曜1限の科目を設定する(授業記録画面のテスト用の下準備) */
+async function setUpMaster(page: Page): Promise<void> {
   await page.goto("/timetable/master");
   await page.getByLabel("クラス(全マスに適用)").selectOption({ label: "1年1組" });
   await page.getByLabel("月曜1限の科目").selectOption({ label: "国語" });
-  await page.getByLabel("起算日").fill(startDate);
   await page.getByRole("button", { name: "保存" }).click();
   await expect(page.getByText("時間割マスタを保存しました")).toBeVisible();
 }
@@ -49,7 +48,7 @@ test.describe("授業記録画面(T-063)", () => {
     await signUpAndLogin(page);
     await createClass(page, "1", "1年1組");
     await createSubject(page, "国語");
-    await setUpMaster(page, "2026-04-06"); // 月曜1限のみ設定、火曜1限は未設定のまま
+    await setUpMaster(page); // 月曜1限のみ設定、火曜1限は未設定のまま
 
     await page.goto("/memos/record?date=2026-04-07&period=1"); // 2026-04-07は火曜日
     await expect(
@@ -64,7 +63,7 @@ test.describe("授業記録画面(T-063)", () => {
     await createClass(page, "1", "1年1組");
     await createSubject(page, "国語");
     await importStudents(page, "1年1組", "1,生徒A\n2,生徒B");
-    await setUpMaster(page, "2026-04-06");
+    await setUpMaster(page);
 
     await page.goto("/memos/record?date=2026-04-06&period=1");
     await expect(page.getByText("国語 / 1年1組")).toBeVisible();
@@ -93,7 +92,7 @@ test.describe("授業記録画面(T-063)", () => {
     await createClass(page, "1", "1年1組");
     await createSubject(page, "国語");
     await importStudents(page, "1年1組", "1,生徒A");
-    await setUpMaster(page, "2026-04-06");
+    await setUpMaster(page);
 
     await page.goto("/memos/record?date=2026-04-06&period=1");
     await page.getByRole("button", { name: /生徒A/ }).click();
@@ -119,7 +118,7 @@ test.describe("授業記録画面(T-063)", () => {
     await createClass(page, "1", "1年1組");
     await createSubject(page, "国語");
     await importStudents(page, "1年1組", "1,生徒A");
-    await setUpMaster(page, "2026-04-06");
+    await setUpMaster(page);
 
     await page.goto("/memos/record?date=2026-04-06&period=1");
     await page.getByRole("button", { name: /生徒A/ }).click();

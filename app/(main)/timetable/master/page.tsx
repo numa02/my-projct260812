@@ -5,8 +5,7 @@ import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { TimetableMasterForm } from "./TimetableMasterForm";
 
 export default function TimetableMasterPage() {
-  const { slots, isLoading, startDate, hasAnyMemo, saveMaster, updateStartDate } =
-    useTimetableMaster();
+  const { slots, isLoading, saveMaster } = useTimetableMaster();
 
   if (isLoading) {
     return (
@@ -16,13 +15,5 @@ export default function TimetableMasterPage() {
     );
   }
 
-  return (
-    <TimetableMasterForm
-      initialSlots={slots}
-      initialStartDate={startDate}
-      hasAnyMemo={hasAnyMemo}
-      saveMaster={saveMaster}
-      updateStartDate={updateStartDate}
-    />
-  );
+  return <TimetableMasterForm initialSlots={slots} saveMaster={saveMaster} />;
 }
