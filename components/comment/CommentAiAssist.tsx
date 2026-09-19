@@ -23,15 +23,15 @@ export interface CommentAiAssistProps {
   pseudonymCode: string;
   periodStartDate: string;
   periodEndDate: string;
-  /** 生成・貼り付けた内容を行の所感欄に反映する(この時点ではまだ保存しない) */
+  /** 生成・貼り付けた内容を行の所見欄に反映する(この時点ではまだ保存しない) */
   onApply: (content: string, method: CommentCreationMethod) => void;
 }
 
 /**
- * 所感一覧画面の行内で折りたたまれるAI生成セクション(F9, F10)。
+ * 所見一覧画面の行内で折りたたまれるAI生成セクション(F9, F10)。
  * 直接呼び出し・プロンプトコピー運用のどちらを使うかは教員が都度選べる
  * (APIキー設定済みでも、あえてプロンプトコピー運用を選んでよい)。
- * いずれの方法も、結果は自前で保存せずonApplyで行の所感欄(常時表示のテキストエリア)に
+ * いずれの方法も、結果は自前で保存せずonApplyで行の所見欄(常時表示のテキストエリア)に
  * 反映するだけに留める。保存は行側の責務
  */
 export function CommentAiAssist({
@@ -73,7 +73,7 @@ export function CommentAiAssist({
         targetCharCount: targetCharCountNumber,
       });
       onApply(rawText, "direct_ai");
-      showToast("success", "生成結果を所感欄に反映しました");
+      showToast("success", "生成結果を所見欄に反映しました");
     } catch (err) {
       showToast("error", (err as Error).message || "生成に失敗しました");
     }
@@ -92,7 +92,7 @@ export function CommentAiAssist({
     if (pastedText.trim().length === 0) return;
     onApply(pastedText.trim(), "prompt_copy");
     setPastedText("");
-    showToast("success", "所感欄に反映しました");
+    showToast("success", "所見欄に反映しました");
   };
 
   if (isLoadingSetting || isLoadingTemplate) {
@@ -102,7 +102,7 @@ export function CommentAiAssist({
   return (
     <div className="flex flex-col gap-4 rounded-md border border-gray-200 bg-gray-50 p-4">
       <SegmentedControl
-        aria-label="所感の作成方法"
+        aria-label="所見の作成方法"
         options={[
           { value: "direct", label: "AIで直接生成" },
           { value: "prompt", label: "プロンプトを作成" },
@@ -147,10 +147,10 @@ export function CommentAiAssist({
             loading={generateComment.isPending}
             onClick={handleGenerate}
           >
-            生成して所感欄に反映
+            生成して所見欄に反映
           </Button>
           {generateComment.isPending && (
-            <LoadingSpinner label="AIが所感を生成しています(数秒〜数十秒かかることがあります)" />
+            <LoadingSpinner label="AIが所見を生成しています(数秒〜数十秒かかることがあります)" />
           )}
         </>
       ) : (
@@ -176,7 +176,7 @@ export function CommentAiAssist({
             onClick={handleApplyPasted}
             disabled={pastedText.trim().length === 0}
           >
-            所感欄に反映
+            所見欄に反映
           </Button>
         </div>
       )}

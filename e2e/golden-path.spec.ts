@@ -1,11 +1,11 @@
 import { test, expect } from "@playwright/test";
 
 /**
- * ゴールデンパス(T-077): サインアップ→クラス作成→CSV登録→時間割設定→メモ記録→所感生成・保存
+ * ゴールデンパス(T-077): サインアップ→クラス作成→CSV登録→時間割設定→メモ記録→所見生成・保存
  * 各画面の細かい分岐は個別のspecでカバー済みのため、ここでは一連の主要フローが
  * 画面間の遷移を含めて最後まで通ることだけを確認する。
  */
-test("サインアップからクラス作成・生徒登録・時間割設定・メモ記録・所感生成保存までの一連の流れが完了する", async ({
+test("サインアップからクラス作成・生徒登録・時間割設定・メモ記録・所見生成保存までの一連の流れが完了する", async ({
   page,
 }) => {
   // 1. サインアップ
@@ -59,7 +59,7 @@ test("サインアップからクラス作成・生徒登録・時間割設定�
   await page.getByRole("button", { name: "保存" }).click();
   await expect(page.getByText("メモを保存しました")).toBeVisible();
 
-  // 8. 所感画面で直接呼び出しにより所感を生成・保存(design.mdの方針通りAI呼び出しはモック)
+  // 8. 所見画面で直接呼び出しにより所見を生成・保存(design.mdの方針通りAI呼び出しはモック)
   await page.goto("/settings/ai-provider");
   await page.getByLabel("APIキー").fill("sk-test-golden-path-key");
   await page.getByRole("button", { name: "保存" }).click();
@@ -73,7 +73,7 @@ test("サインアップからクラス作成・生徒登録・時間割設定�
 
   await page.goto("/students");
   await page.getByLabel("クラス").selectOption({ label: "1年1組" });
-  await page.getByRole("link", { name: "生徒Aの所感" }).click();
+  await page.getByRole("link", { name: "生徒Aの所見" }).click();
   await expect(page).toHaveURL(/\/comments\/class\//);
 
   await page.getByLabel("開始日").fill("2026-04-01");
@@ -81,13 +81,13 @@ test("サインアップからクラス作成・生徒登録・時間割設定�
 
   const row = page.getByRole("group", { name: "生徒Aの行" });
   await row.getByRole("button", { name: "AIで生成する" }).click();
-  await row.getByRole("button", { name: "生成して所感欄に反映" }).click();
-  await expect(row.getByLabel("生徒Aの所感")).toHaveValue(
+  await row.getByRole("button", { name: "生成して所見欄に反映" }).click();
+  await expect(row.getByLabel("生徒Aの所見")).toHaveValue(
     "授業に積極的に取り組み、着実に成長が見られました。",
   );
 
   await row.getByRole("button", { name: "保存" }).click();
-  await expect(page.getByText("生徒Aの所感を保存しました")).toBeVisible();
+  await expect(page.getByText("生徒Aの所見を保存しました")).toBeVisible();
 
   // 保存後、作成方法バッジに反映されていることを確認して一連の流れを締める
   await expect(row.getByText("AI生成(直接呼び出し)")).toBeVisible();

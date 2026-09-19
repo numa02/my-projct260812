@@ -16,7 +16,7 @@ describe("LoadingSpinner", () => {
 
 describe("FullScreenLoading", () => {
   it("フルスクリーンで表示される", () => {
-    render(<FullScreenLoading label="AIが所感を生成しています" />);
-    expect(screen.getByRole("status")).toHaveTextContent("AIが所感を生成しています");
+    render(<FullScreenLoading label="AIが所見を生成しています" />);
+    expect(screen.getByRole("status")).toHaveTextContent("AIが所見を生成しています");
   });
 });

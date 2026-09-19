@@ -56,7 +56,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
 
 export type TextareaProps = BaseProps & TextareaHTMLAttributes<HTMLTextAreaElement>;
 
-/** メモ・所感本文など複数行入力用 */
+/** メモ・所見本文など複数行入力用 */
 export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(function Textarea(
   { label, error, className, id, rows = 4, ...rest },
   ref,

@@ -33,7 +33,7 @@ export function ClassCommentsContent({ initialClassId, highlightStudentId }: Cla
   if (!isLoadingClasses && classes.length === 0) {
     return (
       <div className="flex flex-col gap-6 p-8">
-        <h1 className="text-2xl font-semibold text-gray-900">所感管理</h1>
+        <h1 className="text-2xl font-semibold text-gray-900">所見管理</h1>
         <EmptyState
           message="まだクラスが登録されていません"
           actionLabel="クラス管理画面へ"
@@ -45,7 +45,7 @@ export function ClassCommentsContent({ initialClassId, highlightStudentId }: Cla
 
   return (
     <div className="flex flex-col gap-6 p-8">
-      <h1 className="text-2xl font-semibold text-gray-900">所感管理</h1>
+      <h1 className="text-2xl font-semibold text-gray-900">所見管理</h1>
 
       <div className="flex flex-wrap items-end gap-4">
         <div className="w-64">

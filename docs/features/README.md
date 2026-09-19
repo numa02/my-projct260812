@@ -14,9 +14,10 @@
 - [週次時間割](./timetable-weekly/test-cases.md)(T-061, T-062)
 - [授業記録](./memo-record/test-cases.md)(T-063)
 - [生徒別メモ一覧](./memo-students-list/test-cases.md)(T-064)
-- [所感管理(クラス単位一覧)](./comments/test-cases.md)(T-080。T-065〜T-067の生徒単位・タブ切替の構成を再設計・置換)
+- [所見管理(クラス単位一覧)](./comments/test-cases.md)(T-080。T-065〜T-067の生徒単位・タブ切替の構成を再設計・置換)
 - [AIプロバイダ設定](./settings-ai-provider/test-cases.md)(T-068)
 - [プロンプトひな形編集](./settings-prompt-template/test-cases.md)(T-069)
 - [データエクスポート](./settings-export/test-cases.md)(T-070)
+- [用語「所感」→「所見」の統一](./terminology-shoken/test-cases.md)(TS-001〜TS-005)
 
-全画面(T-049〜T-070)の実装完了後、仕上げ(T-071〜T-079)・所感画面を所感管理画面として再設計(T-080)まで完了。
+全画面(T-049〜T-070)の実装完了後、仕上げ(T-071〜T-079)・所見画面を所見管理画面として再設計(T-080)まで完了。

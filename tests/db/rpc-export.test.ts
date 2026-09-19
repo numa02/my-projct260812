@@ -9,7 +9,7 @@ describe("export_teacher_data", () => {
     teacher = undefined;
   });
 
-  it("生徒ごとにメモ・所感がまとまったJSONが返り、ai_provider_settingは含まれない(T-021)", async () => {
+  it("生徒ごとにメモ・所見がまとまったJSONが返り、ai_provider_settingは含まれない(T-021)", async () => {
     teacher = await createTestTeacher();
 
     const { data: klass } = await teacher.client
@@ -34,7 +34,7 @@ describe("export_teacher_data", () => {
     });
     await teacher.client.from("student_comment").insert({
       student_id: student!.id,
-      content: "所感内容",
+      content: "所見内容",
       creation_method: "manual",
     });
     await teacher.client
@@ -66,7 +66,7 @@ describe("export_teacher_data", () => {
     expect(result.students[0].name).toBe("生徒A");
     expect(result.students[0].memos).toEqual([expect.objectContaining({ content: "メモ内容" })]);
     expect(result.students[0].comments).toEqual([
-      expect.objectContaining({ content: "所感内容" }),
+      expect.objectContaining({ content: "所見内容" }),
     ]);
     expect(result.aiProviderSetting).toBeUndefined();
     expect(JSON.stringify(result)).not.toContain("dummy");

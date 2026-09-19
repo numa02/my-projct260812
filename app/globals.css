@@ -43,7 +43,7 @@
   --text-xl: 20px;
   --text-2xl: 24px;
   --leading-normal: 1.6; /* 本文 */
-  --leading-loose: 1.8; /* 所感文などまとまった文章 */
+  --leading-loose: 1.8; /* 所見文などまとまった文章 */
   /* フォントウェイトは通常400(font-normal)、強調500〜600(font-medium/font-semibold)。
      太字700(font-bold)は装飾よりも静けさを優先する原則により多用しない */
 

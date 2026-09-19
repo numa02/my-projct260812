@@ -337,7 +337,7 @@ describe("student_comment RLS", () => {
       .from("student_comment")
       .insert({
         student_id: student!.id,
-        content: "所感内容",
+        content: "所見内容",
         creation_method: "manual",
       })
       .select()
@@ -351,7 +351,7 @@ describe("student_comment RLS", () => {
 
     const { error: spoofError } = await teacherB.client.from("student_comment").insert({
       student_id: student!.id,
-      content: "偽装所感",
+      content: "偽装所見",
       creation_method: "manual",
     });
     expect(spoofError).not.toBeNull();

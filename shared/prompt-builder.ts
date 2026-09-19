@@ -6,7 +6,7 @@ export interface PromptMemo {
 }
 
 /** プロンプトひな形の初期値(F10)。設定画面で教員ごとに編集される */
-export const DEFAULT_PROMPT_TEMPLATE = `生徒{{pseudonymCode}}について、以下の授業メモをもとに所感文を作成してください。
+export const DEFAULT_PROMPT_TEMPLATE = `生徒{{pseudonymCode}}について、以下の授業メモをもとに所見文を作成してください。
 目安の文字数: {{targetCharCount}}文字
 
 【授業メモ】

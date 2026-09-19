@@ -14,7 +14,7 @@ export interface StudentComment {
   updatedAt: string;
 }
 
-/** F11向け。生徒ごとに常に最新1件のみを保持する所感の取得・保存(新規/上書き)を行う */
+/** F11向け。生徒ごとに常に最新1件のみを保持する所見の取得・保存(新規/上書き)を行う */
 export function useStudentComments(studentId: string | null) {
   const supabase = useMemo(() => createSupabaseBrowserClient(), []);
   const queryClient = useQueryClient();

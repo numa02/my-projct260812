@@ -24,7 +24,7 @@ const NAV_ITEMS: NavItem[] = [
   { href: "/timetable/master", label: "時間割マスタ設定", icon: CalendarDays },
   { href: "/timetable/weekly", label: "週次時間割", icon: CalendarRange },
   { href: "/memos/students", label: "生徒別メモ一覧", icon: ClipboardList },
-  { href: "/comments/class", label: "所感管理", icon: Sparkles },
+  { href: "/comments/class", label: "所見管理", icon: Sparkles },
   { href: "/settings/ai-provider", label: "AIプロバイダ設定", icon: KeyRound },
   { href: "/settings/prompt-template", label: "プロンプトひな形編集", icon: NotebookPen },
   { href: "/settings/export", label: "データエクスポート", icon: Download },

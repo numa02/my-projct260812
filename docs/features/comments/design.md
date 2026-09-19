@@ -1,4 +1,4 @@
-# 技術設計: 所感管理の再設計(期間の記憶・所感の単一化)
+# 技術設計: 所見管理の再設計(期間の記憶・所見の単一化)
 
 対応する要件は`docs/features/comments/requirements.md`を参照。3機能の中で唯一、不可逆なデータマイグレーションを伴う。
 
@@ -113,7 +113,7 @@ alter table class add column comment_period_start_date date;
 alter table class add column comment_period_end_date date;
 ```
 
-`comment_period_start_date`・`comment_period_end_date`はいずれもnullable(既存クラスは未設定の状態で追加され、教員が所感管理画面で対象期間を初めて入力したタイミングで値が入る)。既存の`class`テーブルのRLSポリシー(`teacher_id = auth.uid()`)がそのまま適用されるため、RLSポリシーの追加・変更は不要。
+`comment_period_start_date`・`comment_period_end_date`はいずれもnullable(既存クラスは未設定の状態で追加され、教員が所見管理画面で対象期間を初めて入力したタイミングで値が入る)。既存の`class`テーブルのRLSポリシー(`teacher_id = auth.uid()`)がそのまま適用されるため、RLSポリシーの追加・変更は不要。
 
 新規テーブル(例: `class_comment_period`)は作成しない。対象期間は`class`と1:1の関係であり、別テーブルに切り出す運用上の利点がないため(CLAUDE.mdの「楽観的な理由からモノレポ化・切り出しを行うこと」を避ける方針に整合)。
 
@@ -122,30 +122,30 @@ alter table class add column comment_period_end_date date;
 新規Honoエンドポイントの追加はない。以下はすべて`supabase-js`からの直接呼び出し(CLAUDE.mdの単純CRUD方針)。
 
 ```
-所感の取得: supabase.from("student_comment").select(...).eq("student_id", studentId).maybeSingle()
-所感の保存: supabase.from("student_comment").upsert({ student_id, content, ... }, { onConflict: "student_id" })
+所見の取得: supabase.from("student_comment").select(...).eq("student_id", studentId).maybeSingle()
+所見の保存: supabase.from("student_comment").upsert({ student_id, content, ... }, { onConflict: "student_id" })
 対象期間の取得: supabase.from("class").select("comment_period_start_date, comment_period_end_date").eq("id", classId).single()
 対象期間の保存: supabase.from("class").update({ comment_period_start_date, comment_period_end_date }).eq("id", classId)
 ```
 
-`docs/design.md` §5.4(直接Supabaseアクセスのパターン)の「所感の保存について」の補足(L849)を、上記の`onConflict: "student_id"`に合わせて更新する。
+`docs/design.md` §5.4(直接Supabaseアクセスのパターン)の「所見の保存について」の補足(L849)を、上記の`onConflict: "student_id"`に合わせて更新する。
 
 ## 画面/UI設計
 
 `app/(main)/comments/class/[[...id]]/`配下の画面構成(クラス選択+対象期間+生徒一覧)自体は変更しない。変更点は以下の2つ。
 
 1. 対象期間の入力欄の値の出所が、ローカルstateの初期値`""`から、選択中クラスの`comment_period_start_date`/`comment_period_end_date`(DB)に変わる
-2. 各生徒の行から「過去の所感を見る」の折りたたみセクションを削除する
+2. 各生徒の行から「過去の所見を見る」の折りたたみセクションを削除する
 
 ```
-所感管理(変更後)
+所見管理(変更後)
 クラス選択 [1年1組 ▾]
 対象期間   [2026-04-01] 〜 [2026-07-20]   ← 変更した瞬間に自動保存(クラスごと)
 
 生徒一覧
-  田中太郎   [所感入力欄(常時表示)]        [保存]
+  田中太郎   [所見入力欄(常時表示)]        [保存]
              ▶ AIで生成する                  ← 既存のまま
-             (「過去の所感を見る」は削除)
+             (「過去の所見を見る」は削除)
   ...
 ```
 
@@ -160,8 +160,8 @@ alter table class add column comment_period_end_date date;
 
 ### `components/comment/StudentCommentRow.tsx`
 
-- L67-72の「対象期間との完全一致で`existing`/`history`に振り分ける」ロジックを削除。`useStudentComments`が返す単一の所感をそのまま初期値として使う
-- L127の`historyOpen`のstate、およびL192-225の履歴セクション(「過去の所感を見る」ボタンとその中身)を削除
+- L67-72の「対象期間との完全一致で`existing`/`history`に振り分ける」ロジックを削除。`useStudentComments`が返す単一の所見をそのまま初期値として使う
+- L127の`historyOpen`のstate、およびL192-225の履歴セクション(「過去の所見を見る」ボタンとその中身)を削除
 - `periodStartDate`/`periodEndDate`のpropsは維持する(`CommentAiAssist`へAI生成の集計範囲として渡すため)
 
 ### `components/comment/CommentAiAssist.tsx`
@@ -221,7 +221,7 @@ export function useClassCommentPeriod(classId: string | null) {
 |---|---|---|
 | 対象期間の自動保存失敗 | `useClassCommentPeriod`の`updatePeriod`mutation | `useToast`で「対象期間の保存に失敗しました」を表示し、入力欄の表示値は直前にサーバーへの保存が確認できている値に戻す(サーバー未確認の値を表示し続けない。CLAUDE.mdの楽観的更新禁止方針に従う) |
 | 対象期間の開始日が終了日より後 | `ClassCommentsContent.tsx`(クライアント側バリデーション) | 終了日の入力欄に「開始日は終了日より前の日付にしてください」というインラインエラーを表示し、自動保存自体を実行しない(不正な範囲をDBに保存しない)。既存の`Input`コンポーネントの`error`propを使う(他画面の入力バリデーションと同じパターン) |
-| 所感の保存失敗 | `useStudentComments`の`saveComment`mutation | 既存のF13方針のまま変更なし(エラー表示、直前の状態を維持) |
+| 所見の保存失敗 | `useStudentComments`の`saveComment`mutation | 既存のF13方針のまま変更なし(エラー表示、直前の状態を維持) |
 | AI生成時のメモ取得・生成失敗 | `useSharedMemosForPeriod`、`useGenerateComment` | 変更なし(既存のF9のエラーハンドリングをそのまま維持) |
 
 ## 影響を受ける既存テスト
@@ -233,7 +233,7 @@ export function useClassCommentPeriod(classId: string | null) {
 | `tests/db/rls.test.ts` L311-370 | `student_comment`への`insert`呼び出しから`period_start_date`/`period_end_date`を除去する。2件目のinsert(`teacherB`によるなりすまし)は、現状「別の期間を指定してユニーク制約を回避しRLSのみで弾かれることを確認する」意図で書かれているが、ユニーク制約が`student_id`のみになった後は期間を変える意味がなくなる。RLSが制約チェックより先に評価されブロックすることを確認する意図はそのまま成立するため、期間関連のフィールドを削除するだけでテスト自体は成立する |
 | `e2e/comments-class.spec.ts` | 「履歴閲覧」に関するケースを削除。「対象期間切替」のケースは自動保存・クラスごとの記憶を検証する内容に書き換える |
 | `shared/schemas/index.test.ts` L45-46, L55-56 | `commentSaveInputSchema`のテストから`periodStartDate`/`periodEndDate`を除去する |
-| `e2e/golden-path.spec.ts` | 所感生成→保存のステップを含む場合、対象期間の入力方法が変わっていないか確認する(クラスごとの自動保存に変わるため、初回訪問時は空欄から入力する手順になる) |
+| `e2e/golden-path.spec.ts` | 所見生成→保存のステップを含む場合、対象期間の入力方法が変わっていないか確認する(クラスごとの自動保存に変わるため、初回訪問時は空欄から入力する手順になる) |
 
 **追記(CM-014実装時に判明、上記表には未掲載だった項目)**: 以下はフェーズ1適用時点ではまだ動作するが、フェーズ2(列削除)を適用すると影響が出るため、フェーズ2と同じマイグレーション内(またはその直前)で対応する必要がある。
 
@@ -279,10 +279,10 @@ psql "$SUPABASE_DB_URL" -f student_comment_backup.sql
 
 本アプリにはフィーチャーフラグの仕組みが存在しないため、機能単位の段階公開(一部ユーザーのみ先行公開等)は行わない。代わりに、上記の2フェーズマイグレーションに沿ってリリース手順そのものを段階化し、各ステップの間に本番動作確認を挟む。
 
-1. **事前確認**: 本番DBの`student_comment`テーブルの総件数、生徒あたりの最大所感件数、`(student_id, updated_at)`のインデックス有無を確認する
+1. **事前確認**: 本番DBの`student_comment`テーブルの総件数、生徒あたりの最大所見件数、`(student_id, updated_at)`のインデックス有無を確認する
 2. **バックアップ取得**: 上記の`pg_dump`コマンドで`student_comment`のバックアップを取得し、ローカル環境でリストアを検証する
 3. **`class`カラム追加を適用**: `alter table class add column comment_period_start_date / comment_period_end_date`のみを含むマイグレーションを適用する(既存カラムへの影響がなく、最もリスクが低いため最初に適用する)
 4. **フェーズ1(拡張)マイグレーションを適用**: DELETE・NOT NULL解除・新ユニーク制約追加を適用する。この時点ではまだ`period_start_date`/`period_end_date`カラムは存在するため、旧コードは引き続き問題なく動作する
-5. **新コードをデプロイ**: フェーズ1適用後であればいつでもよい。デプロイ後、所感の保存・表示、対象期間の自動保存・復元、AI生成が本番環境で正常に動作することを確認する
+5. **新コードをデプロイ**: フェーズ1適用後であればいつでもよい。デプロイ後、所見の保存・表示、対象期間の自動保存・復元、AI生成が本番環境で正常に動作することを確認する
 6. **新コードの安定稼働を数日程度確認**: この間、問題があればコードのロールバックのみで復旧できる(フェーズ2未適用のため)
 7. **フェーズ2(縮小)マイグレーションを適用**: 安定稼働を確認できてから、`period_start_date`/`period_end_date`カラムを削除する。この時点以降はコードロールバックだけでは復旧できなくなる

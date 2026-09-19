@@ -6,7 +6,7 @@ interface ApiErrorBody {
   error: { code: string; message: string };
 }
 
-/** F9向け。Hono経由で外部AIプロバイダを呼び出し、所感文の生のテキストを取得する(この時点では保存しない) */
+/** F9向け。Hono経由で外部AIプロバイダを呼び出し、所見文の生のテキストを取得する(この時点では保存しない) */
 export function useGenerateComment() {
   return useMutation({
     mutationFn: async (input: { prompt: string; targetCharCount?: number }) => {

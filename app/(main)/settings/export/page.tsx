@@ -44,7 +44,7 @@ export default function ExportPage() {
       <h1 className="text-2xl font-semibold text-gray-900">データエクスポート</h1>
 
       <p className="max-w-xl text-sm leading-normal text-gray-700">
-        クラス・生徒・科目・時間割マスタ・週次時間割の個別変更・メモ・所感・プロンプトひな形など、アカウントに紐づく全データをJSON形式でダウンロードします。AIプロバイダ設定(APIキーを含む)はエクスポート対象に含まれません。
+        クラス・生徒・科目・時間割マスタ・週次時間割の個別変更・メモ・所見・プロンプトひな形など、アカウントに紐づく全データをJSON形式でダウンロードします。AIプロバイダ設定(APIキーを含む)はエクスポート対象に含まれません。
       </p>
 
       <Button
