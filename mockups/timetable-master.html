@@ -110,17 +110,20 @@
               <p class="text-sm text-gray-600">CSVファイルをドラッグ&amp;ドロップ、またはファイルを選択してください</p>
               <button class="h-9 px-4 rounded-sm border border-gray-300 text-sm text-gray-700 hover:bg-gray-50">ファイルを選択</button>
             </div>
-            <p class="text-xs text-gray-400">一括モード: 「曜日,時限,科目名」の3列。教科担任制モード: 「曜日,時限,科目名,クラス名」の4列。いずれも1行目はヘッダー行、30マス(曜日5×時限6)分が必要です</p>
-            <!-- テキスト貼り付けモードでは、生徒名簿の「出席番号,氏名」より列数が多く複雑なため、例を示す -->
-            <pre class="whitespace-pre-wrap rounded-sm border border-gray-200 bg-gray-50 px-3 py-2 text-xs text-gray-600">曜日,時限,科目名
-月,1,国語
-火,2,算数</pre>
+            <p class="text-xs text-gray-400">時間割表(曜日5列×時限6行、科目名のみ)をそのまま貼り付けてください(ヘッダー行なし)。教科担任制モードでは「曜日,時限,科目名,クラス名」の4列形式(1行目はヘッダー行)を使います。いずれも30マス(曜日5×時限6)分が必要です</p>
+            <!-- 時間割表をそのままコピー&ペーストする想定のため、例を示す -->
+            <pre class="whitespace-pre-wrap rounded-sm border border-gray-200 bg-gray-50 px-3 py-2 text-xs text-gray-600">国語	国語	国語	国語	国語
+算数	算数	算数	算数	算数
+理科	理科	理科	理科	理科
+社会	社会	社会	社会	社会
+英語	英語	英語	英語	英語
+図画工作	図画工作	図画工作	図画工作	図画工作</pre>
             <!-- エラー表示例 -->
             <div class="rounded-md border border-error-500/30 bg-error-500/5 p-3">
               <p class="mb-2 text-sm font-medium text-error-500">2件のエラーがあります</p>
               <ul class="text-sm text-gray-700 space-y-1">
-                <li>3行目: 科目名が登録済みの科目と一致しません</li>
-                <li>17行目: 同じ曜日・時限の組み合わせが重複しています</li>
+                <li>科目名が登録済みの科目と一致しません</li>
+                <li>同じ曜日・時限の組み合わせが重複しています</li>
               </ul>
             </div>
           </div>
