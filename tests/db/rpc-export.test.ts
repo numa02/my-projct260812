@@ -9,7 +9,7 @@ describe("export_teacher_data", () => {
     teacher = undefined;
   });
 
-  it("生徒ごとにメモ・所見がまとまったJSONが返り、ai_provider_settingは含まれない(T-021)", async () => {
+  it("生徒ごとにメモ・所見・生活メモ・生活の所見がまとまったJSONが返り、ai_provider_settingは含まれない(T-021, LS-002)", async () => {
     teacher = await createTestTeacher();
 
     const { data: klass } = await teacher.client
@@ -37,6 +37,19 @@ describe("export_teacher_data", () => {
       content: "所見内容",
       creation_method: "manual",
     });
+    await teacher.client.from("life_memo").insert({
+      student_id: student!.id,
+      note_date: "2026-04-11",
+      content: "生活メモ内容",
+    });
+    await teacher.client.from("student_life_comment").insert({
+      student_id: student!.id,
+      content: "生活の所見内容",
+      creation_method: "manual",
+    });
+    await teacher.client
+      .from("prompt_template")
+      .insert({ teacher_id: teacher.id, content: "学習用ひな形", life_content: "生活用ひな形" });
     await teacher.client
       .from("ai_provider_setting")
       .insert({
@@ -56,7 +69,10 @@ describe("export_teacher_data", () => {
         name: string;
         memos: Array<{ content: string }>;
         comments: Array<{ content: string }>;
+        lifeMemos: Array<{ content: string; noteDate: string }>;
+        lifeComments: Array<{ content: string }>;
       }>;
+      promptTemplate: { content: string | null; lifeContent: string | null } | null;
       aiProviderSetting?: unknown;
     };
 
@@ -68,6 +84,15 @@ describe("export_teacher_data", () => {
     expect(result.students[0].comments).toEqual([
       expect.objectContaining({ content: "所見内容" }),
     ]);
+    expect(result.students[0].lifeMemos).toEqual([
+      expect.objectContaining({ content: "生活メモ内容", noteDate: "2026-04-11" }),
+    ]);
+    expect(result.students[0].lifeComments).toEqual([
+      expect.objectContaining({ content: "生活の所見内容" }),
+    ]);
+    expect(result.promptTemplate).toEqual(
+      expect.objectContaining({ content: "学習用ひな形", lifeContent: "生活用ひな形" }),
+    );
     expect(result.aiProviderSetting).toBeUndefined();
     expect(JSON.stringify(result)).not.toContain("dummy");
   });

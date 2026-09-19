@@ -22,6 +22,8 @@ erDiagram
     SUBJECT ||--o{ MEMO : "assigned to"
     STUDENT ||--o{ MEMO : "has (cascade delete)"
     STUDENT ||--o{ STUDENT_COMMENT : "has (cascade delete)"
+    STUDENT ||--o{ LIFE_MEMO : "has (cascade delete)"
+    STUDENT ||--o| STUDENT_LIFE_COMMENT : "has (cascade delete)"
 
     TEACHER {
         uuid id PK "Supabase AuthのユーザーIDと同一"
@@ -112,6 +114,26 @@ erDiagram
         datetime updated_at
     }
 
+    LIFE_MEMO {
+        uuid id PK
+        uuid student_id FK
+        date note_date "記録日。授業に紐づかないため科目・時限は持たない"
+        text content
+        string share_flag "共有する/共有しない(初期値:共有する)"
+        datetime created_at
+        datetime updated_at
+    }
+
+    STUDENT_LIFE_COMMENT {
+        uuid id PK
+        uuid student_id FK "unique。生活の所見は生徒ごとに最新1件のみ(学習の所見STUDENT_COMMENTとは独立)"
+        text content
+        int target_char_count "目安文字数(nullable)"
+        string creation_method "直接生成/プロンプトコピー運用/手動作成"
+        datetime created_at
+        datetime updated_at
+    }
+
     AI_PROVIDER_SETTING {
         uuid id PK
         uuid teacher_id FK
@@ -124,7 +146,8 @@ erDiagram
     PROMPT_TEMPLATE {
         uuid id PK
         uuid teacher_id FK
-        text content
+        text content "学習の所見用(nullable。nullなら既定値)"
+        text life_content "生活の所見用(nullable。nullなら既定値)"
         datetime updated_at
     }
 ```
@@ -139,19 +162,23 @@ erDiagram
 - `WEEKLY_SUBJECT_OVERRIDE`: (teacher_id, week_start_date, weekday, period)
 - `WEEKLY_CLASS_OVERRIDE`: (teacher_id, week_start_date, weekday, period)
 - `MEMO`: (student_id, subject_id, note_date, period) — 同一生徒・科目・日付・時限につき1件(F6)
+- `LIFE_MEMO`: (student_id, note_date) — 同一生徒・日付につき1件(`docs/features/life-shoken/`)
+- `STUDENT_LIFE_COMMENT`: (student_id) — 生徒ごとに1件(`docs/features/life-shoken/`)
 - `STUDENT_COMMENT`: (student_id) — 生徒ごとに1件(F11。2026-09時点で未実装。旧仕様は(student_id, period_start_date, period_end_date)で生徒×期間ごとに1件だった。詳細は`docs/features/comments/design.md`)
 
 `WEEKLY_SUBJECT_OVERRIDE` / `WEEKLY_CLASS_OVERRIDE` を分離しているのは、F4・F5が「科目とクラスは独立に個別変更でき、一致した項目だけがマスタ追従に戻る」と定義しているため。1テーブルにまとめて2つのnull許容カラムを持たせるより、科目側とクラス側で行の有無自体が「個別変更されているかどうか」を表す設計の方が、この部分一致・部分削除の挙動を素直に表現できると判断した(要件はテーブル構造までは指定していないため、これは設計判断)。
 
-`STUDENT`・`MEMO`・`STUDENT_COMMENT`は生徒削除時に物理削除で連鎖する(ON DELETE CASCADE相当)。`CLASS`は生徒が0人の場合のみ物理削除でき、`TIMETABLE_MASTER_SLOT`・`WEEKLY_CLASS_OVERRIDE`からの参照は削除前に自動でnull/削除に置き換わる(F1)。
+`STUDENT`・`MEMO`・`STUDENT_COMMENT`・`LIFE_MEMO`・`STUDENT_LIFE_COMMENT`は生徒削除時に物理削除で連鎖する(ON DELETE CASCADE相当)。`CLASS`は生徒が0人の場合のみ物理削除でき、`TIMETABLE_MASTER_SLOT`・`WEEKLY_CLASS_OVERRIDE`からの参照は削除前に自動でnull/削除に置き換わる(F1)。
 
 `TEACHER`エンティティの`email`はER図上の概念的な項目であり、`docs/design.md`の実テーブル(`teacher_profile`)には複製しない。`auth.users.email`と二重管理してズレが生じるのを避けるため、表示が必要な箇所ではSupabase Authのセッションから直接取得する想定とする。
+
+学習の所見(`STUDENT_COMMENT`)と生活の所見(`STUDENT_LIFE_COMMENT`)を別テーブルにしているのは、`STUDENT_COMMENT`の一意制約`(student_id)`を`(student_id, 種別)`に入れ替えると稼働中のコードのupsertが失敗する破壊的変更になるため(`docs/features/life-shoken/`design.md)。
 
 `STUDENT_COMMENT`と`MEMO`の間にはFK関係を持たせていない。所見は生成・保存時点のテキストを保持する独立したスナップショットであり、元になったメモを後から編集・削除しても既存の所見の内容には影響しない(F11)。
 
 ## データエクスポート(F14)について
 
-F14は既存エンティティを横断的に読み取ってJSONにまとめる機能であり、新しいエンティティは追加していない。目的は生徒ごとのメモ・所見を長期的に手元へ保管しておくことにあるため、出力は生徒ごとにメモ・所見がまとまる形にする。`AI_PROVIDER_SETTING`(APIキーを含む)はエクスポート対象から除外する。インポート(復元)機能は持たないため、エクスポートしたファイルからDBの状態を再現する経路は現時点で存在しない。バックアップ目的で定期的にエクスポートを促す仕組み(リマインダー等)は要件に含まれておらず、教員が自発的に実行しなければ手元にファイルは残らない。
+F14は既存エンティティを横断的に読み取ってJSONにまとめる機能であり、新しいエンティティは追加していない。目的は生徒ごとのメモ・所見を長期的に手元へ保管しておくことにあるため、出力は生徒ごとにメモ・所見がまとまる形にする(生活メモ`lifeMemos`・生活の所見`lifeComments`も生徒ごとに含める)。`AI_PROVIDER_SETTING`(APIキーを含む)はエクスポート対象から除外する。インポート(復元)機能は持たないため、エクスポートしたファイルからDBの状態を再現する経路は現時点で存在しない。バックアップ目的で定期的にエクスポートを促す仕組み(リマインダー等)は要件に含まれておらず、教員が自発的に実行しなければ手元にファイルは残らない。
 
 ## 残っている矛盾・未決事項
 

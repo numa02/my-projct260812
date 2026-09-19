@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { addDays, format } from "date-fns";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useWeeklyTimetable } from "@/hooks/useWeeklyTimetable";
@@ -22,6 +23,7 @@ function parseJstDate(dateISO: string): Date {
 }
 
 export function WeeklyTimetableView() {
+  const router = useRouter();
   const [weekStartDateISO, setWeekStartDateISO] = useState(() =>
     formatISODate(getWeekStartDate(new Date())),
   );
@@ -112,6 +114,11 @@ export function WeeklyTimetableView() {
           mode="weekly"
           cells={cells}
           onCellClick={(cell) => setEditingSlot({ weekday: cell.weekday, period: cell.period })}
+          onLifeCellClick={(weekday) =>
+            router.push(
+              `/memos/life?date=${formatISODate(addWeekdayOffset(weekStartDate, weekday))}&from=/timetable/weekly`,
+            )
+          }
         />
       )}
 

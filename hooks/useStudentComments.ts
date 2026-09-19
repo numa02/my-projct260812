@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createSupabaseBrowserClient } from "@/lib/supabase-browser";
+import type { CommentKind } from "@/shared/schemas";
 
 export type CommentCreationMethod = "direct_ai" | "prompt_copy" | "manual";
 
@@ -14,17 +15,24 @@ export interface StudentComment {
   updatedAt: string;
 }
 
-/** F11向け。生徒ごとに常に最新1件のみを保持する所見の取得・保存(新規/上書き)を行う */
-export function useStudentComments(studentId: string | null) {
+/** 学習の所見と生活の所見は、一意制約(student_id)を保つため別テーブルで保持している */
+const COMMENT_TABLE: Record<CommentKind, "student_comment" | "student_life_comment"> = {
+  learning: "student_comment",
+  life: "student_life_comment",
+};
+
+/** F11向け。生徒ごと・種類ごとに常に最新1件のみを保持する所見の取得・保存(新規/上書き)を行う */
+export function useStudentComments(studentId: string | null, kind: CommentKind = "learning") {
   const supabase = useMemo(() => createSupabaseBrowserClient(), []);
   const queryClient = useQueryClient();
+  const table = COMMENT_TABLE[kind];
 
   const commentQuery = useQuery({
-    queryKey: ["student-comments", studentId],
+    queryKey: ["student-comments", kind, studentId],
     queryFn: async (): Promise<StudentComment | null> => {
       if (!studentId) return null;
       const { data, error } = await supabase
-        .from("student_comment")
+        .from(table)
         .select("id, content, target_char_count, creation_method, updated_at")
         .eq("student_id", studentId)
         .maybeSingle();
@@ -41,7 +49,8 @@ export function useStudentComments(studentId: string | null) {
     enabled: studentId !== null,
   });
 
-  const invalidate = () => queryClient.invalidateQueries({ queryKey: ["student-comments", studentId] });
+  const invalidate = () =>
+    queryClient.invalidateQueries({ queryKey: ["student-comments", kind, studentId] });
 
   /** 生徒につき1件、upsertで新規保存/上書きする(F11) */
   const saveComment = useMutation({
@@ -50,7 +59,7 @@ export function useStudentComments(studentId: string | null) {
       targetCharCount?: number;
       creationMethod: CommentCreationMethod;
     }) => {
-      const { error } = await supabase.from("student_comment").upsert(
+      const { error } = await supabase.from(table).upsert(
         {
           student_id: studentId,
           content: input.content,

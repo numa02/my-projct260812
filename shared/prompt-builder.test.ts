@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildPrompt, DEFAULT_PROMPT_TEMPLATE } from "./prompt-builder";
+import { buildPrompt, DEFAULT_LIFE_PROMPT_TEMPLATE, DEFAULT_PROMPT_TEMPLATE } from "./prompt-builder";
 
 describe("buildPrompt", () => {
   it("プレースホルダーをメモ・文字数・仮名コードで置換する", () => {
@@ -17,6 +17,19 @@ describe("buildPrompt", () => {
     expect(result).toContain("目安の文字数: 200文字");
     expect(result).toContain("- 2026-04-10 1時限 国語: よく発言していた");
     expect(result).toContain("- 2026-04-11 3時限 算数: 計算が早い");
+  });
+
+  it("生活メモ(時限・科目なし)は日付と内容だけの行になる", () => {
+    const result = buildPrompt({
+      template: DEFAULT_LIFE_PROMPT_TEMPLATE,
+      memos: [{ noteDate: "2026-04-10", content: "休み時間に下級生の面倒を見ていた" }],
+      pseudonymCode: "1-03-10",
+    });
+
+    expect(result).toContain("行動・生活面の所見文");
+    expect(result).toContain("【生活メモ】");
+    expect(result).toContain("- 2026-04-10: 休み時間に下級生の面倒を見ていた");
+    expect(result).not.toContain("時限");
   });
 
   it("メモが0件の場合は代替文言になる", () => {

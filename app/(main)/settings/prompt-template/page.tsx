@@ -5,7 +5,7 @@ import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { PromptTemplateForm } from "./PromptTemplateForm";
 
 export default function PromptTemplatePage() {
-  const { template, isLoading, saveTemplate } = usePromptTemplate();
+  const { templates, isLoading, saveTemplate } = usePromptTemplate();
 
   if (isLoading) {
     return (
@@ -15,5 +15,11 @@ export default function PromptTemplatePage() {
     );
   }
 
-  return <PromptTemplateForm initialTemplate={template} saveTemplate={saveTemplate} />;
+  return (
+    <div className="flex flex-col gap-12 p-8">
+      <h1 className="text-2xl font-semibold text-gray-900">プロンプトひな形編集</h1>
+      <PromptTemplateForm kind="learning" initialTemplate={templates.learning} saveTemplate={saveTemplate} />
+      <PromptTemplateForm kind="life" initialTemplate={templates.life} saveTemplate={saveTemplate} />
+    </div>
+  );
 }

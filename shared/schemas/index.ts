@@ -72,6 +72,18 @@ export const memoInputSchema = z.object({
 });
 export type MemoInput = z.infer<typeof memoInputSchema>;
 
+export const lifeMemoInputSchema = z.object({
+  studentId: z.string().uuid(),
+  noteDate: z.string().date("日付を入力してください"),
+  content: z.string().trim().min(1, "メモを入力してください"),
+  shareFlag: z.enum(["shared", "private"]).default("shared"),
+});
+export type LifeMemoInput = z.infer<typeof lifeMemoInputSchema>;
+
+/** 所見の種類。learning=学習の所見(授業メモが材料)、life=生活の所見(生活メモが材料) */
+export const commentKindSchema = z.enum(["learning", "life"]);
+export type CommentKind = z.infer<typeof commentKindSchema>;
+
 export const commentSaveInputSchema = z.object({
   content: z.string().min(1),
   targetCharCount: z.number().int().positive().optional(),

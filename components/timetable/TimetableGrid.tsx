@@ -20,13 +20,15 @@ export interface TimetableGridProps {
   mode: TimetableGridMode;
   cells: TimetableCell[];
   onCellClick?: (cell: TimetableCell) => void;
+  /** 指定した場合のみ、6限の下に曜日ごとの「生活」行を表示する(週次時間割画面のみ) */
+  onLifeCellClick?: (weekday: number) => void;
 }
 
 /**
  * 時間割マスタ設定画面・週次時間割画面で共通利用するグリッド。
  * 編集モードの切り替え自体(一括/教科担任制など)は呼び出し側の画面が担当する。
  */
-export function TimetableGrid({ mode, cells, onCellClick }: TimetableGridProps) {
+export function TimetableGrid({ mode, cells, onCellClick, onLifeCellClick }: TimetableGridProps) {
   const cellAt = (weekday: number, period: number) =>
     cells.find((c) => c.weekday === weekday && c.period === period);
 
@@ -93,6 +95,26 @@ export function TimetableGrid({ mode, cells, onCellClick }: TimetableGridProps) 
           })}
         </Fragment>
       ))}
+
+      {onLifeCellClick && (
+        <>
+          <div role="rowheader" className="flex items-center justify-center bg-gray-50 text-gray-500">
+            生活
+          </div>
+          {WEEKDAY_LABELS.map((label, index) => (
+            <button
+              key={`life-${label}`}
+              type="button"
+              role="gridcell"
+              aria-label={`${label}曜の生活記録`}
+              onClick={() => onLifeCellClick(index + 1)}
+              className="flex min-h-12 items-center bg-white px-2 py-1.5 text-left text-gray-500 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-gray-400"
+            >
+              生活記録
+            </button>
+          ))}
+        </>
+      )}
     </div>
   );
 }

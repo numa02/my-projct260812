@@ -31,6 +31,19 @@ describe("TimetableGrid", () => {
     expect(screen.queryByText("変更あり")).not.toBeInTheDocument();
   });
 
+  it("onLifeCellClickがない場合は「生活」行を表示しない", () => {
+    render(<TimetableGrid mode="master" cells={cells} />);
+    expect(screen.queryByRole("rowheader", { name: "生活" })).not.toBeInTheDocument();
+  });
+
+  it("onLifeCellClickがある場合、「生活」行の曜日のマスを押すとその曜日番号が渡される", async () => {
+    const onLifeCellClick = vi.fn();
+    render(<TimetableGrid mode="weekly" cells={cells} onLifeCellClick={onLifeCellClick} />);
+    expect(screen.getByRole("rowheader", { name: "生活" })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("gridcell", { name: "水曜の生活記録" }));
+    expect(onLifeCellClick).toHaveBeenCalledWith(3);
+  });
+
   it("onCellClickがある場合、マスクリックでコールバックにセルが渡される", async () => {
     const onCellClick = vi.fn();
     render(<TimetableGrid mode="master" cells={cells} onCellClick={onCellClick} />);

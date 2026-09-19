@@ -442,3 +442,93 @@ describe("ai_provider_setting / prompt_template RLS", () => {
     expect(updated).toHaveLength(0);
   });
 });
+
+describe("life_memo / student_life_comment RLS", () => {
+  let teacherA: TestTeacher | undefined;
+  let teacherB: TestTeacher | undefined;
+
+  afterEach(async () => {
+    if (teacherA) await deleteTestTeacher(teacherA.id);
+    if (teacherB) await deleteTestTeacher(teacherB.id);
+    teacherA = undefined;
+    teacherB = undefined;
+  });
+
+  async function createStudentOfA(teacher: TestTeacher): Promise<string> {
+    const { data: klass } = await teacher.client
+      .from("class")
+      .insert({ teacher_id: teacher.id, grade: "1", group_number: 1, display_name: "1年1組" })
+      .select()
+      .single<{ id: string }>();
+    const { data: student } = await teacher.client
+      .from("student")
+      .insert({ class_id: klass!.id, attendance_number: 1, name: "生徒A" })
+      .select()
+      .single<{ id: string }>();
+    return student!.id;
+  }
+
+  it("他教員の生徒に紐づくlife_memoへのアクセスがRLSで拒否される(LS-002)", async () => {
+    teacherA = await createTestTeacher();
+    teacherB = await createTestTeacher();
+    const studentId = await createStudentOfA(teacherA);
+
+    const { data: lifeMemo } = await teacherA.client
+      .from("life_memo")
+      .insert({ student_id: studentId, note_date: "2026-04-10", content: "生活メモ" })
+      .select()
+      .single<{ id: string }>();
+
+    const { data: seenByB } = await teacherB.client.from("life_memo").select("id").eq("id", lifeMemo!.id);
+    expect(seenByB).toHaveLength(0);
+
+    const { error: spoofError } = await teacherB.client
+      .from("life_memo")
+      .insert({ student_id: studentId, note_date: "2026-04-11", content: "偽装メモ" });
+    expect(spoofError).not.toBeNull();
+
+    const { data: updated } = await teacherB.client
+      .from("life_memo")
+      .update({ content: "改ざん" })
+      .eq("id", lifeMemo!.id)
+      .select();
+    expect(updated).toHaveLength(0);
+
+    const { data: deleted } = await teacherB.client
+      .from("life_memo")
+      .delete()
+      .eq("id", lifeMemo!.id)
+      .select();
+    expect(deleted).toHaveLength(0);
+  });
+
+  it("他教員の生徒に紐づくstudent_life_commentへのアクセスがRLSで拒否される(LS-002)", async () => {
+    teacherA = await createTestTeacher();
+    teacherB = await createTestTeacher();
+    const studentId = await createStudentOfA(teacherA);
+
+    const { data: comment } = await teacherA.client
+      .from("student_life_comment")
+      .insert({ student_id: studentId, content: "生活の所見", creation_method: "manual" })
+      .select()
+      .single<{ id: string }>();
+
+    const { data: seenByB } = await teacherB.client
+      .from("student_life_comment")
+      .select("id")
+      .eq("id", comment!.id);
+    expect(seenByB).toHaveLength(0);
+
+    const { error: spoofError } = await teacherB.client
+      .from("student_life_comment")
+      .insert({ student_id: studentId, content: "偽装所見", creation_method: "manual" });
+    expect(spoofError).not.toBeNull();
+
+    const { data: updated } = await teacherB.client
+      .from("student_life_comment")
+      .update({ content: "改ざん" })
+      .eq("id", comment!.id)
+      .select();
+    expect(updated).toHaveLength(0);
+  });
+});

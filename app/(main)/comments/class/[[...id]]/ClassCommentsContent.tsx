@@ -6,12 +6,14 @@ import { useClassOptions } from "@/hooks/useClassOptions";
 import { useClassCommentPeriod } from "@/hooks/useClassCommentPeriod";
 import { StudentCommentRow } from "@/components/comment/StudentCommentRow";
 import { Select } from "@/components/ui/Select";
+import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { Input } from "@/components/ui/Input";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { InlineMessage } from "@/components/ui/InlineMessage";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { useToast } from "@/components/ui/Toast";
 import { computePseudonymCode } from "@/shared/pseudonym";
+import type { CommentKind } from "@/shared/schemas";
 
 export interface ClassCommentsContentProps {
   initialClassId: string | null;
@@ -25,6 +27,8 @@ export function ClassCommentsContent({ initialClassId, highlightStudentId }: Cla
   // 生徒一覧の表示可否・AI生成の集計範囲は、入力中の未確定値ではなく
   // サーバー確認済みの対象期間を基準にする
   const { periodStartDate, periodEndDate } = useClassCommentPeriod(selectedClassId);
+  // 対象期間は学習・生活の両タブで共通(クラスごとに1つ)
+  const [kind, setKind] = useState<CommentKind>("learning");
 
   const selectedClass = classes.find((c) => c.id === selectedClassId);
   const hasPeriod = periodStartDate !== "" && periodEndDate !== "";
@@ -63,6 +67,16 @@ export function ClassCommentsContent({ initialClassId, highlightStudentId }: Cla
         )}
       </div>
 
+      <SegmentedControl
+        aria-label="所見の種類"
+        options={[
+          { value: "learning", label: "学習の所見" },
+          { value: "life", label: "生活の所見" },
+        ]}
+        value={kind}
+        onChange={(v) => setKind(v as CommentKind)}
+      />
+
       {!hasPeriod ? (
         <InlineMessage
           variant="info"
@@ -83,8 +97,9 @@ export function ClassCommentsContent({ initialClassId, highlightStudentId }: Cla
         <div className="flex flex-col rounded-md border border-gray-200 px-4">
           {students.map((s) => (
             <StudentCommentRow
-              key={`${s.id}-${periodKey}`}
+              key={`${kind}-${s.id}-${periodKey}`}
               studentId={s.id}
+              kind={kind}
               studentName={s.name}
               pseudonymCode={
                 selectedClass

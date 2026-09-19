@@ -303,6 +303,7 @@ create table prompt_template (
 
 - `class`テーブルへの`comment_period_start_date date`/`comment_period_end_date date`(いずれもnullable)の追加、および`student_comment`テーブルの`period_start_date`/`period_end_date`カラム削除・ユニーク制約変更(`(student_id, period_start_date, period_end_date)`→`(student_id)`のみ): `docs/features/comments/design.md`を参照
 - `seed_standard_subjects(school_level)`Postgres関数の新規追加: `docs/features/subjects/design.md`を参照
+- `life_memo`・`student_life_comment`テーブルの新規追加(RLSは`memo`・`student_comment`と同じ`student→class`経由)、`prompt_template`への`life_content text`(nullable)追加と`content`のnot null解除、`export_teacher_data()`への生活メモ・生活の所見・生活用ひな形の出力追加: `docs/features/life-shoken/`design.mdを参照
 
 ### 4.3 RLSポリシー(変更なし、方針のみ再掲)
 
@@ -769,7 +770,7 @@ export const POST = app.fetch;
 | `import_students(class_id, rows)` | CSV/貼り付け一括登録 | F2 |
 | `save_timetable_master(slots, confirm_overwrite)` | 時間割マスタ保存 | F4 |
 | `update_timetable_start_date(new_start_date, force)`(廃止予定。アプリからは呼ばない) | 起算日変更・年度更新 | F4。`docs/features/start-date-removal/`のフェーズ2で削除 |
-| `export_teacher_data()` | 全データエクスポート | F14 |
+| `export_teacher_data()` | 全データエクスポート(生活メモ・生活の所見・生活用ひな形を含む) | F14。生活系の出力は`docs/features/life-shoken/`で追加 |
 | `seed_standard_subjects(school_level)`(未実装、2026-09時点) | 標準科目セット投入 | F3。詳細は`docs/features/subjects/design.md` |
 
 これ以外の単純なCRUD(クラス表示名編集、生徒編集・削除、科目名編集、週次個別変更の保存・revert、メモの保存・編集・削除、所見の保存・編集)は、単一テーブルへの`insert`/`update`/`delete`/`upsert`で完結するため、RPC化せず`supabase-js`から直接呼ぶ(§5.4)。
