@@ -219,6 +219,111 @@ describe("student_comment", () => {
   });
 });
 
+describe("life_memo", () => {
+  let teacher: TestTeacher | undefined;
+
+  afterEach(async () => {
+    if (teacher) await deleteTestTeacher(teacher.id);
+    teacher = undefined;
+  });
+
+  it("(student_id, note_date)のユニーク制約で1人1日1件になり、upsertで上書きできる(LS-002)", async () => {
+    teacher = await createTestTeacher();
+    const { studentId } = await createClassWithStudent(teacher);
+
+    const { error: insertError } = await teacher.client
+      .from("life_memo")
+      .insert({ student_id: studentId, note_date: "2026-04-10", content: "最初の生活メモ" });
+    expect(insertError).toBeNull();
+
+    // 同じ生徒・同じ日付の2件目はinsertできない
+    const { error: duplicateError } = await teacher.client
+      .from("life_memo")
+      .insert({ student_id: studentId, note_date: "2026-04-10", content: "2件目" });
+    expect(duplicateError?.code).toBe("23505");
+
+    const { data: upserted, error: upsertError } = await teacher.client
+      .from("life_memo")
+      .upsert(
+        { student_id: studentId, note_date: "2026-04-10", content: "更新後の生活メモ" },
+        { onConflict: "student_id,note_date" },
+      )
+      .select();
+    expect(upsertError).toBeNull();
+    expect(upserted).toHaveLength(1);
+    expect(upserted?.[0].content).toBe("更新後の生活メモ");
+    expect(upserted?.[0].share_flag).toBe("shared");
+  });
+});
+
+describe("student_life_comment", () => {
+  let teacher: TestTeacher | undefined;
+
+  afterEach(async () => {
+    if (teacher) await deleteTestTeacher(teacher.id);
+    teacher = undefined;
+  });
+
+  it("(student_id)のユニーク制約でupsertが機能し、学習の所見とは独立に保持される(LS-002)", async () => {
+    teacher = await createTestTeacher();
+    const { studentId } = await createClassWithStudent(teacher);
+
+    await teacher.client
+      .from("student_comment")
+      .insert({ student_id: studentId, content: "学習の所見", creation_method: "manual" });
+
+    const input = { student_id: studentId, content: "最初の生活の所見", creation_method: "manual" as const };
+    const { error: insertError } = await teacher.client
+      .from("student_life_comment")
+      .upsert(input, { onConflict: "student_id" });
+    expect(insertError).toBeNull();
+
+    const { data: upserted, error: upsertError } = await teacher.client
+      .from("student_life_comment")
+      .upsert({ ...input, content: "更新後の生活の所見" }, { onConflict: "student_id" })
+      .select();
+    expect(upsertError).toBeNull();
+    expect(upserted).toHaveLength(1);
+    expect(upserted?.[0].content).toBe("更新後の生活の所見");
+
+    const { data: learning } = await teacher.client
+      .from("student_comment")
+      .select("content")
+      .eq("student_id", studentId)
+      .single<{ content: string }>();
+    expect(learning?.content).toBe("学習の所見");
+  });
+});
+
+describe("prompt_template", () => {
+  let teacher: TestTeacher | undefined;
+
+  afterEach(async () => {
+    if (teacher) await deleteTestTeacher(teacher.id);
+    teacher = undefined;
+  });
+
+  it("生活用だけを保存でき、その後の学習用の保存で生活用が消えない(LS-002)", async () => {
+    teacher = await createTestTeacher();
+
+    const { error: lifeError } = await teacher.client
+      .from("prompt_template")
+      .upsert({ teacher_id: teacher.id, life_content: "生活用" }, { onConflict: "teacher_id" });
+    expect(lifeError).toBeNull();
+
+    const { error: learningError } = await teacher.client
+      .from("prompt_template")
+      .upsert({ teacher_id: teacher.id, content: "学習用" }, { onConflict: "teacher_id" });
+    expect(learningError).toBeNull();
+
+    const { data } = await teacher.client
+      .from("prompt_template")
+      .select("content, life_content")
+      .single<{ content: string | null; life_content: string | null }>();
+    expect(data).toEqual({ content: "学習用", life_content: "生活用" });
+  });
+});
+
 describe("ai_provider_setting", () => {
   it("APIキーが平文で保存されないカラム構成になっている(T-015)", async () => {
     const { error: encryptedColumnError } = await adminClient

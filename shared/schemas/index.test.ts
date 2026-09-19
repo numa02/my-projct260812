@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { commentSaveInputSchema, memoInputSchema, signupInputSchema } from "./index";
+import {
+  commentKindSchema,
+  commentSaveInputSchema,
+  lifeMemoInputSchema,
+  memoInputSchema,
+  signupInputSchema,
+} from "./index";
 
 describe("memoInputSchema", () => {
   it("有効な入力を受け付ける", () => {
@@ -94,5 +100,37 @@ describe("signupInputSchema", () => {
       schoolLevel: "high",
     });
     expect(result.success).toBe(false);
+  });
+});
+
+describe("lifeMemoInputSchema", () => {
+  const base = {
+    studentId: "11111111-1111-4111-8111-111111111111",
+    noteDate: "2026-04-10",
+    content: "休み時間に下級生の面倒を見ていた",
+  };
+
+  it("科目・時限なしの入力を受け付け、共有区分の既定値はshared", () => {
+    const result = lifeMemoInputSchema.safeParse(base);
+    expect(result.success).toBe(true);
+    expect(result.data?.shareFlag).toBe("shared");
+  });
+
+  it("日付が空なら拒否する", () => {
+    const result = lifeMemoInputSchema.safeParse({ ...base, noteDate: "" });
+    expect(result.success).toBe(false);
+  });
+
+  it("内容が空白のみなら拒否する", () => {
+    const result = lifeMemoInputSchema.safeParse({ ...base, content: "   " });
+    expect(result.success).toBe(false);
+  });
+});
+
+describe("commentKindSchema", () => {
+  it("learning・lifeのみを受け付ける", () => {
+    expect(commentKindSchema.safeParse("learning").success).toBe(true);
+    expect(commentKindSchema.safeParse("life").success).toBe(true);
+    expect(commentKindSchema.safeParse("other").success).toBe(false);
   });
 });

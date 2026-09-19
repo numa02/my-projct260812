@@ -106,12 +106,30 @@
           <p class="text-xs text-gray-400">クラス選択はこの一覧の生徒を絞り込むためだけのもので、ヘッダーのクラス選択とは連動しません。</p>
         </div>
 
-        <div class="inline-flex bg-gray-100 rounded-sm p-1 text-sm">
-          <button class="px-3 py-1.5 rounded-sm bg-white shadow-sm text-gray-900 font-medium">日付順</button>
-          <button class="px-3 py-1.5 rounded-sm text-gray-500">教科別</button>
+        <div class="flex flex-wrap items-center gap-3">
+          <div class="inline-flex bg-gray-100 rounded-sm p-1 text-sm">
+            <button class="px-3 py-1.5 rounded-sm bg-white shadow-sm text-gray-900 font-medium">日付順</button>
+            <button class="px-3 py-1.5 rounded-sm text-gray-500">教科別</button>
+          </div>
+          <button class="h-9 px-4 rounded-sm border border-gray-300 text-sm text-gray-700 hover:bg-gray-50">+ 生活メモを追加</button>
         </div>
 
         <div class="space-y-3">
+          <!-- 生活メモ(授業に紐づかない。時限・科目の代わりに「生活」) -->
+          <div class="border border-gray-200 rounded-md p-4 space-y-2">
+            <div class="flex flex-wrap items-center gap-2 text-xs text-gray-500">
+              <span class="font-medium text-gray-700">10/15(水)</span>
+              <span class="text-gray-300">/</span>
+              <span>生活</span>
+              <span class="ml-auto bg-primary-50 text-primary-600 px-2 py-0.5 rounded-sm font-medium">共有する</span>
+            </div>
+            <p class="text-sm text-gray-700">給食の配膳を率先して手伝っていた。</p>
+            <div class="flex gap-3 text-xs text-gray-400">
+              <button class="hover:text-primary-500 hover:underline">編集</button>
+              <button class="hover:text-error-500 hover:underline">削除</button>
+            </div>
+          </div>
+
           <div class="border border-gray-200 rounded-md p-4 space-y-2">
             <div class="flex flex-wrap items-center gap-2 text-xs text-gray-500">
               <span class="font-medium text-gray-700">10/14(火) 3限</span>
@@ -175,6 +193,15 @@
           </div>
         </div>
         <div>
+          <p class="text-sm font-semibold text-gray-900 mb-2">生活(1件)</p>
+          <div class="space-y-2 pl-3 border-l-2 border-gray-100">
+            <div class="text-sm">
+              <span class="text-xs text-gray-400">10/15(水)</span>
+              <p class="text-gray-700">給食の配膳を率先して手伝っていた。</p>
+            </div>
+          </div>
+        </div>
+        <div>
           <p class="text-sm font-semibold text-gray-900 mb-2">体育(1件)</p>
           <div class="space-y-2 pl-3 border-l-2 border-gray-100">
             <div class="text-sm">
@@ -186,12 +213,40 @@
       </div>
     </section>
 
+    <!-- 生活メモの追加フォーム -->
+    <section class="space-y-3">
+      <h2 class="text-sm font-medium text-gray-500">生活メモの追加(日付は入力・選択式。初期値は今日。同じ日付が既にある場合はエラー)</h2>
+      <div class="bg-white rounded-lg border border-gray-200 shadow-sm p-4 tablet:p-6 space-y-3 max-w-2xl">
+        <p class="text-base font-semibold text-gray-900">生活メモを追加</p>
+        <label class="flex flex-col gap-1.5 text-sm text-gray-700 w-48">
+          日付
+          <input type="date" value="2026-10-15" class="h-10 px-3 rounded-sm border border-gray-300 text-sm">
+        </label>
+        <label class="flex flex-col gap-1.5 text-sm text-gray-700">
+          生活メモ
+          <textarea rows="3" class="w-full px-3 py-2 rounded-sm border border-gray-300 text-sm">給食の配膳を率先して手伝っていた。</textarea>
+        </label>
+        <label class="flex items-center gap-2 text-xs text-gray-500">
+          <span class="relative inline-block w-8 h-4">
+            <span class="absolute inset-0 rounded-full bg-primary-500"></span>
+            <span class="absolute left-0.5 top-0.5 w-3 h-3 rounded-full bg-white translate-x-4"></span>
+          </span>
+          共有する
+        </label>
+        <p class="text-sm text-error-500">この日付の生活メモは既にあります。一覧から編集してください</p>
+        <div class="flex gap-2">
+          <button class="h-9 px-4 rounded-sm bg-primary-500 text-white text-sm font-medium hover:bg-primary-600">保存</button>
+          <button class="h-9 px-4 rounded-sm bg-gray-100 text-gray-700 text-sm">キャンセル</button>
+        </div>
+      </div>
+    </section>
+
     <!-- 空状態 -->
     <section class="space-y-3">
       <h2 class="text-sm font-medium text-gray-500">空状態(メモが1件もない生徒)</h2>
       <div class="bg-white rounded-lg border border-gray-200 shadow-sm p-8 text-center space-y-1">
         <p class="text-gray-900 font-medium">まだメモがありません</p>
-        <p class="text-sm text-gray-500">授業記録画面からメモを入力すると、ここに表示されます</p>
+        <p class="text-sm text-gray-500">授業記録画面・生活記録画面からメモを入力すると、ここに表示されます</p>
       </div>
     </section>
 

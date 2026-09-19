@@ -8,6 +8,7 @@ import { useSharedMemosForPeriod } from "@/hooks/useSharedMemosForPeriod";
 import { useGenerateComment } from "@/hooks/useGenerateComment";
 import type { CommentCreationMethod } from "@/hooks/useStudentComments";
 import { buildPrompt } from "@/shared/prompt-builder";
+import type { CommentKind } from "@/shared/schemas";
 import { Input, Textarea } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
@@ -20,6 +21,8 @@ type Method = "direct" | "prompt";
 
 export interface CommentAiAssistProps {
   studentId: string;
+  /** learning=授業メモから学習の所見、life=生活メモから生活の所見を生成する */
+  kind: CommentKind;
   pseudonymCode: string;
   periodStartDate: string;
   periodEndDate: string;
@@ -36,6 +39,7 @@ export interface CommentAiAssistProps {
  */
 export function CommentAiAssist({
   studentId,
+  kind,
   pseudonymCode,
   periodStartDate,
   periodEndDate,
@@ -43,7 +47,9 @@ export function CommentAiAssist({
 }: CommentAiAssistProps) {
   const { showToast } = useToast();
   const { setting, isLoading: isLoadingSetting } = useAiProviderSettings();
-  const { template, isLoading: isLoadingTemplate } = usePromptTemplate();
+  const { templates, isLoading: isLoadingTemplate } = usePromptTemplate();
+  const template = templates[kind];
+  const memoLabel = kind === "life" ? "生活メモ" : "メモ";
   const generateComment = useGenerateComment();
 
   const [targetCharCount, setTargetCharCount] = useState("");
@@ -57,6 +63,7 @@ export function CommentAiAssist({
     studentId,
     periodStartDate,
     periodEndDate,
+    kind,
   );
   const hasSharedMemos = memos.length > 0;
   const targetCharCountNumber = targetCharCount.trim() ? Number(targetCharCount) : undefined;
@@ -123,7 +130,7 @@ export function CommentAiAssist({
       {isLoadingMemos ? (
         <LoadingSpinner label="読み込み中..." />
       ) : !hasSharedMemos ? (
-        <EmptyState message="送信可能なメモが存在しません" />
+        <EmptyState message={`送信可能な${memoLabel}が存在しません`} />
       ) : method === "direct" && !setting.hasKey ? (
         <div className="flex flex-col gap-2">
           <InlineMessage
@@ -138,7 +145,7 @@ export function CommentAiAssist({
         <>
           <InlineMessage
             variant="info"
-            message="「共有する」区分のメモが仮名化された状態で外部のAIサービスに送信されます"
+            message={`「共有する」区分の${memoLabel}が仮名化された状態で外部のAIサービスに送信されます`}
           />
           <Button
             variant="primary"
@@ -157,7 +164,7 @@ export function CommentAiAssist({
         <div className="flex flex-col gap-3">
           <InlineMessage
             variant="info"
-            message="「共有する」区分のメモが仮名化された状態でプロンプトに含まれます。コピーして外部のAIサービスに貼り付けてください"
+            message={`「共有する」区分の${memoLabel}が仮名化された状態でプロンプトに含まれます。コピーして外部のAIサービスに貼り付けてください`}
           />
           <Textarea label="プロンプト" value={prompt} readOnly rows={6} />
           <Button variant="outline" size="sm" className="self-start" onClick={handleCopyPrompt}>
