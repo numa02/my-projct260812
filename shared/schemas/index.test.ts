@@ -42,7 +42,7 @@ describe("memoInputSchema", () => {
 describe("commentSaveInputSchema", () => {
   it("有効な入力を受け付ける", () => {
     const result = commentSaveInputSchema.safeParse({
-      content: "所感文",
+      content: "所見文",
       creationMethod: "manual",
     });
     expect(result.success).toBe(true);
@@ -50,7 +50,7 @@ describe("commentSaveInputSchema", () => {
 
   it("creationMethodが許可リスト外の場合は拒否する", () => {
     const result = commentSaveInputSchema.safeParse({
-      content: "所感文",
+      content: "所見文",
       creationMethod: "auto",
     });
     expect(result.success).toBe(false);

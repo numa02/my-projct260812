@@ -36,7 +36,7 @@ test.describe("設定画面・データエクスポート(T-070)", () => {
     await expect(page.getByRole("heading", { name: "全データをエクスポートしますか" })).not.toBeVisible();
   });
 
-  test("確認後に実行すると、生徒ごとにメモ・所感がまとまったJSONがダウンロードされ、APIキー設定は含まれない", async ({
+  test("確認後に実行すると、生徒ごとにメモ・所見がまとまったJSONがダウンロードされ、APIキー設定は含まれない", async ({
     page,
   }) => {
     await signUpAndLogin(page);

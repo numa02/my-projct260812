@@ -344,7 +344,7 @@ export function TimetableMasterForm({
 
       <ConfirmDialog
         title="年度を更新しますか"
-        body="年度を更新すると、今日以降の週番号の数え方が新しい起算日を基準に変わります。過去に記録した授業記録・メモ・所感はそのまま残り、削除されません。"
+        body="年度を更新すると、今日以降の週番号の数え方が新しい起算日を基準に変わります。過去に記録した授業記録・メモ・所見はそのまま残り、削除されません。"
         open={yearUpdateConfirmOpen}
         onConfirm={() => {
           setYearUpdateMode(true);

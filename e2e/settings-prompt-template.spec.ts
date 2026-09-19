@@ -21,7 +21,7 @@ async function createClass(page: Page, grade: string, displayName: string): Prom
 async function createSubject(page: Page, name: string): Promise<void> {
   await page.goto("/subjects");
   await page.getByLabel("科目名").fill(name);
-  await page.getByRole("button", { name: "登録" }).click();
+  await page.getByRole("button", { name: "登録", exact: true }).click();
   await expect(page.getByText("科目を登録しました")).toBeVisible();
 }
 
@@ -54,7 +54,7 @@ async function recordMemo(page: Page, dateISO: string, period: number, content: 
 async function openCommentsForStudentA(page: Page) {
   await page.goto("/students");
   await page.getByLabel("クラス").selectOption({ label: "1年1組" });
-  await page.getByRole("link", { name: "生徒Aの所感" }).click();
+  await page.getByRole("link", { name: "生徒Aの所見" }).click();
   await expect(page).toHaveURL(/\/comments\/class\//);
   await page.getByLabel("開始日").fill("2026-04-01");
   await page.getByLabel("終了日").fill("2026-04-30");
@@ -106,8 +106,8 @@ test.describe("設定画面・プロンプトひな形編集(T-069)", () => {
 
     const row = await openCommentsForStudentA(page);
     await row.getByRole("button", { name: "AIで生成する" }).click();
-    await row.getByRole("button", { name: "生成して所感欄に反映" }).click();
-    await expect(row.getByLabel("生徒Aの所感")).toHaveValue("生成結果");
+    await row.getByRole("button", { name: "生成して所見欄に反映" }).click();
+    await expect(row.getByLabel("生徒Aの所見")).toHaveValue("生成結果");
 
     expect(capturedPrompt).toContain("カスタムひな形マーカー");
   });

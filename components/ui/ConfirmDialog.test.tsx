@@ -10,7 +10,7 @@ describe("ConfirmDialog", () => {
     render(
       <ConfirmDialog
         title="生徒を削除しますか"
-        body="メモ・所感も完全に削除されます"
+        body="メモ・所見も完全に削除されます"
         open
         variant="danger"
         confirmLabel="削除する"
@@ -28,7 +28,7 @@ describe("ConfirmDialog", () => {
     render(
       <ConfirmDialog
         title="上書きしますか"
-        body="既存の所感を上書きします"
+        body="既存の所見を上書きします"
         open
         loading
         onConfirm={() => {}}

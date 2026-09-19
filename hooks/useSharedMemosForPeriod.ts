@@ -5,7 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { createSupabaseBrowserClient } from "@/lib/supabase-browser";
 import type { PromptMemo } from "@/shared/prompt-builder";
 
-/** F9/F10向け。指定期間内のその生徒の「共有する」区分のメモのみを取得する(所感生成の対象) */
+/** F9/F10向け。指定期間内のその生徒の「共有する」区分のメモのみを取得する(所見生成の対象) */
 export function useSharedMemosForPeriod(studentId: string | null, startDate: string, endDate: string) {
   const supabase = useMemo(() => createSupabaseBrowserClient(), []);
 

@@ -172,7 +172,7 @@ export default function StudentsPage() {
           <div className="flex justify-end gap-2">
             <Link
               href={`/comments/class/${selectedClassId}?student=${s.id}`}
-              aria-label={`${s.name}の所感`}
+              aria-label={`${s.name}の所見`}
               className="flex h-11 w-11 items-center justify-center rounded-sm text-gray-500 hover:bg-gray-100"
             >
               <Sparkles className="h-4 w-4" aria-hidden />
@@ -244,7 +244,7 @@ export default function StudentsPage() {
 
       <ConfirmDialog
         title="生徒を削除しますか"
-        body="この生徒を削除すると、記録済みのメモ・所感もすべて完全に削除され、復元できません。"
+        body="この生徒を削除すると、記録済みのメモ・所見もすべて完全に削除され、復元できません。"
         variant="danger"
         confirmLabel="削除する"
         open={deleteTarget !== null}

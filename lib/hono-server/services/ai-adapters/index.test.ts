@@ -19,33 +19,33 @@ describe("aiAdapters", () => {
   });
 
   it("openai: モック環境でgenerateCommentを呼び出せる(T-029)", async () => {
-    mockFetchOnce(200, { choices: [{ message: { content: "生成された所感" } }] });
+    mockFetchOnce(200, { choices: [{ message: { content: "生成された所見" } }] });
     const text = await aiAdapters.openai.generateComment({
       apiKey: "key",
       model: "gpt-5-mini",
       prompt: "プロンプト",
     });
-    expect(text).toBe("生成された所感");
+    expect(text).toBe("生成された所見");
   });
 
   it("anthropic: モック環境でgenerateCommentを呼び出せる(T-029)", async () => {
-    mockFetchOnce(200, { content: [{ type: "text", text: "生成された所感" }] });
+    mockFetchOnce(200, { content: [{ type: "text", text: "生成された所見" }] });
     const text = await aiAdapters.anthropic.generateComment({
       apiKey: "key",
       model: "claude-sonnet-5",
       prompt: "プロンプト",
     });
-    expect(text).toBe("生成された所感");
+    expect(text).toBe("生成された所見");
   });
 
   it("gemini: モック環境でgenerateCommentを呼び出せる(T-029)", async () => {
-    mockFetchOnce(200, { candidates: [{ content: { parts: [{ text: "生成された所感" }] } }] });
+    mockFetchOnce(200, { candidates: [{ content: { parts: [{ text: "生成された所見" }] } }] });
     const text = await aiAdapters.gemini.generateComment({
       apiKey: "key",
       model: "gemini-3.5-flash",
       prompt: "プロンプト",
     });
-    expect(text).toBe("生成された所感");
+    expect(text).toBe("生成された所見");
   });
 
   it("401はAUTH_ERRORとして扱われる", async () => {

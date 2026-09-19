@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>モック: 所感管理画面(クラス単位一覧)</title>
+<title>モック: 所見管理画面(クラス単位一覧)</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <script>
   tailwind.config = {
@@ -38,7 +38,7 @@
   <aside class="hidden tablet:flex w-[240px] shrink-0 h-screen overflow-y-auto bg-white border-r border-gray-200 flex-col justify-between">
     <div>
       <div class="px-4 py-4 border-b border-gray-200">
-        <p class="text-sm font-semibold text-gray-900 leading-tight">週間時間割・所感ツール</p>
+        <p class="text-sm font-semibold text-gray-900 leading-tight">週間時間割・所見ツール</p>
       </div>
       <nav class="px-2 py-3 space-y-4 text-sm">
         <div>
@@ -52,8 +52,8 @@
           <a href="student-memo-list.html" class="block px-2 py-1.5 rounded-sm text-gray-600 hover:bg-gray-50">生徒別メモ一覧</a>
         </div>
         <div>
-          <p class="px-2 text-xs text-gray-400 mb-1">所感</p>
-          <a href="comment.html" class="block px-2 py-1.5 rounded-sm bg-primary-50 text-primary-600 font-medium">所感管理</a>
+          <p class="px-2 text-xs text-gray-400 mb-1">所見</p>
+          <a href="comment.html" class="block px-2 py-1.5 rounded-sm bg-primary-50 text-primary-600 font-medium">所見管理</a>
         </div>
         <div>
           <p class="px-2 text-xs text-gray-400 mb-1">管理</p>
@@ -76,8 +76,8 @@
 
     <header class="space-y-1">
       <p class="text-sm text-gray-500">モック(状態バリエーション確認用・2026-08-19版)</p>
-      <h1 class="text-2xl font-semibold text-gray-900">所感管理画面</h1>
-      <p class="text-sm text-gray-500">クラスと対象期間(開始日・終了日、画面全体で1つ)を指定すると、そのクラス全員分の氏名・所感入力欄が一覧表示されます。氏名と所感入力欄は常時表示で、AI生成は生徒の行ごとに折りたたみます。かつての「生徒を1人選んで生成/履歴タブを切り替える」構成は廃止されました。所感は生徒ごとに常に最新1件のみを保持し、過去の所感を別途閲覧する機能は廃止されました。</p>
+      <h1 class="text-2xl font-semibold text-gray-900">所見管理画面</h1>
+      <p class="text-sm text-gray-500">クラスと対象期間(開始日・終了日、画面全体で1つ)を指定すると、そのクラス全員分の氏名・所見入力欄が一覧表示されます。氏名と所見入力欄は常時表示で、AI生成は生徒の行ごとに折りたたみます。かつての「生徒を1人選んで生成/履歴タブを切り替える」構成は廃止されました。所見は生徒ごとに常に最新1件のみを保持し、過去の所見を別途閲覧する機能は廃止されました。</p>
     </header>
 
     <!-- 正常状態:クラス+対象期間指定、生徒一覧 -->
@@ -108,7 +108,7 @@
 
         <div class="divide-y divide-gray-100 border-t border-gray-200">
 
-          <!-- 行1: 既存所感あり、折りたたみは閉じた状態 -->
+          <!-- 行1: 既存所見あり、折りたたみは閉じた状態 -->
           <div class="py-4 space-y-3">
             <div class="flex flex-wrap items-center gap-2">
               <span class="text-sm font-medium text-gray-900">田中 陽菜</span>
@@ -130,7 +130,7 @@
               <span class="text-xs text-gray-400 bg-white px-2 py-0.5 rounded-sm">1-03-02</span>
               <span class="text-xs text-gray-500">(生徒名簿画面から遷移した生徒。行が目立つ表示になる)</span>
             </div>
-            <textarea rows="4" placeholder="所感を入力するか、AIで生成してください" class="w-full px-3 py-3 rounded-sm border border-gray-300 bg-white text-base leading-[1.8] placeholder-gray-400"></textarea>
+            <textarea rows="4" placeholder="所見を入力するか、AIで生成してください" class="w-full px-3 py-3 rounded-sm border border-gray-300 bg-white text-base leading-[1.8] placeholder-gray-400"></textarea>
             <div class="flex flex-wrap items-center gap-2">
               <button class="h-9 px-4 rounded-sm bg-gray-900 text-white text-sm font-medium hover:bg-gray-700">保存</button>
               <button class="h-9 px-3 rounded-sm border border-gray-400 bg-white text-sm text-gray-900 font-medium inline-flex items-center gap-1.5">✨ AIで生成する</button>
@@ -151,12 +151,12 @@
                 <span>「共有する」区分のメモが仮名化された状態で外部のAIサービスに送信されます。</span>
               </div>
               <div class="flex justify-start">
-                <button class="h-9 px-4 rounded-sm bg-gray-900 text-white text-sm font-medium hover:bg-gray-700">生成して所感欄に反映</button>
+                <button class="h-9 px-4 rounded-sm bg-gray-900 text-white text-sm font-medium hover:bg-gray-700">生成して所見欄に反映</button>
               </div>
             </div>
           </div>
 
-          <!-- 行3: 既存所感あり(手動作成) -->
+          <!-- 行3: 既存所見あり(手動作成) -->
           <div class="py-4 space-y-3">
             <div class="flex flex-wrap items-center gap-2">
               <span class="text-sm font-medium text-gray-900">鈴木 陸</span>
@@ -193,7 +193,7 @@
               <button class="text-xs text-gray-700 underline">プロンプトをコピー</button>
             </div>
             <div class="bg-gray-50 border border-gray-200 rounded-sm px-3 py-3 text-sm text-gray-600 leading-[1.8]">
-              以下は生徒「1-03-01」の授業メモです。これをもとに150字程度の所感文を作成してください。<br>
+              以下は生徒「1-03-01」の授業メモです。これをもとに150字程度の所見文を作成してください。<br>
               ・10/14 国語:音読の声が大きくなってきた。挙手も増えている。<br>
               ・10/10 体育:リレーでバトンパスの練習に積極的に取り組んでいた。
             </div>
@@ -201,7 +201,7 @@
               <label class="text-xs text-gray-500">AIの応答を貼り付け</label>
               <textarea rows="3" placeholder="外部のAIチャットサービスから得た回答を貼り付けてください" class="w-full px-3 py-2 rounded-sm border border-gray-300 text-sm placeholder-gray-400"></textarea>
             </div>
-            <button class="h-9 px-4 rounded-sm border border-gray-300 text-sm text-gray-700 hover:bg-gray-50">所感欄に反映</button>
+            <button class="h-9 px-4 rounded-sm border border-gray-300 text-sm text-gray-700 hover:bg-gray-50">所見欄に反映</button>
           </div>
         </div>
 
@@ -227,7 +227,7 @@
               <circle class="opacity-20" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
               <path class="opacity-90" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
             </svg>
-            <p class="text-sm text-gray-500">AIが所感を生成しています(数秒〜数十秒かかることがあります)</p>
+            <p class="text-sm text-gray-500">AIが所見を生成しています(数秒〜数十秒かかることがあります)</p>
           </div>
         </div>
 
@@ -244,7 +244,7 @@
           <div class="bg-white border border-gray-200 rounded-md p-4">
             <div class="flex items-start gap-2 bg-error-500/10 border border-error-500/30 text-error-500 text-sm rounded-sm px-3 py-2.5">
               <span class="mt-0.5">⚠</span>
-              <span>AIプロバイダの呼び出しに失敗しました(認証エラー)。設定画面でAPIキーをご確認ください。所感は保存されていません。</span>
+              <span>AIプロバイダの呼び出しに失敗しました(認証エラー)。設定画面でAPIキーをご確認ください。所見は保存されていません。</span>
             </div>
           </div>
         </div>
@@ -274,7 +274,7 @@
     </section>
 
     <footer class="text-xs text-gray-400 pt-4 pb-12">
-      docs/design/screens.md「12. 所感管理画面」に対応(T-080でクラス単位の一覧編集画面に再設計)
+      docs/design/screens.md「12. 所見管理画面」に対応(T-080でクラス単位の一覧編集画面に再設計)
     </footer>
 
   </main>

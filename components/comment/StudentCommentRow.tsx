@@ -29,9 +29,9 @@ export interface StudentCommentRowProps {
 }
 
 /**
- * 所感管理画面の1行。氏名と所感入力欄は常時表示し、AI生成(F9, F10)は折りたたみで
- * 必要なときだけ開く。所感は生徒につき常に最新1件のみを保持するため、行を開いた時点で
- * その生徒の既存所感があれば初期表示し、なければ空欄から始まる
+ * 所見管理画面の1行。氏名と所見入力欄は常時表示し、AI生成(F9, F10)は折りたたみで
+ * 必要なときだけ開く。所見は生徒につき常に最新1件のみを保持するため、行を開いた時点で
+ * その生徒の既存所見があれば初期表示し、なければ空欄から始まる
  */
 export function StudentCommentRow({
   studentId,
@@ -121,7 +121,7 @@ function RowBody({
 
   const handleSave = async () => {
     if (content.trim().length === 0) {
-      setError("所感を入力してください");
+      setError("所見を入力してください");
       return;
     }
     setError(null);
@@ -130,7 +130,7 @@ function RowBody({
         content: content.trim(),
         creationMethod,
       });
-      showToast("success", `${studentName}の所感を保存しました`);
+      showToast("success", `${studentName}の所見を保存しました`);
     } catch {
       setError("保存に失敗しました。もう一度お試しください");
     }
@@ -152,11 +152,11 @@ function RowBody({
       </div>
 
       <Textarea
-        aria-label={`${studentName}の所感`}
+        aria-label={`${studentName}の所見`}
         value={content}
         onChange={(e) => setContent(e.target.value)}
         rows={4}
-        placeholder="所感を入力するか、AIで生成してください"
+        placeholder="所見を入力するか、AIで生成してください"
       />
 
       {error && <p className="text-sm text-error-500">{error}</p>}

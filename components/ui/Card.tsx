@@ -10,7 +10,7 @@ export interface CardProps {
   className?: string;
 }
 
-/** メモカード・所感カード共通。craft.do路線に沿いshadow-sm + radius-mdの柔らかい表現を使う */
+/** メモカード・所見カード共通。craft.do路線に沿いshadow-sm + radius-mdの柔らかい表現を使う */
 export function Card({ title, meta, body, selected, onClick, className }: CardProps) {
   const clickable = Boolean(onClick);
   const Component = clickable ? "button" : "div";

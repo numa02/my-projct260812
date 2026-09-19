@@ -5,7 +5,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createSupabaseBrowserClient } from "@/lib/supabase-browser";
 
 /**
- * 所感管理画面(クラス単位一覧)の対象期間(開始日・終了日)をクラスごとに記憶する。
+ * 所見管理画面(クラス単位一覧)の対象期間(開始日・終了日)をクラスごとに記憶する。
  * CLAUDE.mdの楽観的更新禁止方針に従い、入力欄の表示値は常にmutation成功後にのみ更新され、
  * mutation失敗時も何もしないだけで直前の確認済み値の表示が維持される
  * (表示値を先に書き換えていないため)。

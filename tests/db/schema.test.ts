@@ -197,7 +197,7 @@ describe("student_comment", () => {
 
     const commentInput = {
       student_id: studentId,
-      content: "最初の所感",
+      content: "最初の所見",
       creation_method: "manual" as const,
     };
 
@@ -209,13 +209,13 @@ describe("student_comment", () => {
     const { data: upserted, error: upsertError } = await teacher.client
       .from("student_comment")
       .upsert(
-        { ...commentInput, content: "更新後の所感" },
+        { ...commentInput, content: "更新後の所見" },
         { onConflict: "student_id" },
       )
       .select();
     expect(upsertError).toBeNull();
     expect(upserted).toHaveLength(1);
-    expect(upserted?.[0].content).toBe("更新後の所感");
+    expect(upserted?.[0].content).toBe("更新後の所見");
   });
 });
 

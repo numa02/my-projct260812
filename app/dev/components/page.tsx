@@ -251,7 +251,7 @@ function ComponentGallery() {
           </Button>
           <ConfirmDialog
             title="生徒を削除しますか"
-            body="この生徒を削除すると、記録済みのメモ・所感もすべて完全に削除され、復元できません"
+            body="この生徒を削除すると、記録済みのメモ・所見もすべて完全に削除され、復元できません"
             open={confirmOpen}
             variant="danger"
             confirmLabel="削除する"
@@ -308,7 +308,7 @@ function ComponentGallery() {
         <Demo label="インライン / ラベル付き">
           <div className="flex items-center gap-4">
             <LoadingSpinner />
-            <LoadingSpinner label="所感を生成しています..." />
+            <LoadingSpinner label="所見を生成しています..." />
           </div>
         </Demo>
         <Demo label="Skeleton">
@@ -394,7 +394,7 @@ function ComponentGallery() {
           </Button>
         </Demo>
       </Section>
-      {fullScreenLoading && <FullScreenLoading label="所感を生成しています..." />}
+      {fullScreenLoading && <FullScreenLoading label="所見を生成しています..." />}
     </div>
   );
 }

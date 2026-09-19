@@ -127,6 +127,6 @@ aiRoutes.post("/comments/generate", async (c) => {
       if (err.code === "AUTH_ERROR") return c.json(payload, 401);
       return c.json(payload, 502);
     }
-    return c.json({ error: { code: "INTERNAL_ERROR", message: "所感の生成に失敗しました" } }, 500);
+    return c.json({ error: { code: "INTERNAL_ERROR", message: "所見の生成に失敗しました" } }, 500);
   }
 });
