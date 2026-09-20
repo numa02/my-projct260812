@@ -2,9 +2,10 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Pencil, Trash2 } from "lucide-react";
+import { Pencil, Plus, Trash2 } from "lucide-react";
 import { useClassOptions } from "@/hooks/useClassOptions";
 import { useStudentMemos, type StudentMemoRow } from "@/hooks/useStudentMemos";
+import { LifeMemoAddForm } from "@/components/memo/LifeMemoAddForm";
 import { Select } from "@/components/ui/Select";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { Toggle } from "@/components/ui/Toggle";
@@ -21,6 +22,13 @@ export interface StudentMemosContentProps {
   initialClassId: string | null;
   initialStudentId: string | null;
   from: string | null;
+}
+
+/** 一覧・操作ボタンのラベルに使う「日付 時限 科目」表記。生活メモは時限の代わりに「生活」とする */
+function memoLabel(memo: StudentMemoRow): string {
+  return memo.kind === "life"
+    ? `${memo.noteDate} ${memo.subjectName}`
+    : `${memo.noteDate} ${memo.period}限 ${memo.subjectName}`;
 }
 
 function groupBySubject(memos: StudentMemoRow[]): Array<{ subjectName: string; memos: StudentMemoRow[] }> {
@@ -51,8 +59,10 @@ export function StudentMemosContent({
   const [editingMemoId, setEditingMemoId] = useState<string | null>(null);
   const [editContent, setEditContent] = useState("");
   const [deleteTarget, setDeleteTarget] = useState<StudentMemoRow | null>(null);
+  const [lifeFormOpen, setLifeFormOpen] = useState(false);
 
-  const { memos, isLoading: isLoadingMemos, updateMemo, deleteMemo } = useStudentMemos(selectedStudentId);
+  const { memos, isLoading: isLoadingMemos, updateMemo, deleteMemo, addLifeMemo } =
+    useStudentMemos(selectedStudentId);
 
   const startEdit = (memo: StudentMemoRow) => {
     setEditingMemoId(memo.id);
@@ -60,9 +70,10 @@ export function StudentMemosContent({
   };
 
   const saveEdit = async () => {
-    if (!editingMemoId || editContent.trim().length === 0) return;
+    const target = memos.find((m) => m.id === editingMemoId);
+    if (!target || editContent.trim().length === 0) return;
     try {
-      await updateMemo.mutateAsync({ id: editingMemoId, content: editContent.trim() });
+      await updateMemo.mutateAsync({ id: target.id, kind: target.kind, content: editContent.trim() });
       showToast("success", "メモを更新しました");
       setEditingMemoId(null);
     } catch {
@@ -72,7 +83,11 @@ export function StudentMemosContent({
 
   const handleToggleShare = async (memo: StudentMemoRow, checked: boolean) => {
     try {
-      await updateMemo.mutateAsync({ id: memo.id, shareFlag: checked ? "shared" : "private" });
+      await updateMemo.mutateAsync({
+        id: memo.id,
+        kind: memo.kind,
+        shareFlag: checked ? "shared" : "private",
+      });
       showToast(
         "success",
         "共有区分を更新しました(過去にAIへ送信済みの内容そのものは取り消せません)",
@@ -85,7 +100,7 @@ export function StudentMemosContent({
   const handleConfirmDelete = async () => {
     if (!deleteTarget) return;
     try {
-      await deleteMemo.mutateAsync(deleteTarget.id);
+      await deleteMemo.mutateAsync({ id: deleteTarget.id, kind: deleteTarget.kind });
       showToast("success", "メモを削除しました");
       setDeleteTarget(null);
     } catch {
@@ -94,17 +109,19 @@ export function StudentMemosContent({
   };
 
   const renderMemoRow = (memo: StudentMemoRow) => (
-    <div key={memo.id} className="flex flex-col gap-2 border-b border-gray-100 py-3 last:border-b-0">
+    <div key={`${memo.kind}-${memo.id}`} className="flex flex-col gap-2 border-b border-gray-100 py-3 last:border-b-0">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <span className="text-sm text-gray-500">
-          {memo.noteDate} ・ {memo.period}限 ・ {memo.subjectName}
+          {memo.kind === "life"
+            ? `${memo.noteDate} ・ ${memo.subjectName}`
+            : `${memo.noteDate} ・ ${memo.period}限 ・ ${memo.subjectName}`}
         </span>
         <div className="flex items-center gap-2">
           <Toggle
             checked={memo.shareFlag === "shared"}
             onChange={(checked) => handleToggleShare(memo, checked)}
             disabled={updateMemo.isPending}
-            label={`${memo.noteDate} ${memo.period}限 ${memo.subjectName}の共有区分`}
+            label={`${memoLabel(memo)}の共有区分`}
           />
           <span className="text-sm text-gray-700">
             {memo.shareFlag === "shared" ? "共有する" : "共有しない"}
@@ -112,7 +129,7 @@ export function StudentMemosContent({
           <button
             type="button"
             onClick={() => startEdit(memo)}
-            aria-label={`${memo.noteDate} ${memo.period}限 ${memo.subjectName}のメモを編集`}
+            aria-label={`${memoLabel(memo)}のメモを編集`}
             className="flex h-11 w-11 items-center justify-center rounded-sm text-gray-500 hover:bg-gray-100"
           >
             <Pencil className="h-4 w-4" aria-hidden />
@@ -120,7 +137,7 @@ export function StudentMemosContent({
           <button
             type="button"
             onClick={() => setDeleteTarget(memo)}
-            aria-label={`${memo.noteDate} ${memo.period}限 ${memo.subjectName}のメモを削除`}
+            aria-label={`${memoLabel(memo)}のメモを削除`}
             className="flex h-11 w-11 items-center justify-center rounded-sm text-gray-500 hover:bg-gray-100"
           >
             <Trash2 className="h-4 w-4" aria-hidden />
@@ -184,6 +201,7 @@ export function StudentMemosContent({
             onChange={(id) => {
               setSelectedClassId(id);
               setSelectedStudentId(null);
+              setLifeFormOpen(false);
             }}
           />
         </div>
@@ -198,7 +216,10 @@ export function StudentMemosContent({
                 ...students.map((s) => ({ value: s.id, label: s.name })),
               ]}
               value={selectedStudentId ?? ""}
-              onChange={(id) => setSelectedStudentId(id || null)}
+              onChange={(id) => {
+                setSelectedStudentId(id || null);
+                setLifeFormOpen(false);
+              }}
               emptyMessage="このクラスにはまだ生徒が登録されていません"
             />
           </div>
@@ -215,6 +236,20 @@ export function StudentMemosContent({
           />
         )}
       </div>
+
+      {selectedStudentId &&
+        (lifeFormOpen ? (
+          <LifeMemoAddForm
+            key={selectedStudentId}
+            addLifeMemo={addLifeMemo}
+            onDone={() => setLifeFormOpen(false)}
+          />
+        ) : (
+          <Button variant="outline" size="sm" className="self-start" onClick={() => setLifeFormOpen(true)}>
+            <Plus className="h-4 w-4" aria-hidden />
+            生活メモを追加
+          </Button>
+        ))}
 
       {!selectedClassId ? null : isLoadingStudents ? (
         <LoadingSpinner label="読み込み中..." />

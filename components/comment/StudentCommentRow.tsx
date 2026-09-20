@@ -11,6 +11,7 @@ import { CodeBadge } from "@/components/ui/CodeBadge";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { useToast } from "@/components/ui/Toast";
 import { cn } from "@/lib/cn";
+import type { CommentKind } from "@/shared/schemas";
 
 const CREATION_METHOD_LABEL: Record<CommentCreationMethod, string> = {
   direct_ai: "AI生成(直接呼び出し)",
@@ -20,6 +21,8 @@ const CREATION_METHOD_LABEL: Record<CommentCreationMethod, string> = {
 
 export interface StudentCommentRowProps {
   studentId: string;
+  /** learning=学習の所見、life=生活の所見 */
+  kind: CommentKind;
   studentName: string;
   pseudonymCode: string;
   periodStartDate: string;
@@ -35,6 +38,7 @@ export interface StudentCommentRowProps {
  */
 export function StudentCommentRow({
   studentId,
+  kind,
   studentName,
   pseudonymCode,
   periodStartDate,
@@ -42,7 +46,7 @@ export function StudentCommentRow({
   highlighted,
 }: StudentCommentRowProps) {
   const { showToast } = useToast();
-  const { comment, isLoading, saveComment } = useStudentComments(studentId);
+  const { comment, isLoading, saveComment } = useStudentComments(studentId, kind);
   const rowRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -74,6 +78,7 @@ export function StudentCommentRow({
     >
       <RowBody
         studentId={studentId}
+        kind={kind}
         studentName={studentName}
         pseudonymCode={pseudonymCode}
         periodStartDate={periodStartDate}
@@ -88,6 +93,7 @@ export function StudentCommentRow({
 
 interface RowBodyProps {
   studentId: string;
+  kind: CommentKind;
   studentName: string;
   pseudonymCode: string;
   periodStartDate: string;
@@ -99,6 +105,7 @@ interface RowBodyProps {
 
 function RowBody({
   studentId,
+  kind,
   studentName,
   pseudonymCode,
   periodStartDate,
@@ -107,6 +114,8 @@ function RowBody({
   saveComment,
   showToast,
 }: RowBodyProps) {
+  // 学習の所見は従来の表記(「所見」)のまま、生活の所見のみ「生活の所見」と明示する
+  const commentLabel = kind === "life" ? "生活の所見" : "所見";
   const [content, setContent] = useState(existing?.content ?? "");
   const [creationMethod, setCreationMethod] = useState<CommentCreationMethod>(
     existing?.creationMethod ?? "manual",
@@ -121,7 +130,7 @@ function RowBody({
 
   const handleSave = async () => {
     if (content.trim().length === 0) {
-      setError("所見を入力してください");
+      setError(`${commentLabel}を入力してください`);
       return;
     }
     setError(null);
@@ -130,7 +139,7 @@ function RowBody({
         content: content.trim(),
         creationMethod,
       });
-      showToast("success", `${studentName}の所見を保存しました`);
+      showToast("success", `${studentName}の${commentLabel}を保存しました`);
     } catch {
       setError("保存に失敗しました。もう一度お試しください");
     }
@@ -152,11 +161,11 @@ function RowBody({
       </div>
 
       <Textarea
-        aria-label={`${studentName}の所見`}
+        aria-label={`${studentName}の${commentLabel}`}
         value={content}
         onChange={(e) => setContent(e.target.value)}
         rows={4}
-        placeholder="所見を入力するか、AIで生成してください"
+        placeholder={`${commentLabel}を入力するか、AIで生成してください`}
       />
 
       {error && <p className="text-sm text-error-500">{error}</p>}
@@ -179,6 +188,7 @@ function RowBody({
       {aiOpen && (
         <CommentAiAssist
           studentId={studentId}
+          kind={kind}
           pseudonymCode={pseudonymCode}
           periodStartDate={periodStartDate}
           periodEndDate={periodEndDate}

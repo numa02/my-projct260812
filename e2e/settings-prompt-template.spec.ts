@@ -42,7 +42,12 @@ async function setUpMaster(page: Page): Promise<void> {
   await expect(page.getByText("時間割マスタを保存しました")).toBeVisible();
 }
 
-async function recordMemo(page: Page, dateISO: string, period: number, content: string): Promise<void> {
+async function recordMemo(
+  page: Page,
+  dateISO: string,
+  period: number,
+  content: string,
+): Promise<void> {
   await page.goto(`/memos/record?date=${dateISO}&period=${period}`);
   await page.getByRole("button", { name: /生徒A/ }).click();
   await page.getByLabel("メモ", { exact: true }).fill(content);
@@ -65,16 +70,18 @@ test.describe("設定画面・プロンプトひな形編集(T-069)", () => {
     await signUpAndLogin(page);
     await page.goto("/settings/prompt-template");
 
-    await expect(page.getByLabel("プロンプトひな形")).toHaveValue(/{{pseudonymCode}}/);
-    await expect(page.getByLabel("プロンプトひな形")).toHaveValue(/{{memos}}/);
+    await expect(page.getByLabel("学習の所見用のひな形", { exact: true })).toHaveValue(
+      /{{pseudonymCode}}/,
+    );
+    await expect(page.getByLabel("学習の所見用のひな形", { exact: true })).toHaveValue(/{{memos}}/);
   });
 
   test("空欄では保存できない", async ({ page }) => {
     await signUpAndLogin(page);
     await page.goto("/settings/prompt-template");
 
-    await page.getByLabel("プロンプトひな形").fill("");
-    await expect(page.getByRole("button", { name: "保存" })).toBeDisabled();
+    await page.getByLabel("学習の所見用のひな形", { exact: true }).fill("");
+    await expect(page.getByRole("button", { name: "学習の所見用のひな形を保存" })).toBeDisabled();
   });
 
   test("編集して保存すると、以後の直接生成のプロンプトに反映される", async ({ page }) => {
@@ -87,10 +94,10 @@ test.describe("設定画面・プロンプトひな形編集(T-069)", () => {
 
     await page.goto("/settings/prompt-template");
     await page
-      .getByLabel("プロンプトひな形")
+      .getByLabel("学習の所見用のひな形", { exact: true })
       .fill("カスタムひな形マーカー: {{pseudonymCode}} / {{memos}} / {{targetCharCount}}");
-    await page.getByRole("button", { name: "保存" }).click();
-    await expect(page.getByText("プロンプトひな形を保存しました")).toBeVisible();
+    await page.getByRole("button", { name: "学習の所見用のひな形を保存" }).click();
+    await expect(page.getByText("学習の所見用のひな形を保存しました")).toBeVisible();
 
     await page.goto("/settings/ai-provider");
     await page.getByLabel("APIキー").fill("sk-test-dummy-key");
@@ -111,7 +118,9 @@ test.describe("設定画面・プロンプトひな形編集(T-069)", () => {
     expect(capturedPrompt).toContain("カスタムひな形マーカー");
   });
 
-  test("編集して保存すると、プロンプトコピー運用のプロンプト表示にも反映される", async ({ page }) => {
+  test("編集して保存すると、プロンプトコピー運用のプロンプト表示にも反映される", async ({
+    page,
+  }) => {
     await signUpAndLogin(page);
     await createClass(page, "1", "1年1組");
     await createSubject(page, "国語");
@@ -121,10 +130,10 @@ test.describe("設定画面・プロンプトひな形編集(T-069)", () => {
 
     await page.goto("/settings/prompt-template");
     await page
-      .getByLabel("プロンプトひな形")
+      .getByLabel("学習の所見用のひな形", { exact: true })
       .fill("コピー運用用カスタムマーカー: {{pseudonymCode}} / {{memos}}");
-    await page.getByRole("button", { name: "保存" }).click();
-    await expect(page.getByText("プロンプトひな形を保存しました")).toBeVisible();
+    await page.getByRole("button", { name: "学習の所見用のひな形を保存" }).click();
+    await expect(page.getByText("学習の所見用のひな形を保存しました")).toBeVisible();
 
     const row = await openCommentsForStudentA(page);
     await row.getByRole("button", { name: "AIで生成する" }).click();
