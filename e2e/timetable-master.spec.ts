@@ -114,7 +114,9 @@ test.describe("時間割マスタ設定画面(T-058, T-059, T-060)", () => {
     // ページを再読み込みして改めて開くと、保存済みデータ(マスごとに異なるクラス)から
     // 教科担任制モードだったと判断され、一括モードにリセットされずそのまま表示される
     await page.reload();
-    await expect(page.getByRole("radio", { name: "教科担任制モード", checked: true })).toBeVisible();
+    await expect(
+      page.getByRole("radio", { name: "教科担任制モード", checked: true }),
+    ).toBeVisible();
     await expect(page.getByLabel("月曜1限のクラス").locator("option:checked")).toHaveText("1年1組");
     await expect(page.getByLabel("火曜2限のクラス").locator("option:checked")).toHaveText("2年1組");
   });
@@ -142,9 +144,13 @@ test.describe("時間割マスタ設定画面(T-058, T-059, T-060)", () => {
     await page.getByLabel("クラス(全マスに適用)").selectOption({ label: "1年1組" });
     await page.getByRole("button", { name: "保存" }).click();
 
-    await expect(page.getByRole("heading", { name: "マスごとのクラス設定を統一しますか" })).toBeVisible();
     await expect(
-      page.getByText("保存すると、マスごとに設定されているクラスがすべて選択したクラスに統一されます。続行しますか。"),
+      page.getByRole("heading", { name: "マスごとのクラス設定を統一しますか" }),
+    ).toBeVisible();
+    await expect(
+      page.getByText(
+        "保存すると、マスごとに設定されているクラスがすべて選択したクラスに統一されます。続行しますか。",
+      ),
     ).toBeVisible();
 
     await page.getByRole("button", { name: "続行" }).click();

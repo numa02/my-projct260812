@@ -54,9 +54,7 @@ test.describe("生徒名簿画面(T-055, T-055b, T-056)", () => {
     await page.getByLabel("クラス").selectOption({ label: "1年1組" });
 
     await page.getByRole("radio", { name: "テキスト貼り付け" }).click();
-    await page
-      .getByLabel(/出席番号,氏名/)
-      .fill("1,生徒A\n,氏名だけ\n2,生徒B\n2,重複太郎");
+    await page.getByLabel(/出席番号,氏名/).fill("1,生徒A\n,氏名だけ\n2,生徒B\n2,重複太郎");
     await page.getByRole("button", { name: "取り込む" }).click();
 
     await expect(page.getByText("2件のエラーがあります")).toBeVisible();
@@ -82,7 +80,9 @@ test.describe("生徒名簿画面(T-055, T-055b, T-056)", () => {
 
     await page.getByRole("button", { name: "生徒Aを削除" }).click();
     await expect(
-      page.getByText("この生徒を削除すると、記録済みのメモ・所見もすべて完全に削除され、復元できません。"),
+      page.getByText(
+        "この生徒を削除すると、記録済みのメモ・所見もすべて完全に削除され、復元できません。",
+      ),
     ).toBeVisible();
     await page.getByRole("button", { name: "削除する" }).click();
     await expect(page.getByText("生徒を削除しました")).toBeVisible();

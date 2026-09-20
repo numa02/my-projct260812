@@ -58,7 +58,10 @@ test.describe("クラス管理画面(T-053, T-054)", () => {
     await page.getByRole("button", { name: "保存" }).click();
     await expect(page.getByText("クラスを作成しました")).toBeVisible();
 
-    await page.getByRole("row", { name: /1年1組/ }).getByRole("button", { name: "編集" }).click();
+    await page
+      .getByRole("row", { name: /1年1組/ })
+      .getByRole("button", { name: "編集" })
+      .click();
     await page.getByLabel("学年").fill("2");
     await page.getByRole("button", { name: "保存" }).click();
 
@@ -86,9 +89,14 @@ test.describe("クラス管理画面(T-053, T-054)", () => {
     await expect(page.getByText("1件の生徒を登録しました")).toBeVisible();
 
     await page.goto("/classes");
-    await page.getByRole("row", { name: /1年1組/ }).getByRole("button", { name: "削除" }).click();
+    await page
+      .getByRole("row", { name: /1年1組/ })
+      .getByRole("button", { name: "削除" })
+      .click();
     await expect(
-      page.getByText("生徒が登録されているため削除できません。先に生徒名簿から生徒を削除してください"),
+      page.getByText(
+        "生徒が登録されているため削除できません。先に生徒名簿から生徒を削除してください",
+      ),
     ).toBeVisible();
     await expect(page.getByRole("heading", { name: "クラスを削除しますか" })).not.toBeVisible();
   });

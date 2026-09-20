@@ -2,7 +2,10 @@ import { test, expect, type APIRequestContext } from "@playwright/test";
 
 const MAILPIT_URL = "http://127.0.0.1:54324";
 
-async function getLatestEmailLinkTo(request: APIRequestContext, toAddress: string): Promise<string> {
+async function getLatestEmailLinkTo(
+  request: APIRequestContext,
+  toAddress: string,
+): Promise<string> {
   let messageId: string | undefined;
 
   await expect(async () => {
@@ -41,9 +44,7 @@ test.describe("認証フロー(T-049〜T-052)", () => {
     await page.getByLabel("メールアドレス").fill(email);
     await page.getByLabel("パスワード").fill("wrong-password");
     await page.getByRole("button", { name: "ログイン" }).click();
-    await expect(
-      page.getByText("メールアドレスまたはパスワードが正しくありません"),
-    ).toBeVisible();
+    await expect(page.getByText("メールアドレスまたはパスワードが正しくありません")).toBeVisible();
 
     // 正しいパスワードでログイン
     await page.getByLabel("パスワード").fill(password);
@@ -69,9 +70,7 @@ test.describe("認証フロー(T-049〜T-052)", () => {
     await expect(page.getByText("このメールアドレスは既に登録されています")).toBeVisible();
   });
 
-  test("パスワードリセット申請は登録有無にかかわらず同一メッセージを表示する", async ({
-    page,
-  }) => {
+  test("パスワードリセット申請は登録有無にかかわらず同一メッセージを表示する", async ({ page }) => {
     await page.goto("/reset-password");
     await page.getByLabel("メールアドレス").fill("not-registered@example.com");
     await page.getByRole("button", { name: "送信" }).click();

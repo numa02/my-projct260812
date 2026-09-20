@@ -42,7 +42,12 @@ async function setUpMaster(page: Page): Promise<void> {
   await expect(page.getByText("時間割マスタを保存しました")).toBeVisible();
 }
 
-async function recordMemo(page: Page, dateISO: string, period: number, content: string): Promise<void> {
+async function recordMemo(
+  page: Page,
+  dateISO: string,
+  period: number,
+  content: string,
+): Promise<void> {
   await page.goto(`/memos/record?date=${dateISO}&period=${period}`);
   await page.getByRole("button", { name: /生徒A/ }).click();
   await page.getByLabel("メモ", { exact: true }).fill(content);
@@ -57,9 +62,22 @@ async function setApiKey(page: Page): Promise<void> {
   await expect(page.getByText("AIプロバイダ設定を保存しました")).toBeVisible();
 }
 
+/**
+ * 対象期間(開始日・終了日)を入力し、保存の完了まで待つ。
+ *
+ * 期間は入力のたびに`class`テーブルへのPATCHで保存され、楽観的更新を行わない方針のため、
+ * 保存が成功して初めて確定値になる。確定するまでは「対象期間を指定すると…」の案内が
+ * 表示されたままなので、これが消えるのを保存完了の合図として待つ。待たずにクラス切り替え等の
+ * 次の操作へ進むと、負荷の高いときだけ後続のアサーションが失敗する。
+ * PATCHのレスポンスを直接待たないのは、既に同じ値が入っている場合(再読み込み後など)は
+ * 保存自体が走らず、待ち続けてしまうため
+ */
 async function openPeriod(page: Page, startDate: string, endDate: string): Promise<void> {
   await page.getByLabel("開始日").fill(startDate);
   await page.getByLabel("終了日").fill(endDate);
+  await expect(
+    page.getByText("対象期間(開始日・終了日)を指定すると、このクラスの生徒一覧が表示されます"),
+  ).toHaveCount(0);
 }
 
 test.describe("所見管理画面(クラス単位一覧)", () => {
@@ -117,9 +135,9 @@ test.describe("所見管理画面(クラス単位一覧)", () => {
 
     await page.reload();
     await openPeriod(page, "2026-04-01", "2026-04-30");
-    await expect(page.getByRole("group", { name: "生徒Aの行" }).getByLabel("生徒Aの所見")).toHaveValue(
-      "手動で入力した所見文です。",
-    );
+    await expect(
+      page.getByRole("group", { name: "生徒Aの行" }).getByLabel("生徒Aの所見"),
+    ).toHaveValue("手動で入力した所見文です。");
   });
 
   test("対象期間を切り替えても、生徒の所見の内容は保持される(所見は生徒ごとに常に1件のみ)", async ({
@@ -202,7 +220,9 @@ test.describe("所見管理画面(クラス単位一覧)", () => {
     await page.route("**/api/comments/generate", async (route) => {
       const body = route.request().postDataJSON();
       expect(body.prompt).toContain("1-01-01"); // 仮名コードが含まれる
-      await route.fulfill({ json: { rawText: "積極的に音読に取り組み、着実に力をつけています。" } });
+      await route.fulfill({
+        json: { rawText: "積極的に音読に取り組み、着実に力をつけています。" },
+      });
     });
 
     await page.goto("/comments/class");
@@ -224,7 +244,10 @@ test.describe("所見管理画面(クラス単位一覧)", () => {
     await expect(row.getByText("AI生成(直接呼び出し)")).toBeVisible();
   });
 
-  test("APIキー設定済みでも、教員が選べば「プロンプトを作成」を使える", async ({ page, context }) => {
+  test("APIキー設定済みでも、教員が選べば「プロンプトを作成」を使える", async ({
+    page,
+    context,
+  }) => {
     await context.grantPermissions(["clipboard-read", "clipboard-write"]);
 
     await signUpAndLogin(page);
@@ -251,7 +274,9 @@ test.describe("所見管理画面(クラス単位一覧)", () => {
 
     await row.getByLabel("AIの応答を貼り付け").fill("プロンプトコピー運用で得た所見文です。");
     await row.getByRole("button", { name: "所見欄に反映" }).click();
-    await expect(row.getByLabel("生徒Aの所見")).toHaveValue("プロンプトコピー運用で得た所見文です。");
+    await expect(row.getByLabel("生徒Aの所見")).toHaveValue(
+      "プロンプトコピー運用で得た所見文です。",
+    );
 
     await row.getByRole("button", { name: "保存" }).click();
     await expect(page.getByText("生徒Aの所見を保存しました")).toBeVisible();
@@ -278,9 +303,7 @@ test.describe("所見管理画面(クラス単位一覧)", () => {
     await expect(row.getByRole("radio", { name: "プロンプトを作成", checked: true })).toBeVisible();
     await row.getByRole("radio", { name: "AIで直接生成" }).click();
 
-    await expect(
-      row.getByText("APIキーが未設定のため、直接生成はできません"),
-    ).toBeVisible();
+    await expect(row.getByText("APIキーが未設定のため、直接生成はできません")).toBeVisible();
     await expect(row.getByRole("link", { name: "AIプロバイダ設定へ" })).toBeVisible();
     await expect(row.getByRole("button", { name: "生成して所見欄に反映" })).not.toBeVisible();
   });
@@ -329,7 +352,9 @@ test.describe("所見管理画面(クラス単位一覧)", () => {
     await row.getByRole("button", { name: "プロンプトをコピー" }).click();
     await expect(page.getByText("プロンプトをコピーしました")).toBeVisible();
 
-    await row.getByLabel("AIの応答を貼り付け").fill("外部AIから得た所見文をそのまま貼り付けました。");
+    await row
+      .getByLabel("AIの応答を貼り付け")
+      .fill("外部AIから得た所見文をそのまま貼り付けました。");
     await row.getByRole("button", { name: "所見欄に反映" }).click();
 
     await expect(row.getByLabel("生徒Aの所見")).toHaveValue(
