@@ -105,7 +105,7 @@ flowchart LR
 │   │   │   ├── record/page.tsx         # 授業記録(F6)
 │   │   │   └── students/[[...id]]/page.tsx  # 生徒別メモ一覧(F7)。クラス選択は画面内state、[[...id]]は生徒名簿からの初期選択ヒント(任意)。ナビゲーションメニューから直接開く場合はIDなし(`/memos/students`)
 │   │   ├── comments/
-│   │   │   └── class/[[...id]]/page.tsx  # 所見管理(F9-F11)。クラス+対象期間単位の一覧画面。[[...id]]は生徒名簿からの初期選択クラスのヒント(任意)。生徒ごとのAI生成・履歴閲覧は行内の折りたたみセクション
+│   │   │   └── class/[[...id]]/page.tsx  # 所見管理(F9-F11)。クラス+対象期間単位の一覧画面。[[...id]]は生徒名簿からの初期選択クラスのヒント(任意)。生徒ごとのAI生成は行内の折りたたみセクション。学習/生活の所見はタブで切り替える
 │   │   └── settings/
 │   │       ├── ai-provider/page.tsx
 │   │       ├── prompt-template/page.tsx
@@ -196,6 +196,9 @@ create table class (
   grade text not null,
   group_number int not null,
   display_name text not null,
+  -- 所見管理画面の対象期間をクラスごとに記憶する(未設定はnull)
+  comment_period_start_date date,
+  comment_period_end_date date,
   created_at timestamptz not null default now(),
   unique (teacher_id, grade, group_number)
 );
@@ -262,19 +265,42 @@ create table memo (
   unique (student_id, subject_id, note_date, period)
 );
 
-create type comment_creation_method as enum ('direct_ai', 'prompt_copy', 'manual');
-
-create table student_comment (
+-- 生活メモ: 授業に紐づかない、日付ごとの生徒の様子の記録(1人1日1件)
+create table life_memo (
   id uuid primary key default gen_random_uuid(),
   student_id uuid not null references student(id) on delete cascade,
-  period_start_date date not null,
-  period_end_date date not null,
+  note_date date not null,
+  content text not null,
+  share_flag share_flag not null default 'shared',
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique (student_id, note_date)
+);
+
+create type comment_creation_method as enum ('direct_ai', 'prompt_copy', 'manual');
+
+-- 学習の所見: 生徒ごとに常に最新の1件のみを保持する
+create table student_comment (
+  id uuid primary key default gen_random_uuid(),
+  student_id uuid not null unique references student(id) on delete cascade,
   content text not null,
   target_char_count int,
   creation_method comment_creation_method not null,
   created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now(),
-  unique (student_id, period_start_date, period_end_date)
+  updated_at timestamptz not null default now()
+);
+
+-- 生活の所見: 学習の所見とは独立に、生徒ごとに最新の1件のみを保持する。
+-- student_commentに種別列を足して一意制約を(student_id, 種別)へ入れ替えると
+-- 稼働中のコードのupsertが壊れるため、別テーブルにしている
+create table student_life_comment (
+  id uuid primary key default gen_random_uuid(),
+  student_id uuid not null unique references student(id) on delete cascade,
+  content text not null,
+  target_char_count int,
+  creation_method comment_creation_method not null,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
 );
 
 create type ai_provider as enum ('openai', 'anthropic', 'gemini');
@@ -291,19 +317,15 @@ create table ai_provider_setting (
 create table prompt_template (
   id uuid primary key default gen_random_uuid(),
   teacher_id uuid not null unique references teacher_profile(id) on delete cascade,
-  content text not null,
+  content text,        -- 学習の所見用。nullなら本ツール既定のひな形を使う
+  life_content text,   -- 生活の所見用。nullなら本ツール既定のひな形を使う
   updated_at timestamptz not null default now()
 );
 ```
 
 `subject`の削除制限(F3:メモで使用中は削除不可)は`memo.subject_id on delete restrict`で保証する。`timetable_master_slot`/`weekly_subject_override`側は`on delete set null`とし、「時間割でのみ使用中」の場合は削除自体は成功させ未設定に戻す(要件通り)。「メモで使用中」の場合だけを事前チェックしエラーメッセージを出すロジックは、後述の`delete_subject`関数に集約する。
 
-**未反映の変更点(2026-09時点)**: 上記のDDLは実装時点(2026-08)のものであり、以下の追加機能による変更を反映していない。マイグレーション適用時に各設計書を参照して更新すること。
-
-- `class`テーブルへの`comment_period_start_date date`/`comment_period_end_date date`(いずれもnullable)の追加、および`student_comment`テーブルの`period_start_date`/`period_end_date`カラム削除・ユニーク制約変更(`(student_id, period_start_date, period_end_date)`→`(student_id)`のみ): `docs/features/comments/design.md`を参照
-- `seed_standard_subjects(school_level)`Postgres関数の新規追加: `docs/features/subjects/design.md`を参照
-- `teacher_profile.start_date`列と`update_timetable_start_date`関数の削除(起算日の廃止): `docs/features/start-date-removal/design.md`を参照。上記DDLからは削除済み
-- `life_memo`・`student_life_comment`テーブルの新規追加(RLSは`memo`・`student_comment`と同じ`student→class`経由)、`prompt_template`への`life_content text`(nullable)追加と`content`のnot null解除、`export_teacher_data()`への生活メモ・生活の所見・生活用ひな形の出力追加: `docs/features/life-shoken/`design.mdを参照
+上記のDDLは現行スキーマ(`supabase/migrations/`の全マイグレーション適用後)を反映している。実際の正は`supabase/migrations/`であり、スキーマを変更したときは同じPRでこのDDLも更新する。
 
 ### 4.3 RLSポリシー(変更なし、方針のみ再掲)
 
@@ -597,10 +619,7 @@ $$;
 
 -- 全データエクスポート: 生徒ごとにメモ・所見がまとまったJSONを1回で返す
 -- ai_provider_setting は対象外
-create function export_teacher_data()
-returns jsonb
-language plpgsql
-as $$
+create function export_teacher_data() returns jsonb language plpgsql as $$
 declare
   v_teacher_id uuid := auth.uid();
   v_result jsonb;
@@ -653,7 +672,7 @@ begin
       from weekly_class_override o where o.teacher_id = v_teacher_id
     ), '[]'::jsonb),
     'promptTemplate', (
-      select jsonb_build_object('content', p.content, 'updatedAt', p.updated_at)
+      select jsonb_build_object('content', p.content, 'lifeContent', p.life_content, 'updatedAt', p.updated_at)
       from prompt_template p where p.teacher_id = v_teacher_id
     ),
     'students', coalesce((
@@ -678,15 +697,35 @@ begin
         'comments', coalesce((
           select jsonb_agg(jsonb_build_object(
             'id', sc.id,
-            'periodStartDate', sc.period_start_date,
-            'periodEndDate', sc.period_end_date,
             'content', sc.content,
             'targetCharCount', sc.target_char_count,
             'creationMethod', sc.creation_method,
             'createdAt', sc.created_at,
             'updatedAt', sc.updated_at
-          ) order by sc.period_start_date)
+          ))
           from student_comment sc where sc.student_id = s.id
+        ), '[]'::jsonb),
+        'lifeMemos', coalesce((
+          select jsonb_agg(jsonb_build_object(
+            'id', lm.id,
+            'noteDate', lm.note_date,
+            'content', lm.content,
+            'shareFlag', lm.share_flag,
+            'createdAt', lm.created_at,
+            'updatedAt', lm.updated_at
+          ) order by lm.note_date)
+          from life_memo lm where lm.student_id = s.id
+        ), '[]'::jsonb),
+        'lifeComments', coalesce((
+          select jsonb_agg(jsonb_build_object(
+            'id', slc.id,
+            'content', slc.content,
+            'targetCharCount', slc.target_char_count,
+            'creationMethod', slc.creation_method,
+            'createdAt', slc.created_at,
+            'updatedAt', slc.updated_at
+          ))
+          from student_life_comment slc where slc.student_id = s.id
         ), '[]'::jsonb)
       ) order by s.class_id, s.attendance_number)
       from student s join class c on c.id = s.class_id where c.teacher_id = v_teacher_id
@@ -741,7 +780,7 @@ export const POST = app.fetch;
 | `import_students(class_id, rows)` | CSV/貼り付け一括登録 | F2 |
 | `save_timetable_master(slots, confirm_overwrite)` | 時間割マスタ保存 | F4 |
 | `export_teacher_data()` | 全データエクスポート(生活メモ・生活の所見・生活用ひな形を含む) | F14。生活系の出力は`docs/features/life-shoken/`で追加 |
-| `seed_standard_subjects(school_level)`(未実装、2026-09時点) | 標準科目セット投入 | F3。詳細は`docs/features/subjects/design.md` |
+| `seed_standard_subjects(school_level)` | 標準科目セット投入(小学校10科目/中学校11科目、既存と同名の科目はスキップ) | F3。詳細は`docs/features/subjects/design.md` |
 
 これ以外の単純なCRUD(クラス表示名編集、生徒編集・削除、科目名編集、週次個別変更の保存・revert、メモの保存・編集・削除、所見の保存・編集)は、単一テーブルへの`insert`/`update`/`delete`/`upsert`で完結するため、RPC化せず`supabase-js`から直接呼ぶ(§5.4)。
 
@@ -824,7 +863,7 @@ const usage = await checkClassUsage(classId); // useClasses.ts
 await supabase.rpc("delete_class", { p_class_id: classId });
 ```
 
-**補足(所見の保存について、2026-09時点で未実装の変更あり)**: 実装時点(2026-08)では所見(`student_comment`)は生徒×対象期間の組み合わせが一意キーであり、`upsert`(`onConflict: "student_id,period_start_date,period_end_date"`)で新規作成・更新の両方を1回の呼び出しでまかなっていた。所見管理画面の再設計(`docs/features/comments/design.md`)により、一意キーは`student_id`のみに変更され、`onConflict: "student_id"`へ変更する(生徒ごとに常に最新の1件のみを保持する方式に変更するため)。所見管理画面は画面上部で対象期間を1つ確定させたうえで生徒ごとの行を描画するため(§画面設計は`docs/design/screens.md`参照)、保存時点で対象の生徒は一意に定まっており、既存有無の事前チェック→上書き確認ダイアログという2ステップは不要(直接upsertするだけでよい)という結論自体は変更後も変わらない。
+**補足(所見の保存)**: 学習の所見(`student_comment`)・生活の所見(`student_life_comment`)はいずれも一意キーが`student_id`で、`upsert`(`onConflict: "student_id"`)により新規作成・更新の両方を1回の呼び出しでまかなう。所見管理画面は画面上部で対象期間を1つ確定させたうえで生徒ごとの行を描画するため、保存時点で対象の生徒は一意に定まっており、既存有無の事前チェック→上書き確認ダイアログという2ステップは不要(直接upsertするだけでよい)。
 
 ### 5.5 主要な純粋関数(`shared/`、変更なし)
 
@@ -887,17 +926,18 @@ export class AiProviderError extends Error {
 | `<WeeklyTimetableGrid>` | 週次時間割のマス表示。`resolveWeeklySlots`の結果を描画 |
 | `<SlotEditModal>` | マス編集。個別変更の保存/revertは直接upsert/delete |
 | `<MemoEntryGrid>` | 授業記録画面。生徒一覧+メモ入力欄。保存は各行を直接upsert |
+| `<LifeRecordView>` | 生活記録画面。日付ごとに生徒一覧+生活メモ入力欄。対象クラスはその日の時間割から決まり、1つに定まらない場合のみ選択欄を出す(`docs/features/life-shoken/design.md`) |
 | `<StudentRoster>` | 生徒名簿画面。`useClassOptions()`によるクラス選択(クラス0件時はクラス管理画面への導線を表示)+CSV/貼り付けインポート+一覧 |
-| `<StudentMemoList>` | 生徒別メモ一覧(日付順/教科別)。`useClassOptions()`によるクラス選択で生徒候補を絞り込む |
-| `<TimetableMasterForm>` | 時間割マスタ設定画面。グリッド手入力に加え、CSV/貼り付け一括取り込みセクションを持つ(2026-09時点で未実装。詳細は`docs/features/timetable-master/design.md`) |
-| `<ClassCommentsContent>` | 所見管理画面。`useClassOptions()`によるクラス選択+クラスごとにDB保存される対象期間(開始日・終了日、2026-09時点で未実装。詳細は`docs/features/comments/design.md`)を持ち、クラスの生徒一覧を`<StudentCommentRow>`で行ごとに描画する |
-| `<StudentCommentRow>` | 所見管理画面の1行。氏名+所見入力欄(常時表示、`useStudentComments()`でその生徒の既存所見を初期表示)+保存ボタン+「AIで生成する」の折りたたみトグル。「過去の所見を見る」は2026-09時点で廃止予定(`docs/features/comments/design.md`参照) |
+| `<StudentMemoList>` | 生徒別メモ一覧(日付順/教科別)。授業メモと生活メモを統合して表示し、生活メモの追加もできる。`useClassOptions()`によるクラス選択で生徒候補を絞り込む |
+| `<TimetableMasterForm>` | 時間割マスタ設定画面。グリッド手入力に加え、CSV/貼り付け一括取り込みセクションを持つ(詳細は`docs/features/timetable-master/design.md`) |
+| `<ClassCommentsContent>` | 所見管理画面。`useClassOptions()`によるクラス選択+クラスごとにDB保存される対象期間(開始日・終了日。詳細は`docs/features/comments/design.md`)と、所見の種類タブ(学習/生活。`docs/features/life-shoken/design.md`)を持ち、クラスの生徒一覧を`<StudentCommentRow>`で行ごとに描画する |
+| `<StudentCommentRow>` | 所見管理画面の1行。氏名+所見入力欄(常時表示、`useStudentComments()`でその生徒の既存所見を初期表示)+保存ボタン+「AIで生成する」の折りたたみトグル。所見の種類(学習/生活)を`kind`で受け取り、参照するテーブル・材料のメモ・プロンプトひな形を切り替える |
 | `<CommentAiAssist>` | 行内の「AIで生成する」の中身。目安文字数指定→(APIキー未設定ならプロンプト表示+貼り付け欄、設定済みなら`/api/comments/generate`呼び出し)→結果は行の所見入力欄にコールバックで反映するのみで、保存自体は行う側(`<StudentCommentRow>`)の責務 |
 | `<ConfirmDialog>` | 汎用確認ダイアログ(RPC関数が投げる例外メッセージ、または既存チェック結果を受けて表示) |
 | `useClasses()` / `useWeeklyTimetable()` / `useStudentMemos()` 等 | TanStack Queryベース。`queryFn`が直接`supabase-js`を呼ぶ |
 | `useClassOptions()` | 生徒名簿・生徒別メモ一覧・所見管理画面で共通利用する画面内クラス選択フック。教員のクラス一覧取得+選択中クラスの生徒一覧取得をまとめて提供し、重複実装を避ける |
-| `useStudentComments(studentId)` | 生徒1人分の所見(1件)の取得・upsert保存(2026-09時点で単一化予定。詳細は`docs/features/comments/design.md`) |
-| `useClassCommentPeriod(classId)`(未実装、2026-09時点) | クラスごとの所見対象期間の取得・自動保存。詳細は`docs/features/comments/design.md` |
+| `useStudentComments(studentId, kind)` | 生徒1人分の所見(種類ごとに1件)の取得・upsert保存。`kind`が`learning`なら`student_comment`、`life`なら`student_life_comment`を参照する |
+| `useClassCommentPeriod(classId)` | クラスごとの所見対象期間の取得・自動保存。詳細は`docs/features/comments/design.md` |
 | `<ToastProvider>` / `useToast()` | 保存成功・失敗等のトースト通知(`components.md` Toast)。`app/providers.tsx`でアプリ全体をラップし、`useToast().showToast(variant, message)`でどこからでも呼び出せる |
 
 `useClassOptions()`の返り値:

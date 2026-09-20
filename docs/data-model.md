@@ -37,7 +37,7 @@ erDiagram
         string grade "学年(1〜6等)または「特支」"
         int group_number "学年区分内の連番。CLASS_NUMBER_COUNTERから払い出す。学年編集時は再採番"
         string display_name "クラス表示名"
-        date comment_period_start_date "所見管理画面の対象期間(開始日)。nullable。2026-09時点で未実装、docs/features/comments/design.md参照"
+        date comment_period_start_date "所見管理画面の対象期間(開始日)。nullable。docs/features/comments/design.md参照"
         date comment_period_end_date "所見管理画面の対象期間(終了日)。nullable。同上"
         datetime created_at
     }
@@ -105,7 +105,7 @@ erDiagram
 
     STUDENT_COMMENT {
         uuid id PK
-        uuid student_id FK "unique。生徒ごとに常に最新の1件のみ保持(2026-09時点で未実装。旧仕様はperiod_start_date/period_end_dateを含む複合キーで生徒×対象期間ごとに複数件保持していた。docs/features/comments/design.md参照)"
+        uuid student_id FK "unique。学習の所見を生徒ごとに最新1件のみ保持(docs/features/comments/design.md参照)"
         text content
         int target_char_count "目安文字数(nullable)"
         string creation_method "直接生成/プロンプトコピー運用/手動作成"
@@ -163,7 +163,7 @@ erDiagram
 - `MEMO`: (student_id, subject_id, note_date, period) — 同一生徒・科目・日付・時限につき1件(F6)
 - `LIFE_MEMO`: (student_id, note_date) — 同一生徒・日付につき1件(`docs/features/life-shoken/`)
 - `STUDENT_LIFE_COMMENT`: (student_id) — 生徒ごとに1件(`docs/features/life-shoken/`)
-- `STUDENT_COMMENT`: (student_id) — 生徒ごとに1件(F11。2026-09時点で未実装。旧仕様は(student_id, period_start_date, period_end_date)で生徒×期間ごとに1件だった。詳細は`docs/features/comments/design.md`)
+- `STUDENT_COMMENT`: (student_id) — 学習の所見を生徒ごとに1件(F11。詳細は`docs/features/comments/design.md`)
 
 `WEEKLY_SUBJECT_OVERRIDE` / `WEEKLY_CLASS_OVERRIDE` を分離しているのは、F4・F5が「科目とクラスは独立に個別変更でき、一致した項目だけがマスタ追従に戻る」と定義しているため。1テーブルにまとめて2つのnull許容カラムを持たせるより、科目側とクラス側で行の有無自体が「個別変更されているかどうか」を表す設計の方が、この部分一致・部分削除の挙動を素直に表現できると判断した(要件はテーブル構造までは指定していないため、これは設計判断)。
 
@@ -181,7 +181,7 @@ F14は既存エンティティを横断的に読み取ってJSONにまとめる�
 
 ## 残っている矛盾・未決事項
 
-**科目マスタの初期値は解消済み**: サインアップ画面で学校区分(小学校/中学校)を選ぶと、対応する標準科目セット(小学校10科目/中学校11科目)が自動登録される。学校区分を選ばなければ従来通り空の状態で始まる。既存アカウントも科目管理画面から任意のタイミングで同じセットを追加できる。詳細は`docs/features/subjects/requirements.md`・`docs/features/subjects/design.md`(2026-09時点で未実装)。
+**科目マスタの初期値は解消済み**: サインアップ画面で学校区分(小学校/中学校)を選ぶと、対応する標準科目セット(小学校10科目/中学校11科目)が自動登録される。学校区分を選ばなければ従来通り空の状態で始まる。既存アカウントも科目管理画面から任意のタイミングで同じセットを追加できる。詳細は`docs/features/subjects/requirements.md`・`docs/features/subjects/design.md`。
 
 **`SUBJECT`の一意性については解消済み**: 上記ユニーク制約の項の通り、2026-08-13のヒアリングで「重複を許可する」と確定した。表記ゆれのリスクは受け入れた上で、保存時のエラーによる教員の作業中断を避けることを優先している。
 

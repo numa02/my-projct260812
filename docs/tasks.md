@@ -201,6 +201,7 @@
   - テスト: `e2e/comments-class.spec.ts`(空状態・メニュー導線・一覧表示とハイライト・手動保存と復元・対象期間切替・AI直接生成・共有メモなし・プロンプトコピー運用・履歴閲覧の9ケース)を新規作成。`e2e/golden-path.spec.ts`・`e2e/settings-prompt-template.spec.ts`の所見関連ステップ、`docs/features/comments/test-cases.md`一式を新しいUIに合わせて更新
   - 残タスク: クラス単位の一括AI生成(前述の(4)で見送り)は`B-005`として後回し(MVP後)に記録した
   - **2026-08-18追記**: ユーザーから「所見のAPI生成ができない」と報告があり調査したところ、APIキー未設定のアカウントでF10(プロンプトコピー運用)が仕様通り表示されていただけでバグではなかった。ただしこれをきっかけに「AIで直接生成するかプロンプトを作成するかはAPIキー設定状況で自動的に決まるのではなく、教員に選ばせてほしい(APIキー設定済みでもプロンプトコピー運用を選べるようにしてほしい)」という要望を受けた。`CommentAiAssist.tsx`にSegmentedControl(「AIで直接生成」/「プロンプトを作成」)を追加し、既定値はAPIキー設定状況から算出しつつ教員が上書きできるようにした(`effectiveClassId`等と同じ「未選択ならstateから直接計算する」パターン)。APIキー未設定で「直接生成」を選んだ場合は設定画面へのリンク付き案内を表示し、生成不可であることを明示する。`docs/requirements.md` F9・F10、`docs/design/screens.md`画面12、`docs/design/components.md`(SegmentedControl使用箇所)を更新し、`e2e/comments-class.spec.ts`に2ケース追加
+  - **2026-09追記**: 本タスクで実装した「過去の所見を見る」(F11の履歴閲覧)は、所見データモデルの再設計(`docs/features/comments/`)により廃止した。所見は生徒ごとに最新1件のみを保持し、対象期間はAI生成の材料を絞るためだけに使う。さらに`docs/features/life-shoken/`で所見は学習/生活の2種類(タブ切替)になった。現在の仕様は`docs/requirements.md` F11・F15を参照
 
 ## 後回し(MVP後)
 
