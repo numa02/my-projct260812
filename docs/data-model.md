@@ -28,7 +28,6 @@ erDiagram
     TEACHER {
         uuid id PK "Supabase AuthのユーザーIDと同一"
         string email "概念上の項目。実テーブルにはemail列を複製しない(下記注記参照)"
-        date start_date "廃止予定(旧・起算日)。アプリからは参照しない。start-date-removalフェーズ2で削除"
         datetime created_at
     }
 
