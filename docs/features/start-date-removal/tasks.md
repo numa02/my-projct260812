@@ -55,7 +55,8 @@ ID接頭辞: `SD-`。`teacher_profile.start_date`列と`update_timetable_start_d
   - 依存: SD-008
   - ロールバック: revertのみ
 
-- [ ] **SD-010** 本番に適用する(ユーザーが実行)
+- [x] **SD-010** 本番に適用する(ユーザーが実行。2026-09-20適用完了)
   - DoD: フェーズ1(PR #9)が本番で数日安定稼働していることを確認したうえで、本番の`teacher_profile`をバックアップしてから`npx supabase db push`で適用する。適用前に`select column_name from information_schema.columns where table_name = 'teacher_profile';`で`start_date`列の存在を読み取り確認する(読み取りはClaudeが実施可)。全体設計書からの`start_date`・`update_timetable_start_date`の記述削除はSD-008と同じPRで対応済み
+  - 実績(2026-09-20): 適用前に本番で`start_date`列・`update_timetable_start_date`関数の存在を読み取り確認し、`teacher_profile`の内容(id・start_date・created_at)を控えたうえで`npx supabase db push`を実行。適用後、履歴に`20260920090000`が記録され、`teacher_profile`が`id`・`created_at`のみになり、関数が削除されたことをスキーマダンプの差分で確認した(他テーブル・他関数に差分なし)。なお`db push`実行時に`ECONNREFUSED ...:5432`の警告が出るが、これはCLIがカタログをキャッシュする際の直接接続(IPv6)の失敗であり、適用自体は成功している
   - 依存: SD-008, SD-009
   - ロールバック: SD-008のロールバック手順に従う
