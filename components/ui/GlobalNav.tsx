@@ -1,4 +1,5 @@
 import type { ComponentType } from "react";
+import Link from "next/link";
 import { LogOut } from "lucide-react";
 import { cn } from "@/lib/cn";
 
@@ -28,7 +29,7 @@ export function GlobalNav({ navItems, currentPath, onLogout }: GlobalNavProps) {
             currentPath === item.href || currentPath.startsWith(`${item.href}/`);
           const Icon = item.icon;
           return (
-            <a
+            <Link
               key={item.href}
               href={item.href}
               aria-current={active ? "page" : undefined}
@@ -39,7 +40,7 @@ export function GlobalNav({ navItems, currentPath, onLogout }: GlobalNavProps) {
             >
               {Icon && <Icon className="h-4 w-4" aria-hidden />}
               {item.label}
-            </a>
+            </Link>
           );
         })}
       </nav>
