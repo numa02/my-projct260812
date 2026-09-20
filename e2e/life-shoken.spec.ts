@@ -70,10 +70,27 @@ async function recordLessonMemo(page: Page, dateISO: string, content: string): P
 
 async function openLifeCommentsTab(page: Page) {
   await page.goto("/comments/class");
-  await page.getByLabel("開始日").fill("2026-04-01");
-  await page.getByLabel("終了日").fill("2026-04-30");
+  await openPeriod(page, "2026-04-01", "2026-04-30");
   await page.getByRole("radio", { name: "生活の所見" }).click();
   return page.getByRole("group", { name: "生徒Aの行" });
+}
+
+/**
+ * 対象期間(開始日・終了日)を入力し、保存の完了まで待つ。
+ *
+ * 期間は入力のたびに`class`テーブルへのPATCHで保存され、楽観的更新を行わない方針のため、
+ * 保存が成功して初めて確定値になる。確定するまでは「対象期間を指定すると…」の案内が
+ * 表示されたままなので、これが消えるのを保存完了の合図として待つ。待たずにクラス切り替え等の
+ * 次の操作へ進むと、負荷の高いときだけ後続のアサーションが失敗する。
+ * PATCHのレスポンスを直接待たないのは、既に同じ値が入っている場合(再読み込み後など)は
+ * 保存自体が走らず、待ち続けてしまうため
+ */
+async function openPeriod(page: Page, startDate: string, endDate: string): Promise<void> {
+  await page.getByLabel("開始日").fill(startDate);
+  await page.getByLabel("終了日").fill(endDate);
+  await expect(
+    page.getByText("対象期間(開始日・終了日)を指定すると、このクラスの生徒一覧が表示されます"),
+  ).toHaveCount(0);
 }
 
 test.describe("生活所見の記録(LS-)", () => {

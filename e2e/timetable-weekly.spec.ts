@@ -37,20 +37,18 @@ async function setUpMaster(page: Page): Promise<void> {
 }
 
 test.describe("週次時間割画面(T-061, T-062)", () => {
-  test("サインアップ直後(時間割マスタ未設定)でも今週の週次時間割を表示できる", async ({
-    page,
-  }) => {
+  test("サインアップ直後(時間割マスタ未設定)でも今週の週次時間割を表示できる", async ({ page }) => {
     await signUpAndLogin(page);
     await page.goto("/timetable/weekly");
 
     await expect(page.getByRole("heading", { name: "週次時間割" })).toBeVisible();
-    await expect(page.getByText(/^\d{4}年\d{1,2}月\d{1,2}日\(月\)〜\d{1,2}月\d{1,2}日\(金\)$/)).toBeVisible();
+    await expect(
+      page.getByText(/^\d{4}年\d{1,2}月\d{1,2}日\(月\)〜\d{1,2}月\d{1,2}日\(金\)$/),
+    ).toBeVisible();
     await expect(page.getByText(/第-?\d+週/)).toHaveCount(0);
   });
 
-  test("日付範囲の表示、マスタ内容の表示、週送り・週指定ナビゲーション", async ({
-    page,
-  }) => {
+  test("日付範囲の表示、マスタ内容の表示、週送り・週指定ナビゲーション", async ({ page }) => {
     await signUpAndLogin(page);
     await createClass(page, "1", "1年1組");
     await createSubject(page, "国語");

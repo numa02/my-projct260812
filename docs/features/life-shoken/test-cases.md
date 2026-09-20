@@ -58,6 +58,7 @@
 
 - 手順: データエクスポートを実行する
 - 期待結果: 生徒ごとに`lifeMemos`・`lifeComments`、`promptTemplate.lifeContent`が含まれる
+- **手動確認はスキップ**(2026-09-20): 出力内容は`tests/db/rpc-export.test.ts`の自動テストで検証済み。エクスポートの項目・形式自体は`docs/tasks.md` B-006で見直す予定のため、その決定後に改めて手動確認する
 - [ ] Chrome (Mac)
 
 ### LS-P1-04 既存データへの影響がない(本番運用中の追加機能)
