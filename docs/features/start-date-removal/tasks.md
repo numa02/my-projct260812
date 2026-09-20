@@ -39,7 +39,7 @@ ID接頭辞: `SD-`。`teacher_profile.start_date`列と`update_timetable_start_d
   - ロールバック: revertのみ
 
 - [x] **SD-007** 全体設計書・画面別テストケースを更新する
-  - DoD: `docs/requirements.md`・`docs/data-model.md`・`docs/design.md`・`docs/design/screens.md`・`docs/design/user-flow.md`・`CLAUDE.md`・`docs/features/timetable-master/test-cases.md`・`docs/features/timetable-weekly/test-cases.md`が新仕様に沿っている(`start_date`列・RPCは「廃止予定」と明記)。不要になったテストケースは見出しに【廃止】を付けてIDを残す
+  - DoD: `docs/requirements.md`・`docs/data-model.md`・`docs/design.md`・`docs/design/screens.md`・`docs/design/user-flow.md`・`CLAUDE.md`・`docs/features/timetable-master/test-cases.md`・`docs/features/timetable-weekly/test-cases.md`が新仕様に沿っている(`start_date`列・RPCは「廃止予定」と明記)。不要になったテストケースは削除し、IDが飛ばないよう連番を振り直す(当初は見出しに【廃止】を付けて残したが、確認事項が増えるだけのため2026-09-20に物理削除へ変更した)
   - 依存: なし
   - ロールバック: revertのみ
 
