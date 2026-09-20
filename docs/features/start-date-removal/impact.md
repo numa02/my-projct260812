@@ -21,7 +21,7 @@
 
 ## ドキュメントへの影響
 
-- `docs/requirements.md`: ユーザーストーリー4・22、F4・F5、非機能要件(タイムゾーン)、用語集
+- `docs/requirements.md`: ユーザーストーリー(起算日の再設定に関する項目を削除、週番号の項目を修正)、F4・F5、非機能要件(タイムゾーン)、用語集
 - `docs/data-model.md`・`docs/design.md` §4.2・§5.2: `start_date`・`update_timetable_start_date`を廃止予定と明記
 - `docs/design/screens.md`・`docs/design/user-flow.md`: 時間割マスタ設定・週次時間割の構成要素と状態
 - `docs/features/timetable-master/test-cases.md`・`docs/features/timetable-weekly/test-cases.md`: 起算日・週番号のテストケース
