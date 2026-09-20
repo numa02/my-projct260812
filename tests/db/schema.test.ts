@@ -14,12 +14,11 @@ describe("teacher_profile", () => {
 
     const { data, error } = await teacher.client
       .from("teacher_profile")
-      .select("id, start_date")
+      .select("id")
       .single();
 
     expect(error).toBeNull();
     expect(data?.id).toBe(teacher.id);
-    expect(data?.start_date).toBeNull();
   });
 });
 

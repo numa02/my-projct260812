@@ -165,7 +165,6 @@ flowchart LR
 -- (二重管理によるズレを避けるため。UI表示が必要な場合はセッションから取得する)
 create table teacher_profile (
   id uuid primary key references auth.users(id) on delete cascade,
-  start_date date,                 -- 廃止予定(旧・起算日)。アプリからは参照しない。docs/features/start-date-removal/ フェーズ2で削除
   created_at timestamptz not null default now()
 );
 
@@ -303,6 +302,7 @@ create table prompt_template (
 
 - `class`テーブルへの`comment_period_start_date date`/`comment_period_end_date date`(いずれもnullable)の追加、および`student_comment`テーブルの`period_start_date`/`period_end_date`カラム削除・ユニーク制約変更(`(student_id, period_start_date, period_end_date)`→`(student_id)`のみ): `docs/features/comments/design.md`を参照
 - `seed_standard_subjects(school_level)`Postgres関数の新規追加: `docs/features/subjects/design.md`を参照
+- `teacher_profile.start_date`列と`update_timetable_start_date`関数の削除(起算日の廃止): `docs/features/start-date-removal/design.md`を参照。上記DDLからは削除済み
 - `life_memo`・`student_life_comment`テーブルの新規追加(RLSは`memo`・`student_comment`と同じ`student→class`経由)、`prompt_template`への`life_content text`(nullable)追加と`content`のnot null解除、`export_teacher_data()`への生活メモ・生活の所見・生活用ひな形の出力追加: `docs/features/life-shoken/`design.mdを参照
 
 ### 4.3 RLSポリシー(変更なし、方針のみ再掲)
@@ -595,35 +595,6 @@ begin
 end;
 $$;
 
--- 【廃止予定】起算日の廃止によりアプリからは呼び出さない。docs/features/start-date-removal/ フェーズ2で削除する
--- 起算日の変更: 通常保存(メモが1件でもあれば拒否) と 年度更新(強制)を1関数に集約
-create function update_timetable_start_date(p_new_start_date date, p_force boolean default false)
-returns teacher_profile
-language plpgsql
-as $$
-declare
-  v_teacher_id uuid := auth.uid();
-  v_memo_count int;
-  v_profile teacher_profile;
-begin
-  if not p_force then
-    select count(*) into v_memo_count
-    from memo m join student s on s.id = m.student_id join class c on c.id = s.class_id
-    where c.teacher_id = v_teacher_id;
-
-    if v_memo_count > 0 then
-      raise exception 'START_DATE_LOCKED: 授業記録が開始されているため起算日は変更できません';
-    end if;
-  end if;
-
-  update teacher_profile set start_date = p_new_start_date
-    where id = v_teacher_id
-    returning * into v_profile;
-
-  return v_profile;
-end;
-$$;
-
 -- 全データエクスポート: 生徒ごとにメモ・所見がまとまったJSONを1回で返す
 -- ai_provider_setting は対象外
 create function export_teacher_data()
@@ -769,7 +740,6 @@ export const POST = app.fetch;
 | `delete_subject(subject_id)` | 科目削除 | F3 |
 | `import_students(class_id, rows)` | CSV/貼り付け一括登録 | F2 |
 | `save_timetable_master(slots, confirm_overwrite)` | 時間割マスタ保存 | F4 |
-| `update_timetable_start_date(new_start_date, force)`(廃止予定。アプリからは呼ばない) | 起算日変更・年度更新 | F4。`docs/features/start-date-removal/`のフェーズ2で削除 |
 | `export_teacher_data()` | 全データエクスポート(生活メモ・生活の所見・生活用ひな形を含む) | F14。生活系の出力は`docs/features/life-shoken/`で追加 |
 | `seed_standard_subjects(school_level)`(未実装、2026-09時点) | 標準科目セット投入 | F3。詳細は`docs/features/subjects/design.md` |
 

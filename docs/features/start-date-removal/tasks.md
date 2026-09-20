@@ -45,17 +45,17 @@ ID接頭辞: `SD-`。`teacher_profile.start_date`列と`update_timetable_start_d
 
 ## フェーズ2(DBから削除。本番でフェーズ1の安定稼働を確認後、別PR)
 
-- [ ] **SD-008** 列・RPC削除のマイグレーションを作成する
-  - DoD: 新規マイグレーションで`drop function update_timetable_start_date(date, boolean);`と`alter table teacher_profile drop column start_date;`を行う。適用前に`git grep -n "start_date\|update_timetable_start_date"`で、RPC定義・テストのフィクスチャに参照が残っていないことを確認済み。ローカルで`npx supabase db reset`が通る
-  - 依存: SD-001〜SD-007が本番反映済みで、数日間問題がないこと
+- [x] **SD-008** 列・RPC削除のマイグレーションを作成する
+  - DoD: 新規マイグレーションで`drop function update_timetable_start_date(date, boolean);`と`alter table teacher_profile drop column start_date;`を行う。適用前に`git grep -n "start_date\|update_timetable_start_date"`で、RPC定義・テストのフィクスチャに参照が残っていないことを確認済み。ローカルで`npx supabase db reset`が通る(`supabase/migrations/20260920090000_start_date_contract.sql`)
+  - 依存: SD-001〜SD-007が本番反映済みであること(本PRはコード・マイグレーションの準備まで。本番適用は下記SD-010で、フェーズ1の安定稼働を確認してから行う)
   - ロールバック: 列とRPCを再作成するマイグレーションを追加し、起算日の値は本番バックアップから復元する
 
-- [ ] **SD-009** DBテストを追従させる
-  - DoD: `tests/db/rpc-timetable.test.ts`の`update_timetable_start_date`のdescribeブロックと、`tests/db/schema.test.ts`の`start_date`参照を削除し、`npm run test:db`が通る
+- [x] **SD-009** DBテストを追従させる
+  - DoD: `tests/db/rpc-timetable.test.ts`の`update_timetable_start_date`のdescribeブロックと、`tests/db/schema.test.ts`の`start_date`参照を削除し、`npm run test:db`が通る(45件通過)
   - 依存: SD-008
   - ロールバック: revertのみ
 
-- [ ] **SD-010** 本番に適用し、全体設計書から廃止予定の記述を削除する
-  - DoD: 本番の`teacher_profile`をバックアップしてから適用する。`docs/data-model.md`・`docs/design.md` §4.2・§5.2から`start_date`・`update_timetable_start_date`を削除する
+- [ ] **SD-010** 本番に適用する(ユーザーが実行)
+  - DoD: フェーズ1(PR #9)が本番で数日安定稼働していることを確認したうえで、本番の`teacher_profile`をバックアップしてから`npx supabase db push`で適用する。適用前に`select column_name from information_schema.columns where table_name = 'teacher_profile';`で`start_date`列の存在を読み取り確認する(読み取りはClaudeが実施可)。全体設計書からの`start_date`・`update_timetable_start_date`の記述削除はSD-008と同じPRで対応済み
   - 依存: SD-008, SD-009
   - ロールバック: SD-008のロールバック手順に従う
