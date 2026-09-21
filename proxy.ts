@@ -31,17 +31,21 @@ export async function proxy(request: NextRequest) {
     },
   );
 
-  let user = null;
+  // getUser()はリクエストごとにAuthサーバーへの往復が入る。getClaims()は非対称鍵(ES256)の
+  // JWTをWebCryptoでローカル検証するため往復がなくなる(JWKSはプロセス内で10分キャッシュされる)。
+  // 代償として、失効(アカウント削除・BAN)の検知がトークンの有効期限(60分)まで遅れる。
+  // ここはリダイレクト判定にしか使っておらず、データ分離はRLSが担うため受容する。
+  // 対称鍵に戻した場合はauth-js側が自動でgetUser()相当の検証にフォールバックする。
+  let isAuthenticated = false;
   try {
-    const {
-      data: { user: fetchedUser },
-    } = await supabase.auth.getUser();
-    user = fetchedUser;
+    // セッションがない場合はerrorがnullのままdataだけnullになるため、dataの中身で判定する
+    const { data } = await supabase.auth.getClaims();
+    isAuthenticated = Boolean(data?.claims);
   } catch (error) {
-    console.error("proxy: supabase.auth.getUser() failed", error);
+    console.error("proxy: supabase.auth.getClaims() failed", error);
   }
 
-  if (!user && !isPublicPath(request.nextUrl.pathname)) {
+  if (!isAuthenticated && !isPublicPath(request.nextUrl.pathname)) {
     const loginUrl = request.nextUrl.clone();
     loginUrl.pathname = "/login";
     return NextResponse.redirect(loginUrl);
