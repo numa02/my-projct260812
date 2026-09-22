@@ -65,16 +65,13 @@ export default function ClassesPage() {
     }
   };
 
+  // 組番号は仮名コード生成のための内部的な連番であり、採番規則(学年区分ごとの作成順・欠番は
+  // 再利用しない)を教員が知る必要がないため一覧には表示しない(docs/features/ui-clarity/)
   const columns = [
     {
       key: "grade",
       header: "学年",
       render: (c: ClassRow) => c.grade,
-    },
-    {
-      key: "groupNumber",
-      header: "組番号",
-      render: (c: ClassRow) => c.groupNumber,
     },
     {
       key: "displayName",
@@ -138,7 +135,7 @@ export default function ClassesPage() {
               renderItem={(c) => (
                 <Card
                   title={c.displayName}
-                  meta={`${c.grade} / 組番号${c.groupNumber}`}
+                  meta={c.grade}
                   body={
                     <div className="flex gap-2">
                       <Button variant="outline" size="sm" onClick={() => openEditForm(c)}>

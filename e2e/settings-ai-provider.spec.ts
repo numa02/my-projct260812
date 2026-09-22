@@ -27,6 +27,8 @@ test.describe("AIプロバイダ設定画面(T-068)", () => {
     await expect(page.getByText("AIプロバイダ設定を保存しました")).toBeVisible();
     await expect(page.getByText("設定済み")).toBeVisible();
     await expect(page.getByLabel("APIキー")).toHaveValue("");
+    // 画面の再読み込みなしで、登録済みのプロバイダ・モデルが設定状況の横に併記される
+    await expect(page.getByText("OpenAI / gpt-5-mini")).toBeVisible();
   });
 
   test("保存後に再読み込みしてもプロバイダ・モデルの選択内容が復元される(APIキーは復元されない)", async ({
@@ -46,6 +48,7 @@ test.describe("AIプロバイダ設定画面(T-068)", () => {
     await expect(page.getByLabel("モデル")).toHaveValue("claude-opus-5");
     await expect(page.getByLabel("APIキー")).toHaveValue("");
     await expect(page.getByText("設定済み")).toBeVisible();
+    await expect(page.getByText("Anthropic / claude-opus-5")).toBeVisible();
   });
 
   test("プロバイダを切り替えるとモデル選択が既定モデルにリセットされる", async ({ page }) => {

@@ -780,7 +780,7 @@ export const POST = app.fetch;
 | `import_students(class_id, rows)` | CSV/貼り付け一括登録 | F2 |
 | `save_timetable_master(slots, confirm_overwrite)` | 時間割マスタ保存 | F4 |
 | `export_teacher_data()` | 全データエクスポート(生活メモ・生活の所見・生活用ひな形を含む) | F14。生活系の出力は`docs/features/life-shoken/`で追加 |
-| `seed_standard_subjects(school_level)` | 標準科目セット投入(小学校10科目/中学校11科目、既存と同名の科目はスキップ) | F3。詳細は`docs/features/subjects/design.md` |
+| `seed_standard_subjects(school_level)` | 標準科目セット投入(小学校11科目/中学校11科目、既存と同名の科目はスキップ) | F3。詳細は`docs/features/subjects/design.md` |
 
 これ以外の単純なCRUD(クラス表示名編集、生徒編集・削除、科目名編集、週次個別変更の保存・revert、メモの保存・編集・削除、所見の保存・編集)は、単一テーブルへの`insert`/`update`/`delete`/`upsert`で完結するため、RPC化せず`supabase-js`から直接呼ぶ(§5.4)。
 

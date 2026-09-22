@@ -10,7 +10,7 @@ export interface StudentMemoRow {
   id: string;
   /** lesson=授業メモ(memo)、life=生活メモ(life_memo) */
   kind: MemoKind;
-  /** 生活メモでは「生活」 */
+  /** 生活メモでは「生活記録」(小学校の教科「生活」と区別するため) */
   subjectName: string;
   noteDate: string;
   /** 生活メモではnull */
@@ -19,7 +19,7 @@ export interface StudentMemoRow {
   shareFlag: "shared" | "private";
 }
 
-export const LIFE_MEMO_LABEL = "生活";
+export const LIFE_MEMO_LABEL = "生活記録";
 
 const TABLE: Record<MemoKind, "memo" | "life_memo"> = { lesson: "memo", life: "life_memo" };
 

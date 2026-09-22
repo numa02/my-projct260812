@@ -24,7 +24,7 @@ begin
   perform pg_advisory_xact_lock(hashtext(v_teacher_id::text));
 
   if p_school_level = 'elementary' then
-    v_names := array['国語', '算数', '理科', '社会', '英語', '図画工作', '体育', '音楽', '総合', '学活'];
+    v_names := array['国語', '算数', '理科', '社会', '英語', '図画工作', '体育', '音楽', '生活', '総合', '学活'];
   elsif p_school_level = 'middle' then
     v_names := array['国語', '数学', '理科', '社会', '英語', '美術', '技術・家庭', '保健体育', '音楽', '総合', '学活'];
   else

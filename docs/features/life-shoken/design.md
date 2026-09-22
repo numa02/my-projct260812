@@ -45,7 +45,7 @@
 
 ### 週次時間割(`TimetableGrid`・`WeeklyTimetableView`)
 
-- `TimetableGrid`に任意のprop`onLifeCellClick?: (weekday) => void`を追加。指定時のみ6限の下に「生活」行(各曜日に「生活記録」ボタン)を表示する。時間割マスタ設定画面では渡さないため表示されない
+- `TimetableGrid`に任意のprop`onLifeCellClick?: (weekday) => void`を追加。指定時のみ6限の下に「生活記録」行(各曜日に「生活記録」ボタン)を表示する。時間割マスタ設定画面では渡さないため表示されない
 - 押すと`/memos/life?date=<その日>&from=/timetable/weekly`へ遷移
 
 ### 生活記録画面(新規、`app/(main)/memos/life/`)
@@ -57,7 +57,7 @@
 ### 生徒別メモ一覧
 
 - `useStudentMemos`が`memo`と`life_memo`の両方を取得し、`kind: "lesson" | "life"`付きの行に統合して日付降順に並べる(同じ日付では授業メモを時限降順、生活メモはその後)
-- 生活メモの表示は「日付 ・ 生活」。「教科別」表示では「生活」グループ
+- 生活メモの表示は「日付 ・ 生活記録」。「教科別」表示では「生活記録」グループ(小学校の教科「生活」の授業メモとは別グループ。`docs/features/ui-clarity/`)
 - 「生活メモを追加」ボタンで追加フォーム(日付・メモ・共有区分)を開く。`insert`し、一意制約違反(`23505`)なら既にある旨をフォーム内に表示
 
 ### 所見管理画面
