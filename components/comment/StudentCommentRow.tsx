@@ -19,9 +19,16 @@ const CREATION_METHOD_LABEL: Record<CommentCreationMethod, string> = {
   manual: "手動作成",
 };
 
+/** 所見欄のラベル。学習は従来の表記(「所見」)を維持し、生活・総合は種類を明示する */
+const COMMENT_LABEL: Record<CommentKind, string> = {
+  learning: "所見",
+  life: "生活の所見",
+  general: "総合の所見",
+};
+
 export interface StudentCommentRowProps {
   studentId: string;
-  /** learning=学習の所見、life=生活の所見 */
+  /** learning=学習の所見、life=生活の所見、general=総合の所見 */
   kind: CommentKind;
   studentName: string;
   pseudonymCode: string;
@@ -120,8 +127,8 @@ function RowBody({
   saveComment,
   showToast,
 }: RowBodyProps) {
-  // 学習の所見は従来の表記(「所見」)のまま、生活の所見のみ「生活の所見」と明示する
-  const commentLabel = kind === "life" ? "生活の所見" : "所見";
+  // 学習の所見は従来の表記(「所見」)のまま、生活・総合のみ種類を明示する
+  const commentLabel = COMMENT_LABEL[kind];
   const [content, setContent] = useState(existing?.content ?? "");
   const [creationMethod, setCreationMethod] = useState<CommentCreationMethod>(
     existing?.creationMethod ?? "manual",

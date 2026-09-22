@@ -303,6 +303,18 @@ create table student_life_comment (
   updated_at timestamptz not null default now()
 );
 
+-- 総合の所見: 総合的な学習の時間についての所見。学習・生活の所見とは独立に、
+-- 生徒ごとに最新の1件のみを保持する(別テーブルにする理由は生活の所見と同じ)
+create table student_general_comment (
+  id uuid primary key default gen_random_uuid(),
+  student_id uuid not null unique references student(id) on delete cascade,
+  content text not null,
+  target_char_count int,
+  creation_method comment_creation_method not null,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
 create type ai_provider as enum ('openai', 'anthropic', 'gemini');
 
 create table ai_provider_setting (
@@ -317,8 +329,9 @@ create table ai_provider_setting (
 create table prompt_template (
   id uuid primary key default gen_random_uuid(),
   teacher_id uuid not null unique references teacher_profile(id) on delete cascade,
-  content text,        -- 学習の所見用。nullなら本ツール既定のひな形を使う
-  life_content text,   -- 生活の所見用。nullなら本ツール既定のひな形を使う
+  content text,          -- 学習の所見用。nullなら本ツール既定のひな形を使う
+  life_content text,     -- 生活の所見用。nullなら本ツール既定のひな形を使う
+  general_content text,  -- 総合の所見用。nullなら本ツール既定のひな形を使う
   updated_at timestamptz not null default now()
 );
 ```
@@ -672,7 +685,7 @@ begin
       from weekly_class_override o where o.teacher_id = v_teacher_id
     ), '[]'::jsonb),
     'promptTemplate', (
-      select jsonb_build_object('content', p.content, 'lifeContent', p.life_content, 'updatedAt', p.updated_at)
+      select jsonb_build_object('content', p.content, 'lifeContent', p.life_content, 'generalContent', p.general_content, 'updatedAt', p.updated_at)
       from prompt_template p where p.teacher_id = v_teacher_id
     ),
     'students', coalesce((
@@ -726,6 +739,10 @@ begin
             'updatedAt', slc.updated_at
           ))
           from student_life_comment slc where slc.student_id = s.id
+        ), '[]'::jsonb),
+        'generalComments', coalesce((
+          select jsonb_agg(jsonb_build_object('id', sgc.id, 'content', sgc.content, 'targetCharCount', sgc.target_char_count, 'creationMethod', sgc.creation_method, 'createdAt', sgc.created_at, 'updatedAt', sgc.updated_at))
+          from student_general_comment sgc where sgc.student_id = s.id
         ), '[]'::jsonb)
       ) order by s.class_id, s.attendance_number)
       from student s join class c on c.id = s.class_id where c.teacher_id = v_teacher_id
@@ -779,7 +796,7 @@ export const POST = app.fetch;
 | `delete_subject(subject_id)` | 科目削除 | F3 |
 | `import_students(class_id, rows)` | CSV/貼り付け一括登録 | F2 |
 | `save_timetable_master(slots, confirm_overwrite)` | 時間割マスタ保存 | F4 |
-| `export_teacher_data()` | 全データエクスポート(生活メモ・生活の所見・生活用ひな形を含む) | F14。生活系の出力は`docs/features/life-shoken/`で追加 |
+| `export_teacher_data()` | 全データエクスポート(生活メモ・所見3種・ひな形3種を含む) | F14。生活系の出力は`docs/features/life-shoken/`、総合系は`docs/features/general-shoken/`で追加 |
 | `seed_standard_subjects(school_level)` | 標準科目セット投入(小学校11科目/中学校11科目、既存と同名の科目はスキップ) | F3。詳細は`docs/features/subjects/design.md` |
 
 これ以外の単純なCRUD(クラス表示名編集、生徒編集・削除、科目名編集、週次個別変更の保存・revert、メモの保存・編集・削除、所見の保存・編集)は、単一テーブルへの`insert`/`update`/`delete`/`upsert`で完結するため、RPC化せず`supabase-js`から直接呼ぶ(§5.4)。
@@ -863,7 +880,7 @@ const usage = await checkClassUsage(classId); // useClasses.ts
 await supabase.rpc("delete_class", { p_class_id: classId });
 ```
 
-**補足(所見の保存)**: 学習の所見(`student_comment`)・生活の所見(`student_life_comment`)はいずれも一意キーが`student_id`で、`upsert`(`onConflict: "student_id"`)により新規作成・更新の両方を1回の呼び出しでまかなう。所見管理画面は画面上部で対象期間を1つ確定させたうえで生徒ごとの行を描画するため、保存時点で対象の生徒は一意に定まっており、既存有無の事前チェック→上書き確認ダイアログという2ステップは不要(直接upsertするだけでよい)。
+**補足(所見の保存)**: 学習の所見(`student_comment`)・生活の所見(`student_life_comment`)・総合の所見(`student_general_comment`)はいずれも一意キーが`student_id`で、`upsert`(`onConflict: "student_id"`)により新規作成・更新の両方を1回の呼び出しでまかなう。所見管理画面は画面上部で対象期間を1つ確定させたうえで生徒ごとの行を描画するため、保存時点で対象の生徒は一意に定まっており、既存有無の事前チェック→上書き確認ダイアログという2ステップは不要(直接upsertするだけでよい)。
 
 ### 5.5 主要な純粋関数(`shared/`、変更なし)
 
@@ -936,7 +953,7 @@ export class AiProviderError extends Error {
 | `<ConfirmDialog>` | 汎用確認ダイアログ(RPC関数が投げる例外メッセージ、または既存チェック結果を受けて表示) |
 | `useClasses()` / `useWeeklyTimetable()` / `useStudentMemos()` 等 | TanStack Queryベース。`queryFn`が直接`supabase-js`を呼ぶ |
 | `useClassOptions()` | 生徒名簿・生徒別メモ一覧・所見管理画面で共通利用する画面内クラス選択フック。教員のクラス一覧取得+選択中クラスの生徒一覧取得をまとめて提供し、重複実装を避ける |
-| `useStudentComments(studentId, kind)` | 生徒1人分の所見(種類ごとに1件)の取得・upsert保存。`kind`が`learning`なら`student_comment`、`life`なら`student_life_comment`を参照する |
+| `useStudentComments(studentId, kind)` | 生徒1人分の所見(種類ごとに1件)の取得・upsert保存。`kind`が`learning`なら`student_comment`、`life`なら`student_life_comment`、`general`なら`student_general_comment`を参照する |
 | `useClassCommentPeriod(classId)` | クラスごとの所見対象期間の取得・自動保存。詳細は`docs/features/comments/design.md` |
 | `<ToastProvider>` / `useToast()` | 保存成功・失敗等のトースト通知(`components.md` Toast)。`app/providers.tsx`でアプリ全体をラップし、`useToast().showToast(variant, message)`でどこからでも呼び出せる |
 

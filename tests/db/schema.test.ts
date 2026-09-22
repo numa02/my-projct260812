@@ -294,6 +294,145 @@ describe("student_life_comment", () => {
   });
 });
 
+describe("updated_atの自動更新(BUG-009)", () => {
+  let teacher: TestTeacher | undefined;
+
+  afterEach(async () => {
+    if (teacher) await deleteTestTeacher(teacher.id);
+    teacher = undefined;
+  });
+
+  it("所見をupsertで上書きするとupdated_atが進む(3種類すべて)", async () => {
+    teacher = await createTestTeacher();
+    const { studentId } = await createClassWithStudent(teacher);
+
+    const tables = ["student_comment", "student_life_comment", "student_general_comment"] as const;
+    for (const table of tables) {
+      const { data: inserted } = await teacher.client
+        .from(table)
+        .upsert(
+          { student_id: studentId, content: "初回", creation_method: "manual" },
+          { onConflict: "student_id" },
+        )
+        .select("updated_at")
+        .single<{ updated_at: string }>();
+
+      const { data: updated } = await teacher.client
+        .from(table)
+        .upsert(
+          { student_id: studentId, content: "上書き", creation_method: "manual" },
+          { onConflict: "student_id" },
+        )
+        .select("updated_at")
+        .single<{ updated_at: string }>();
+
+      expect(
+        new Date(updated!.updated_at).getTime(),
+        `${table}のupdated_atが上書き時に更新されていない`,
+      ).toBeGreaterThan(new Date(inserted!.updated_at).getTime());
+    }
+  });
+
+  it("メモを更新するとupdated_atが進む", async () => {
+    teacher = await createTestTeacher();
+    const { studentId, subjectId } = await createClassWithStudent(teacher);
+
+    const { data: inserted } = await teacher.client
+      .from("memo")
+      .insert({
+        student_id: studentId,
+        subject_id: subjectId,
+        note_date: "2026-04-06",
+        period: 1,
+        content: "初回",
+      })
+      .select("id, updated_at")
+      .single<{ id: string; updated_at: string }>();
+
+    const { data: updated } = await teacher.client
+      .from("memo")
+      .update({ content: "上書き" })
+      .eq("id", inserted!.id)
+      .select("updated_at")
+      .single<{ updated_at: string }>();
+
+    expect(new Date(updated!.updated_at).getTime()).toBeGreaterThan(
+      new Date(inserted!.updated_at).getTime(),
+    );
+  });
+});
+
+describe("student_general_comment", () => {
+  let teacher: TestTeacher | undefined;
+
+  afterEach(async () => {
+    if (teacher) await deleteTestTeacher(teacher.id);
+    teacher = undefined;
+  });
+
+  it("(student_id)のユニーク制約でupsertが機能し、学習・生活の所見とは独立に保持される(GS-001)", async () => {
+    teacher = await createTestTeacher();
+    const { studentId } = await createClassWithStudent(teacher);
+
+    await teacher.client
+      .from("student_comment")
+      .insert({ student_id: studentId, content: "学習の所見", creation_method: "manual" });
+    await teacher.client
+      .from("student_life_comment")
+      .insert({ student_id: studentId, content: "生活の所見", creation_method: "manual" });
+
+    const input = {
+      student_id: studentId,
+      content: "最初の総合の所見",
+      creation_method: "manual" as const,
+    };
+    const { error: insertError } = await teacher.client
+      .from("student_general_comment")
+      .upsert(input, { onConflict: "student_id" });
+    expect(insertError).toBeNull();
+
+    const { data: upserted, error: upsertError } = await teacher.client
+      .from("student_general_comment")
+      .upsert({ ...input, content: "更新後の総合の所見" }, { onConflict: "student_id" })
+      .select();
+    expect(upsertError).toBeNull();
+    expect(upserted).toHaveLength(1);
+    expect(upserted?.[0].content).toBe("更新後の総合の所見");
+
+    // 3種類が互いに影響しないこと
+    const { data: learning } = await teacher.client
+      .from("student_comment")
+      .select("content")
+      .eq("student_id", studentId)
+      .single<{ content: string }>();
+    expect(learning?.content).toBe("学習の所見");
+
+    const { data: life } = await teacher.client
+      .from("student_life_comment")
+      .select("content")
+      .eq("student_id", studentId)
+      .single<{ content: string }>();
+    expect(life?.content).toBe("生活の所見");
+  });
+
+  it("生徒を削除すると総合の所見も削除される(on delete cascade)", async () => {
+    teacher = await createTestTeacher();
+    const { studentId } = await createClassWithStudent(teacher);
+
+    await teacher.client
+      .from("student_general_comment")
+      .insert({ student_id: studentId, content: "総合の所見", creation_method: "manual" });
+
+    await teacher.client.from("student").delete().eq("id", studentId);
+
+    const { data } = await teacher.client
+      .from("student_general_comment")
+      .select("id")
+      .eq("student_id", studentId);
+    expect(data).toHaveLength(0);
+  });
+});
+
 describe("prompt_template", () => {
   let teacher: TestTeacher | undefined;
 
@@ -320,6 +459,32 @@ describe("prompt_template", () => {
       .select("content, life_content")
       .single<{ content: string | null; life_content: string | null }>();
     expect(data).toEqual({ content: "学習用", life_content: "生活用" });
+  });
+
+  it("総合用を追加で保存しても学習用・生活用が消えない(GS-001)", async () => {
+    teacher = await createTestTeacher();
+
+    await teacher.client
+      .from("prompt_template")
+      .upsert({ teacher_id: teacher.id, content: "学習用" }, { onConflict: "teacher_id" });
+    await teacher.client
+      .from("prompt_template")
+      .upsert({ teacher_id: teacher.id, life_content: "生活用" }, { onConflict: "teacher_id" });
+
+    const { error: generalError } = await teacher.client
+      .from("prompt_template")
+      .upsert({ teacher_id: teacher.id, general_content: "総合用" }, { onConflict: "teacher_id" });
+    expect(generalError).toBeNull();
+
+    const { data } = await teacher.client
+      .from("prompt_template")
+      .select("content, life_content, general_content")
+      .single<{
+        content: string | null;
+        life_content: string | null;
+        general_content: string | null;
+      }>();
+    expect(data).toEqual({ content: "学習用", life_content: "生活用", general_content: "総合用" });
   });
 });
 
