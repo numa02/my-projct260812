@@ -219,7 +219,7 @@ test.describe("生活所見の記録(LS-)", () => {
 
     await page.goto("/settings/prompt-template");
     await expect(page.getByLabel("生活の所見用のひな形", { exact: true })).toHaveValue(
-      /行動・生活面の所見文/,
+      /生活所見を作成する教員です/,
     );
     await page
       .getByLabel("生活の所見用のひな形", { exact: true })
@@ -232,7 +232,7 @@ test.describe("生活所見の記録(LS-)", () => {
       /生活用マーカー/,
     );
     await expect(page.getByLabel("学習の所見用のひな形", { exact: true })).toHaveValue(
-      /授業メモをもとに所見文/,
+      /学習所見を作成する教員です/,
     );
 
     const row = await openLifeCommentsTab(page);

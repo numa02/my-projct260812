@@ -34,9 +34,9 @@ async function importStudents(page: Page, className: string, csv: string): Promi
   await expect(page.getByText(/件の生徒を登録しました/)).toBeVisible();
 }
 
-async function setUpMaster(page: Page): Promise<void> {
+async function setUpMaster(page: Page, className = "1年1組"): Promise<void> {
   await page.goto("/timetable/master");
-  await page.getByLabel("クラス(全マスに適用)").selectOption({ label: "1年1組" });
+  await page.getByLabel("クラス(全マスに適用)").selectOption({ label: className });
   await page.getByLabel("月曜1限の科目").selectOption({ label: "国語" });
   await page.getByRole("button", { name: "保存" }).click();
   await expect(page.getByText("時間割マスタを保存しました")).toBeVisible();
@@ -192,6 +192,36 @@ test.describe("所見管理画面(クラス単位一覧)", () => {
     await expect(page.getByLabel("終了日")).toHaveValue("2026-10-14");
   });
 
+  test("学年欄はクラスの学年が既定値になり、上書きするとプロンプトに反映される", async ({
+    page,
+  }) => {
+    await signUpAndLogin(page);
+    await createClass(page, "3", "3年1組");
+    await createSubject(page, "国語");
+    await importStudents(page, "3年1組", "1,生徒A");
+    await setUpMaster(page, "3年1組");
+    await recordMemo(page, "2026-04-06", 1, "音読が上手にできました");
+
+    await page.goto("/comments/class");
+    await openPeriod(page, "2026-04-01", "2026-04-30");
+
+    const row = page.getByRole("group", { name: "生徒Aの行" });
+    await row.getByRole("button", { name: "AIで生成する" }).click();
+
+    // 既定値は選択中クラスの学年
+    await expect(row.getByLabel("学年")).toHaveValue("3");
+    const promptField = row.getByLabel("プロンプト");
+    await expect(promptField).toHaveValue(/学年：3/);
+
+    // 教員が書き換えるとプロンプトに反映される
+    await row.getByLabel("学年").fill("特支");
+    await expect(promptField).toHaveValue(/学年：特支/);
+
+    // 空にすると「指定なし」になる
+    await row.getByLabel("学年").fill("");
+    await expect(promptField).toHaveValue(/学年：指定なし/);
+  });
+
   test("開始日が終了日より後の場合、終了日欄にエラーが表示され保存されない", async ({ page }) => {
     await signUpAndLogin(page);
     await createClass(page, "1", "1年1組");
@@ -219,7 +249,10 @@ test.describe("所見管理画面(クラス単位一覧)", () => {
 
     await page.route("**/api/comments/generate", async (route) => {
       const body = route.request().postDataJSON();
-      expect(body.prompt).toContain("1-01-01"); // 仮名コードが含まれる
+      // 既定のひな形は仮名コードを含まない(生成結果への混入を避けるため)。
+      // 学年はクラスの学年が自動で埋まり、実名は送られない
+      expect(body.prompt).toContain("学年：1");
+      expect(body.prompt).not.toContain("生徒A");
       await route.fulfill({
         json: { rawText: "積極的に音読に取り組み、着実に力をつけています。" },
       });
@@ -270,7 +303,8 @@ test.describe("所見管理画面(クラス単位一覧)", () => {
 
     const promptField = row.getByLabel("プロンプト");
     await expect(promptField).toBeVisible();
-    await expect(promptField).toHaveValue(/1-01-01/);
+    await expect(promptField).toHaveValue(/学年：1/);
+    await expect(promptField).toHaveValue(/音読が上手にできました/);
 
     await row.getByLabel("AIの応答を貼り付け").fill("プロンプトコピー運用で得た所見文です。");
     await row.getByRole("button", { name: "所見欄に反映" }).click();
@@ -345,7 +379,7 @@ test.describe("所見管理画面(クラス単位一覧)", () => {
 
     const promptField = row.getByLabel("プロンプト");
     await expect(promptField).toBeVisible();
-    await expect(promptField).toHaveValue(/1-01-01/); // 仮名コードが含まれる
+    await expect(promptField).toHaveValue(/学年：1/); // クラスの学年が自動で埋まる
     await expect(promptField).toHaveValue(/音読が上手にできました/);
     await expect(promptField).not.toHaveValue(/生徒A/); // 実名は含まれない
 

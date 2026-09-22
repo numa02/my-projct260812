@@ -97,7 +97,9 @@ export function ClassCommentsContent({ initialClassId, highlightStudentId }: Cla
         <div className="flex flex-col rounded-md border border-gray-200 px-4">
           {students.map((s) => (
             <StudentCommentRow
-              key={`${kind}-${s.id}-${periodKey}`}
+              // クラスIDを含めることで、クラス切り替え時に行を再マウントし、
+              // 学年欄・所見入力欄に前のクラスの値が残らないようにする
+              key={`${kind}-${selectedClass?.id ?? "none"}-${s.id}-${periodKey}`}
               studentId={s.id}
               kind={kind}
               studentName={s.name}
@@ -110,6 +112,7 @@ export function ClassCommentsContent({ initialClassId, highlightStudentId }: Cla
                     })
                   : ""
               }
+              classGrade={selectedClass?.grade ?? ""}
               periodStartDate={periodStartDate}
               periodEndDate={periodEndDate}
               highlighted={s.id === highlightStudentId}

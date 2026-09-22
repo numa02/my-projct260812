@@ -25,6 +25,8 @@ export interface StudentCommentRowProps {
   kind: CommentKind;
   studentName: string;
   pseudonymCode: string;
+  /** 対象クラスの学年。AI生成セクションの学年欄の既定値として渡す */
+  classGrade: string;
   periodStartDate: string;
   periodEndDate: string;
   /** 生徒名簿からの遷移で指定された生徒の場合、行を目立たせてスクロールする */
@@ -41,6 +43,7 @@ export function StudentCommentRow({
   kind,
   studentName,
   pseudonymCode,
+  classGrade,
   periodStartDate,
   periodEndDate,
   highlighted,
@@ -81,6 +84,7 @@ export function StudentCommentRow({
         kind={kind}
         studentName={studentName}
         pseudonymCode={pseudonymCode}
+        classGrade={classGrade}
         periodStartDate={periodStartDate}
         periodEndDate={periodEndDate}
         existing={comment}
@@ -96,6 +100,7 @@ interface RowBodyProps {
   kind: CommentKind;
   studentName: string;
   pseudonymCode: string;
+  classGrade: string;
   periodStartDate: string;
   periodEndDate: string;
   existing: ReturnType<typeof useStudentComments>["comment"];
@@ -108,6 +113,7 @@ function RowBody({
   kind,
   studentName,
   pseudonymCode,
+  classGrade,
   periodStartDate,
   periodEndDate,
   existing,
@@ -190,6 +196,7 @@ function RowBody({
           studentId={studentId}
           kind={kind}
           pseudonymCode={pseudonymCode}
+          classGrade={classGrade}
           periodStartDate={periodStartDate}
           periodEndDate={periodEndDate}
           onApply={handleApply}

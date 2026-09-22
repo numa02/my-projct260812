@@ -87,10 +87,12 @@ test.describe("設定画面・プロンプトひな形編集(T-069)", () => {
     await signUpAndLogin(page);
     await page.goto("/settings/prompt-template");
 
-    await expect(page.getByLabel("学習の所見用のひな形", { exact: true })).toHaveValue(
-      /{{pseudonymCode}}/,
-    );
-    await expect(page.getByLabel("学習の所見用のひな形", { exact: true })).toHaveValue(/{{memos}}/);
+    const learningTemplate = page.getByLabel("学習の所見用のひな形", { exact: true });
+    await expect(learningTemplate).toHaveValue(/{{grade}}/);
+    await expect(learningTemplate).toHaveValue(/{{targetCharCount}}/);
+    await expect(learningTemplate).toHaveValue(/{{memos}}/);
+    // 学期は本ツールに存在しない概念のため初期値に含めない
+    await expect(learningTemplate).not.toHaveValue(/学期/);
   });
 
   test("空欄では保存できない", async ({ page }) => {
