@@ -19,9 +19,16 @@ import { useToast } from "@/components/ui/Toast";
 
 type Method = "direct" | "prompt";
 
+/** 材料が0件のときの案内文に使うラベル。総合は科目「総合」の授業メモのみが材料になる */
+const MEMO_LABEL: Record<CommentKind, string> = {
+  learning: "メモ",
+  life: "生活メモ",
+  general: "総合の授業メモ",
+};
+
 export interface CommentAiAssistProps {
   studentId: string;
-  /** learning=授業メモから学習の所見、life=生活メモから生活の所見を生成する */
+  /** learning=全教科の授業メモ、life=生活メモ、general=科目「総合」の授業メモを材料にする */
   kind: CommentKind;
   pseudonymCode: string;
   /** 対象クラスの学年。学年欄の既定値に使う(教員が上書きできる) */
@@ -52,7 +59,7 @@ export function CommentAiAssist({
   const { setting, isLoading: isLoadingSetting } = useAiProviderSettings();
   const { templates, isLoading: isLoadingTemplate } = usePromptTemplate();
   const template = templates[kind];
-  const memoLabel = kind === "life" ? "生活メモ" : "メモ";
+  const memoLabel = MEMO_LABEL[kind];
   const generateComment = useGenerateComment();
 
   const [targetCharCount, setTargetCharCount] = useState("");

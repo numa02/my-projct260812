@@ -15,10 +15,14 @@ export interface StudentComment {
   updatedAt: string;
 }
 
-/** 学習の所見と生活の所見は、一意制約(student_id)を保つため別テーブルで保持している */
-const COMMENT_TABLE: Record<CommentKind, "student_comment" | "student_life_comment"> = {
+/** 3種類の所見は、一意制約(student_id)を保つためそれぞれ別テーブルで保持している */
+const COMMENT_TABLE: Record<
+  CommentKind,
+  "student_comment" | "student_life_comment" | "student_general_comment"
+> = {
   learning: "student_comment",
   life: "student_life_comment",
+  general: "student_general_comment",
 };
 
 /** F11向け。生徒ごと・種類ごとに常に最新1件のみを保持する所見の取得・保存(新規/上書き)を行う */

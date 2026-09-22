@@ -20,6 +20,11 @@ export default function PromptTemplatePage() {
       <h1 className="text-2xl font-semibold text-gray-900">プロンプトひな形編集</h1>
       <PromptTemplateForm kind="learning" initialTemplate={templates.learning} saveTemplate={saveTemplate} />
       <PromptTemplateForm kind="life" initialTemplate={templates.life} saveTemplate={saveTemplate} />
+      <PromptTemplateForm
+        kind="general"
+        initialTemplate={templates.general}
+        saveTemplate={saveTemplate}
+      />
     </div>
   );
 }

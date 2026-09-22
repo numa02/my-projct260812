@@ -80,8 +80,11 @@ export const lifeMemoInputSchema = z.object({
 });
 export type LifeMemoInput = z.infer<typeof lifeMemoInputSchema>;
 
-/** 所見の種類。learning=学習の所見(授業メモが材料)、life=生活の所見(生活メモが材料) */
-export const commentKindSchema = z.enum(["learning", "life"]);
+/**
+ * 所見の種類。learning=学習の所見(全教科の授業メモが材料)、life=生活の所見(生活メモが材料)、
+ * general=総合の所見(科目「総合」の授業メモのみが材料)。3種類は生徒ごとに独立して1件ずつ保持する
+ */
+export const commentKindSchema = z.enum(["learning", "life", "general"]);
 export type CommentKind = z.infer<typeof commentKindSchema>;
 
 export const commentSaveInputSchema = z.object({

@@ -6,9 +6,13 @@ import { createSupabaseBrowserClient } from "@/lib/supabase-browser";
 import type { PromptMemo } from "@/shared/prompt-builder";
 import type { CommentKind } from "@/shared/schemas";
 
+/** 総合の所見の材料を絞り込む科目名。完全一致で判定する(docs/features/general-shoken/design.md §7) */
+export const GENERAL_SUBJECT_NAME = "総合";
+
 /**
  * F9/F10向け。指定期間内のその生徒の「共有する」区分のメモのみを取得する(所見生成の対象)。
- * 学習の所見は授業メモ(memo)、生活の所見は生活メモ(life_memo)を材料にする
+ * 学習の所見は全教科の授業メモ(memo)、生活の所見は生活メモ(life_memo)、
+ * 総合の所見は科目名が「総合」の授業メモのみを材料にする
  */
 export function useSharedMemosForPeriod(
   studentId: string | null,
@@ -36,9 +40,17 @@ export function useSharedMemosForPeriod(
         return (data ?? []).map((r) => ({ noteDate: r.note_date, content: r.content }));
       }
 
-      const { data, error } = await supabase
-        .from("memo")
-        .select("note_date, period, content, subject(name)")
+      // 総合は科目名で絞る。埋め込みリソースへのフィルタを効かせるため!innerで内部結合にする
+      // (既定の左結合だと科目が一致しない行が subject: null として残ってしまう)
+      const query =
+        kind === "general"
+          ? supabase
+              .from("memo")
+              .select("note_date, period, content, subject!inner(name)")
+              .eq("subject.name", GENERAL_SUBJECT_NAME)
+          : supabase.from("memo").select("note_date, period, content, subject(name)");
+
+      const { data, error } = await query
         .eq("student_id", studentId)
         .eq("share_flag", "shared")
         .gte("note_date", startDate)

@@ -72,6 +72,7 @@ export function ClassCommentsContent({ initialClassId, highlightStudentId }: Cla
         options={[
           { value: "learning", label: "学習の所見" },
           { value: "life", label: "生活の所見" },
+          { value: "general", label: "総合の所見" },
         ]}
         value={kind}
         onChange={(v) => setKind(v as CommentKind)}

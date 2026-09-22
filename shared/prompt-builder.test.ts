@@ -1,5 +1,16 @@
 import { describe, expect, it } from "vitest";
-import { buildPrompt, DEFAULT_LIFE_PROMPT_TEMPLATE, DEFAULT_PROMPT_TEMPLATE } from "./prompt-builder";
+import {
+  buildPrompt,
+  DEFAULT_GENERAL_PROMPT_TEMPLATE,
+  DEFAULT_LIFE_PROMPT_TEMPLATE,
+  DEFAULT_PROMPT_TEMPLATE,
+} from "./prompt-builder";
+
+const ALL_DEFAULT_TEMPLATES = [
+  DEFAULT_PROMPT_TEMPLATE,
+  DEFAULT_LIFE_PROMPT_TEMPLATE,
+  DEFAULT_GENERAL_PROMPT_TEMPLATE,
+];
 
 describe("buildPrompt", () => {
   it("プレースホルダーを学年・文字数・メモで置換する", () => {
@@ -105,8 +116,8 @@ describe("buildPrompt", () => {
 });
 
 describe("初期値のひな形", () => {
-  it("学習・生活のいずれも必要なプレースホルダーを含む", () => {
-    for (const template of [DEFAULT_PROMPT_TEMPLATE, DEFAULT_LIFE_PROMPT_TEMPLATE]) {
+  it("学習・生活・総合のいずれも必要なプレースホルダーを含む", () => {
+    for (const template of ALL_DEFAULT_TEMPLATES) {
       expect(template).toContain("{{grade}}");
       expect(template).toContain("{{targetCharCount}}");
       expect(template).toContain("{{memos}}");
@@ -114,13 +125,13 @@ describe("初期値のひな形", () => {
   });
 
   it("学期の指定は含まない(本ツールに学期の概念がないため)", () => {
-    for (const template of [DEFAULT_PROMPT_TEMPLATE, DEFAULT_LIFE_PROMPT_TEMPLATE]) {
+    for (const template of ALL_DEFAULT_TEMPLATES) {
       expect(template).not.toContain("学期");
     }
   });
 
   it("仮名コードのプレースホルダーを含む(教員が実名の非送信を目視確認できるようにするため)", () => {
-    for (const template of [DEFAULT_PROMPT_TEMPLATE, DEFAULT_LIFE_PROMPT_TEMPLATE]) {
+    for (const template of ALL_DEFAULT_TEMPLATES) {
       expect(template).toContain("{{pseudonymCode}}");
     }
   });

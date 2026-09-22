@@ -126,6 +126,25 @@ describe("seed_standard_subjects", () => {
     expect(subjects).toHaveLength(1);
   });
 
+  it("「生活」追加前の小学校セット(10科目)を投入済みの教員が再実行すると「生活」だけが追加される", async () => {
+    teacher = await createTestTeacher();
+    // 「生活」を追加する前の小学校セットを再現する
+    const before = ["国語", "算数", "理科", "社会", "英語", "図画工作", "体育", "音楽", "総合", "学活"];
+    await teacher.client
+      .from("subject")
+      .insert(before.map((name) => ({ teacher_id: teacher!.id, name })));
+
+    const { data: result } = await teacher.client
+      .rpc("seed_standard_subjects", { p_school_level: "elementary" })
+      .single<{ inserted: string[] }>();
+    expect(result?.inserted).toEqual(["生活"]);
+
+    const { data: subjects } = await teacher.client.from("subject").select("name");
+    const names = (subjects ?? []).map((s) => s.name);
+    expect(names).toHaveLength(11);
+    expect(new Set(names).size).toBe(11); // 既存の10科目が重複していない
+  });
+
   it("中学校セットには教科「生活」が含まれない", async () => {
     teacher = await createTestTeacher();
 

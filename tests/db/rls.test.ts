@@ -531,4 +531,41 @@ describe("life_memo / student_life_comment RLS", () => {
       .select();
     expect(updated).toHaveLength(0);
   });
+
+  it("他教員の生徒に紐づくstudent_general_commentへのアクセスがRLSで拒否される(GS-001)", async () => {
+    teacherA = await createTestTeacher();
+    teacherB = await createTestTeacher();
+    const studentId = await createStudentOfA(teacherA);
+
+    const { data: comment } = await teacherA.client
+      .from("student_general_comment")
+      .insert({ student_id: studentId, content: "総合の所見", creation_method: "manual" })
+      .select()
+      .single<{ id: string }>();
+
+    const { data: seenByB } = await teacherB.client
+      .from("student_general_comment")
+      .select("id")
+      .eq("id", comment!.id);
+    expect(seenByB).toHaveLength(0);
+
+    const { error: spoofError } = await teacherB.client
+      .from("student_general_comment")
+      .insert({ student_id: studentId, content: "偽装所見", creation_method: "manual" });
+    expect(spoofError).not.toBeNull();
+
+    const { data: updated } = await teacherB.client
+      .from("student_general_comment")
+      .update({ content: "改ざん" })
+      .eq("id", comment!.id)
+      .select();
+    expect(updated).toHaveLength(0);
+
+    const { data: deleted } = await teacherB.client
+      .from("student_general_comment")
+      .delete()
+      .eq("id", comment!.id)
+      .select();
+    expect(deleted).toHaveLength(0);
+  });
 });

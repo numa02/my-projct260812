@@ -15,6 +15,7 @@ interface AsyncAction<T> {
 const LABEL: Record<CommentKind, { title: string; memos: string }> = {
   learning: { title: "学習の所見用のひな形", memos: "授業メモ" },
   life: { title: "生活の所見用のひな形", memos: "生活メモ" },
+  general: { title: "総合の所見用のひな形", memos: "総合の授業メモ" },
 };
 
 export interface PromptTemplateFormProps {
