@@ -2,8 +2,10 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
 // /devは開発用コンポーネントギャラリー。本番ではページ自体がnotFound()を返すため
-// 未ログインで公開扱いにしても実害はない
-const PUBLIC_PATHS = ["/login", "/signup", "/reset-password", "/dev"];
+// 未ログインで公開扱いにしても実害はない。
+// /manualはpublic/配下に置いた使い方説明書(静的ファイル)。ログイン前の教員が読めるよう
+// 公開扱いにする。掲載しているのは練習用のダミーデータのキャプチャのみ
+const PUBLIC_PATHS = ["/login", "/signup", "/reset-password", "/dev", "/manual"];
 
 function isPublicPath(pathname: string): boolean {
   return PUBLIC_PATHS.some((path) => pathname === path || pathname.startsWith(`${path}/`));

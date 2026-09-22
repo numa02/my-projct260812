@@ -4,6 +4,11 @@ const nextConfig: NextConfig = {
   /* config options here */
   agentRules: false,
   allowedDevOrigins: ["127.0.0.1"],
+  async redirects() {
+    // public/manual/index.html は /manual/index.html でしか配信されないため、
+    // 案内しやすい /manual でも開けるようにする
+    return [{ source: "/manual", destination: "/manual/index.html", permanent: false }];
+  },
   async headers() {
     // 開発モードではTurbopack/webpackのHMRがeval()を使うため、CSPが'unsafe-eval'を
     // 禁止すると開発サーバーのハイドレーション自体が壊れる。本番ビルドのみ付与する

@@ -15,7 +15,9 @@ import path from "node:path";
  * 撮り直すだけで注釈の位置が追従する。
  */
 
-const IMAGE_DIR = path.resolve(__dirname, "../images");
+// 画像はアプリから配信する場所に直接書き出す(Artifactへもここから公開する)
+const IMAGE_DIR = path.resolve(__dirname, "../../../public/manual/images");
+const ANNOTATION_PATH = path.resolve(__dirname, "annotations.json");
 const WEEK_MONDAY = "2026-09-21";
 const CLASS_NAME = "3年2組";
 
@@ -428,7 +430,7 @@ test("使い方説明書のキャプチャを撮影する", async ({ page }) => 
   ]);
 
   writeFileSync(
-    path.join(IMAGE_DIR, "annotations.json"),
+    ANNOTATION_PATH,
     `${JSON.stringify({ generatedAt: new Date().toISOString(), shots }, null, 2)}\n`,
   );
 });

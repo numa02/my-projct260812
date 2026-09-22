@@ -12,7 +12,7 @@ import { fileURLToPath } from "node:url";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const htmlPath = path.resolve(here, "../index.html");
-const jsonPath = path.resolve(here, "../images/annotations.json");
+const jsonPath = path.resolve(here, "annotations.json");
 
 const annotations = JSON.parse(readFileSync(jsonPath, "utf8"));
 const payload = JSON.stringify({
