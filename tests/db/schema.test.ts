@@ -294,6 +294,74 @@ describe("student_life_comment", () => {
   });
 });
 
+describe("updated_atの自動更新(BUG-009)", () => {
+  let teacher: TestTeacher | undefined;
+
+  afterEach(async () => {
+    if (teacher) await deleteTestTeacher(teacher.id);
+    teacher = undefined;
+  });
+
+  it("所見をupsertで上書きするとupdated_atが進む(3種類すべて)", async () => {
+    teacher = await createTestTeacher();
+    const { studentId } = await createClassWithStudent(teacher);
+
+    const tables = ["student_comment", "student_life_comment", "student_general_comment"] as const;
+    for (const table of tables) {
+      const { data: inserted } = await teacher.client
+        .from(table)
+        .upsert(
+          { student_id: studentId, content: "初回", creation_method: "manual" },
+          { onConflict: "student_id" },
+        )
+        .select("updated_at")
+        .single<{ updated_at: string }>();
+
+      const { data: updated } = await teacher.client
+        .from(table)
+        .upsert(
+          { student_id: studentId, content: "上書き", creation_method: "manual" },
+          { onConflict: "student_id" },
+        )
+        .select("updated_at")
+        .single<{ updated_at: string }>();
+
+      expect(
+        new Date(updated!.updated_at).getTime(),
+        `${table}のupdated_atが上書き時に更新されていない`,
+      ).toBeGreaterThan(new Date(inserted!.updated_at).getTime());
+    }
+  });
+
+  it("メモを更新するとupdated_atが進む", async () => {
+    teacher = await createTestTeacher();
+    const { studentId, subjectId } = await createClassWithStudent(teacher);
+
+    const { data: inserted } = await teacher.client
+      .from("memo")
+      .insert({
+        student_id: studentId,
+        subject_id: subjectId,
+        note_date: "2026-04-06",
+        period: 1,
+        content: "初回",
+      })
+      .select("id, updated_at")
+      .single<{ id: string; updated_at: string }>();
+
+    const { data: updated } = await teacher.client
+      .from("memo")
+      .update({ content: "上書き" })
+      .eq("id", inserted!.id)
+      .select("updated_at")
+      .single<{ updated_at: string }>();
+
+    expect(new Date(updated!.updated_at).getTime()).toBeGreaterThan(
+      new Date(inserted!.updated_at).getTime(),
+    );
+  });
+});
+
 describe("student_general_comment", () => {
   let teacher: TestTeacher | undefined;
 

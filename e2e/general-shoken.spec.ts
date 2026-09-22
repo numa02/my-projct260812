@@ -108,17 +108,43 @@ test.describe("総合の所見(GS-)", () => {
     await expect(promptField).not.toHaveValue(/生徒A/);
   });
 
-  test("学習タブのプロンプトには総合のメモも含まれる(学習の所見の材料は従来どおり全教科)", async ({
-    page,
-  }) => {
+  test("学習タブのプロンプトからは科目「総合」のメモが除外される", async ({ page }) => {
     await setUpWithBothMemos(page);
 
     const row = await openTab(page, "学習の所見");
     await row.getByRole("button", { name: "AIで生成する" }).click();
 
+    // 学習と総合で材料が重複しないよう、学習側からは科目「総合」を除外する
     const promptField = row.getByLabel("プロンプト");
     await expect(promptField).toHaveValue(/国語の音読をがんばっていた/);
-    await expect(promptField).toHaveValue(/地域の商店街について調べてまとめた/);
+    await expect(promptField).not.toHaveValue(/地域の商店街について調べてまとめた/);
+  });
+
+  test("科目「総合」のメモしかない場合、学習タブでは送信可能なメモが存在しない扱いになる", async ({
+    page,
+  }) => {
+    await signUpAndLogin(page);
+    await createClass(page, "3", "1年1組");
+    await createSubject(page, "総合");
+    await importStudents(page, "1年1組", "1,生徒A");
+    await page.goto("/timetable/master");
+    await page.getByLabel("クラス(全マスに適用)").selectOption({ label: "1年1組" });
+    await page.getByLabel("月曜1限の科目").selectOption({ label: "総合" });
+    await page.getByRole("button", { name: "保存" }).click();
+    await expect(page.getByText("時間割マスタを保存しました")).toBeVisible();
+    await recordMemo(page, "2026-04-06", 1, "地域の商店街について調べてまとめた");
+
+    const row = await openTab(page, "学習の所見");
+    await row.getByRole("button", { name: "AIで生成する" }).click();
+    await expect(row.getByText("送信可能なメモが存在しません")).toBeVisible();
+
+    // 同じメモは総合タブでは材料になる
+    await page.getByRole("radio", { name: "総合の所見" }).click();
+    const generalRow = page.getByRole("group", { name: "生徒Aの行" });
+    await generalRow.getByRole("button", { name: "AIで生成する" }).click();
+    await expect(generalRow.getByLabel("プロンプト")).toHaveValue(
+      /地域の商店街について調べてまとめた/,
+    );
   });
 
   test("総合の所見を保存しても、学習の所見・生活の所見は変わらない", async ({ page }) => {

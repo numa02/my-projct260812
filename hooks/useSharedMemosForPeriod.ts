@@ -11,8 +11,9 @@ export const GENERAL_SUBJECT_NAME = "総合";
 
 /**
  * F9/F10向け。指定期間内のその生徒の「共有する」区分のメモのみを取得する(所見生成の対象)。
- * 学習の所見は全教科の授業メモ(memo)、生活の所見は生活メモ(life_memo)、
- * 総合の所見は科目名が「総合」の授業メモのみを材料にする
+ * 学習の所見は科目「総合」以外の授業メモ(memo)、生活の所見は生活メモ(life_memo)、
+ * 総合の所見は科目名が「総合」の授業メモのみを材料にする。
+ * 学習と総合で材料が重複しないようにするため、学習側からは科目「総合」を除外する
  */
 export function useSharedMemosForPeriod(
   studentId: string | null,
@@ -40,15 +41,18 @@ export function useSharedMemosForPeriod(
         return (data ?? []).map((r) => ({ noteDate: r.note_date, content: r.content }));
       }
 
-      // 総合は科目名で絞る。埋め込みリソースへのフィルタを効かせるため!innerで内部結合にする
-      // (既定の左結合だと科目が一致しない行が subject: null として残ってしまう)
-      const query =
-        kind === "general"
-          ? supabase
-              .from("memo")
-              .select("note_date, period, content, subject!inner(name)")
-              .eq("subject.name", GENERAL_SUBJECT_NAME)
-          : supabase.from("memo").select("note_date, period, content, subject(name)");
+      // 学習と総合はどちらも科目名で絞り込む(総合は「総合」のみ、学習は「総合」以外)。
+      // 埋め込みリソースへのフィルタを効かせるため!innerで内部結合にする
+      // (既定の左結合だと条件に合わない行が subject: null として残ってしまう)。
+      // memo.subject_idはnot nullなので、内部結合にしても取り漏らしは起きない
+      const query = supabase
+        .from("memo")
+        .select("note_date, period, content, subject!inner(name)");
+      if (kind === "general") {
+        query.eq("subject.name", GENERAL_SUBJECT_NAME);
+      } else {
+        query.neq("subject.name", GENERAL_SUBJECT_NAME);
+      }
 
       const { data, error } = await query
         .eq("student_id", studentId)

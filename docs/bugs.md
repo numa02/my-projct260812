@@ -106,3 +106,16 @@
   - **所見管理のN+1(生徒1人につき1クエリ)は、生徒35名でも35本の合計が260〜319msにとどまる。** 並列に発行されるため。一括取得に変えても縮むのは最大200ms程度で、proxy改善の439msより小さい。**当面は一括取得に手を入れる必要はない**
   - 両画面とも`クラス一覧 → 生徒一覧 → メモ/所見`の3段の直列取得になっている(生徒名簿は2段)。各段は約100msのため、こちらも優先度は低い
 - **補足(設計仕様との関係)**: `docs/design/screens.md`の所見管理は「生徒一覧取得中は行ごとにスケルトン表示」と定義しているが、これはページのマウント後にブラウザがSupabaseから生徒一覧を取得する段階の表示を指す(`ClassCommentsContent.tsx`に実装済み)。今回追加した`loading.tsx`はその前段(ページのRSCペイロード待ち)の表示であり、別の待機状態。既存の行スケルトンはそのまま維持している。
+
+---
+
+## BUG-009: 所見の「最終更新」が上書き保存しても初回保存時の日時のまま止まる
+
+- **発見経緯**: 自主レビュー(総合の所見の実装中、`student_general_comment`に既存2テーブルと同じ`updated_at`の自動更新トリガーを設定しようとしたところ、そのトリガーがどこにも存在しないことに気づいた。ユーザーからの報告はなし。報告後、ユーザーから「最終更新日が出るようになっていますが、そちらが更新されていないという認識であっていますか？」と確認を受けた)
+- **症状**: 所見管理画面の各行に表示される「最終更新: yyyy/MM/dd HH:mm」が、所見を何度上書き保存しても初回保存時の日時のまま変わらない。学習の所見・生活の所見の両方で発生していた。データエクスポートのJSONに含まれる`updatedAt`も同じく初回保存時の値だった。
+- **原因**: `updated_at`を持つ7テーブル(`memo`・`life_memo`・`student_comment`・`student_life_comment`・`student_general_comment`・`prompt_template`・`ai_provider_setting`)はいずれも`updated_at timestamptz not null default now()`を持つが、**`default`はINSERT時にしか効かない。** UPDATE時に値を進めるトリガーがどのテーブルにも存在せず(`pg_trigger`の非内部トリガーが0件)、アプリ側(`hooks/useStudentComments.ts`等)も`updated_at`を送っていなかったため、`upsert`(`insert ... on conflict do update`)や`update`のあともINSERT時点の値が残り続けていた。
+  DDLに`updated_at`列があることで自動更新されているように見えてしまい、画面に表示するまで気づかれなかった。
+- **修正**: `set_updated_at()`トリガー関数(`new.updated_at := now()`を返すだけ)を追加し、7テーブルすべてに`before update ... for each row`のトリガーを設定した(`supabase/migrations/20260922190000_updated_at_triggers.sql`)。クライアントから`updated_at`を送る方式は端末の時計に依存するため採らず、サーバー側(DB)で必ず更新される形にした。
+  回帰テストとして`tests/db/schema.test.ts`に「所見3種をupsertで上書きすると`updated_at`が進む」「メモを更新すると`updated_at`が進む」を追加した(修正前は`expected <同じ値> to be greater than <同じ値>`で落ちることを確認済み)。
+  コミット: 総合の所見(GS-001〜GS-013)と同じPRに含める
+- **補足**: **既存データの`updated_at`は遡って直せない。** 本修正の適用以前に保存された行は「最後に保存した日時」ではなく「最初に保存した日時」が入ったままになる。以後の更新で正しい値に置き換わる。

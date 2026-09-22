@@ -4,10 +4,10 @@
 
 | 対象 | 影響 |
 |---|---|
-| `student_general_comment` | 新設(`unique (student_id)`、RLS・grant・updated_atトリガー付き) |
+| `student_general_comment` | 新設(`unique (student_id)`、RLS・grant付き) |
 | `prompt_template.general_content` | 列追加(nullable) |
 | `export_teacher_data` | `create or replace`で総合の所見・総合用ひな形を追加。既存キーは変更なし |
-| 既存テーブル(`student_comment`・`student_life_comment`・`memo`・`life_memo`ほか) | **変更なし。** 列・制約・RLSに一切触れない |
+| 既存テーブル(`student_comment`・`student_life_comment`・`memo`・`life_memo`ほか) | 列・制約・RLSは変更なし。`updated_at`の自動更新トリガー(`set_updated_at`)のみ7テーブルに追加する(`docs/bugs.md` BUG-009。別マイグレーション`20260922190000_updated_at_triggers.sql`) |
 
 破壊的変更を含まないため2フェーズ方式は不要。ダウンタイム・データ移行も発生しない。
 
@@ -15,7 +15,7 @@
 
 | 画面 | 影響 |
 |---|---|
-| 所見管理 | 所見の種類タブが2つ→3つになる(「総合の所見」追加)。総合タブでは材料が科目「総合」の授業メモのみに絞られる。対象期間は3タブ共通のまま |
+| 所見管理 | 所見の種類タブが2つ→3つになる(「総合の所見」追加)。総合タブでは材料が科目「総合」の授業メモのみに、**学習タブでは科目「総合」以外の授業メモのみ**に絞られる。対象期間は3タブ共通のまま。各行の「最終更新」が上書き保存で正しく進むようになる(BUG-009) |
 | プロンプトひな形編集 | 編集フォームが2つ→3つになる(「総合の所見用のひな形」追加) |
 | データエクスポート | 出力JSONに`generalComments`・`promptTemplate.generalContent`が増える(既存キーは不変) |
 | 授業記録・生活記録・生徒別メモ一覧・クラス管理・生徒名簿・科目管理・時間割系 | 変更なし |
@@ -31,7 +31,7 @@
 | `shared/prompt-builder.ts` | `DEFAULT_GENERAL_PROMPT_TEMPLATE`を追加 |
 | `hooks/useStudentComments.ts` | `COMMENT_TABLE`に`general`を追加 |
 | `hooks/usePromptTemplate.ts` | `Templates`・`DEFAULTS`・保存列の判定に`general`を追加 |
-| `hooks/useSharedMemosForPeriod.ts` | `general`の分岐を追加(科目名「総合」で絞る) |
+| `hooks/useSharedMemosForPeriod.ts` | 総合は科目名「総合」で絞り、学習は「総合」を除外する。いずれも`subject!inner`で内部結合にする |
 | `app/(main)/comments/class/[[...id]]/ClassCommentsContent.tsx` | タブの選択肢を追加 |
 | `components/comment/StudentCommentRow.tsx` | 所見欄のラベルに`general`を追加 |
 | `components/comment/CommentAiAssist.tsx` | メモのラベルに`general`を追加 |

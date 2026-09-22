@@ -72,3 +72,19 @@ ID接頭辞: `GS-`。**加算的な変更のみ(テーブル追加・列追加)�
   - DoD: `npm run lint`・`npm run test`・`npm run test:db`・`npx tsc --noEmit`・`npm run build`・`npm run test:e2e`がすべて通る。`git grep -n "未実装\|未反映\|予定" -- docs`に本機能に関する古い注記が残っていない
   - 依存: GS-001〜GS-012
   - ロールバック: 該当なし(検証タスク)
+
+---
+
+## 追加: レビュー指摘への対応(2026-09-22)
+
+PR作成後のユーザー確認で決まった2件。いずれも同じPRに含める。
+
+- [x] **GS-014** 学習の所見の材料から科目「総合」を除外する
+  - DoD: `useSharedMemosForPeriod`の学習側のクエリが`subject!inner(name)`+`neq("subject.name", "総合")`になり、学習の所見の材料に科目「総合」の授業メモが含まれない。`e2e/general-shoken.spec.ts`の学習タブのアサーションが「総合のメモが含まれない」ことの確認に変わり、「科目『総合』のメモしかない場合は学習タブで材料0件になる」ケースが追加される。`npm run test:e2e`が通る
+  - 依存: GS-006
+  - ロールバック: `neq`の条件を外し`subject(name)`に戻す。DB変更を伴わない
+
+- [x] **GS-015** `updated_at`の自動更新トリガーを追加する(`docs/bugs.md` BUG-009)
+  - DoD: `supabase/migrations/<timestamp>_updated_at_triggers.sql`で`set_updated_at()`関数と、`updated_at`を持つ7テーブル(`memo`・`life_memo`・`student_comment`・`student_life_comment`・`student_general_comment`・`prompt_template`・`ai_provider_setting`)への`before update`トリガーが作成される。`tests/db/schema.test.ts`に回帰テスト(所見3種のupsert上書き・メモの更新で`updated_at`が進む)が追加され、`npm run test:db`が通る。`docs/bugs.md`にBUG-009として記録される
+  - 依存: GS-001(`student_general_comment`が存在してからトリガーを張るため、マイグレーションの順序が後になる)
+  - ロールバック: 7つのトリガーと`set_updated_at()`関数を削除する新規マイグレーションを追加する。既存データには影響しない(トリガーを外すと再び`updated_at`が更新されなくなるだけ)

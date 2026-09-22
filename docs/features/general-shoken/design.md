@@ -24,7 +24,7 @@ create table student_general_comment (
 
 - RLS: `student`→`class`経由のサブクエリで`c.teacher_id = auth.uid()`(既存2テーブルと同じ書き方)
 - `grant select, insert, update, delete on student_general_comment to authenticated, service_role;`
-- `updated_at`は`default now()`のみとし、**自動更新トリガーは設けない**(既存の`student_comment`・`student_life_comment`にもトリガーが存在せず、3種類の挙動を揃えるため)。この結果として上書き保存時に`updated_at`が更新されない問題は既存2テーブルにもあり、本機能の範囲外として`docs/bugs.md`に記録する
+- `updated_at`は`default now()`。実装中に、既存の`student_comment`・`student_life_comment`を含む全テーブルで更新時に値が進まない不具合が見つかったため、同じPRで`set_updated_at`トリガーを7テーブルに追加した(`docs/bugs.md` BUG-009)。総合の所見も他の2種類と同じくトリガーで`updated_at`が更新される
 
 **似た構造のテーブルが3つ並ぶ点は承知のうえで採用した**(ユーザー確認済み)。将来1テーブルに統合する場合は、既存データの移行と制約の入れ替えを伴う破壊的変更になるため、別途2フェーズ方式で扱う。
 
@@ -46,15 +46,22 @@ nullなら本ツール既定の総合用初期値を使う(`content`・`life_con
 
 ### 2.1 材料の絞り込み(PostgREST)
 
-`useSharedMemosForPeriod`で、科目名が「総合」の授業メモのみを取得する。PostgRESTの埋め込みリソースへのフィルタを使い、内部結合を明示する。
+`useSharedMemosForPeriod`で、総合の所見は科目名が「総合」の授業メモのみ、学習の所見は科目名が「総合」以外の授業メモのみを取得する。**学習と総合で同じメモが二重に材料にならないようにする**(教員の確認事項)。PostgRESTの埋め込みリソースへのフィルタを使い、内部結合を明示する。
 
 ```ts
-.from("memo")
-.select("note_date, period, content, subject!inner(name)")
-.eq("subject.name", GENERAL_SUBJECT_NAME)   // "総合"
+const query = supabase
+  .from("memo")
+  .select("note_date, period, content, subject!inner(name)");
+if (kind === "general") {
+  query.eq("subject.name", GENERAL_SUBJECT_NAME);   // "総合"
+} else {
+  query.neq("subject.name", GENERAL_SUBJECT_NAME);
+}
 ```
 
-`subject!inner(...)`にするのは、フィルタに一致しない行を除外するため(既定の左結合だと`subject`がnullの行が残る)。学習の所見側のクエリ(`subject(name)`)は変更しない。
+`subject!inner(...)`にするのは、フィルタに一致しない行を除外するため(既定の左結合だと条件に合わない行が`subject: null`として残る)。`memo.subject_id`は`not null`なので、内部結合にしても学習側で授業メモを取り漏らすことはない。
+
+この変更により、**科目「総合」の授業メモしかない生徒では学習の所見の材料が0件になる**(「送信可能なメモが存在しません」の案内が出る)。同じメモは総合の所見タブでは材料になる。
 
 ## 3. 型・スキーマ
 
@@ -141,7 +148,7 @@ export const commentKindSchema = z.enum(["learning", "life", "general"]);
 
 ## 7. 既知の制約
 
-**科目名「総合」の完全一致で絞り込むため、教員が科目名を変更すると材料が0件になる。** 例: 「総合」→「総合的な学習の時間」にリネームすると、総合の所見のAI生成が使えなくなる(手入力は可能)。
+**科目名「総合」の完全一致で絞り込むため、教員が科目名を変更すると材料が0件になる。** 例: 「総合」→「総合的な学習の時間」にリネームすると、総合の所見のAI生成が使えなくなる(手入力は可能)。**このとき、リネーム後の科目は学習の所見側の除外条件(`neq "総合"`)にも一致しなくなるため、学習の所見の材料に戻る。**
 
 ユーザー確認のうえ、実装を単純に保つためこの方式を採用した。将来必要になれば、総合タブで対象科目を選べるようにする改修で解消できる(`requirements.md`のスコープ外に記載)。科目名は標準科目セットで「総合」として投入されるため、既定の運用では問題にならない。
 
