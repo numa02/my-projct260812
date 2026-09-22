@@ -1,0 +1,1052 @@
+<title>記録ノートの使い方</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@500;700&display=swap">
+<style>
+  :root {
+    --ground: #f7f8f9;
+    --surface: #ffffff;
+    --surface-sunk: #f1f4f6;
+    --border: #e2e6ea;
+    --border-strong: #cfd6dc;
+    --ink: #1e2429;
+    --body: #39424b;
+    --muted: #6b747d;
+    --accent: #2e5e7e;
+    --accent-soft: #eaf1f6;
+    --mark: #c0392b;
+    --warn: #a6641b;
+    --warn-soft: #fdf5ec;
+    --ok: #26804a;
+    --shadow: 0 1px 2px rgba(30, 36, 41, .06), 0 8px 24px rgba(30, 36, 41, .06);
+
+    --display: "Zen Kaku Gothic New", "Hiragino Sans", "Noto Sans JP", sans-serif;
+    --text: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Noto Sans JP", "Yu Gothic UI", sans-serif;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground: #14181b;
+      --surface: #1c2227;
+      --surface-sunk: #232b31;
+      --border: #2d353b;
+      --border-strong: #3d474e;
+      --ink: #edf1f3;
+      --body: #c6ced4;
+      --muted: #8d979f;
+      --accent: #8ab9d6;
+      --accent-soft: #1d2b34;
+      --mark: #e8837a;
+      --warn: #d4a067;
+      --warn-soft: #2a2319;
+      --ok: #6cbb8c;
+      --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 8px 24px rgba(0, 0, 0, .35);
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --ground: #14181b;
+    --surface: #1c2227;
+    --surface-sunk: #232b31;
+    --border: #2d353b;
+    --border-strong: #3d474e;
+    --ink: #edf1f3;
+    --body: #c6ced4;
+    --muted: #8d979f;
+    --accent: #8ab9d6;
+    --accent-soft: #1d2b34;
+    --mark: #e8837a;
+    --warn: #d4a067;
+    --warn-soft: #2a2319;
+    --ok: #6cbb8c;
+    --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 8px 24px rgba(0, 0, 0, .35);
+  }
+
+  body {
+    margin: 0;
+    background: var(--ground);
+    color: var(--body);
+    font-family: var(--text);
+    font-size: 16px;
+    line-height: 1.8;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  h1, h2, h3, h4 { font-family: var(--display); color: var(--ink); text-wrap: balance; margin: 0; }
+
+  a { color: var(--accent); text-underline-offset: 3px; }
+
+  /* ---------- 全体のわく ---------- */
+  .page {
+    max-width: 1240px;
+    margin: 0 auto;
+    padding-inline: 16px;
+    padding-block: 0 64px;
+  }
+
+  .masthead {
+    padding-block: 56px 32px;
+    border-bottom: 1px solid var(--border);
+  }
+  .eyebrow {
+    font-size: 13px;
+    letter-spacing: .14em;
+    color: var(--muted);
+    margin: 0 0 12px;
+  }
+  .masthead h1 {
+    font-size: clamp(30px, 5vw, 42px);
+    font-weight: 700;
+    line-height: 1.35;
+    letter-spacing: .01em;
+  }
+  .masthead .lead {
+    margin: 16px 0 0;
+    max-width: 34em;
+    font-size: 17px;
+    color: var(--body);
+  }
+  .masthead .meta {
+    margin: 24px 0 0;
+    font-size: 13px;
+    color: var(--muted);
+  }
+
+  .layout { display: block; }
+
+  /* ---------- 目次 ---------- */
+  .toc {
+    margin: 32px 0 0;
+    padding: 20px 20px 22px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+  }
+  .toc h2 { font-size: 14px; letter-spacing: .08em; color: var(--muted); font-weight: 500; }
+  .toc ol { margin: 12px 0 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 4px; }
+  .toc ol ol { margin-left: 14px; padding-left: 10px; border-left: 1px solid var(--border); }
+  .toc a { display: block; padding: 3px 0; color: var(--body); text-decoration: none; font-size: 14.5px; }
+  .toc a:hover { color: var(--accent); }
+  .toc .num { color: var(--muted); font-variant-numeric: tabular-nums; margin-right: 8px; }
+  .toc a[aria-current="true"] { color: var(--accent); font-weight: 600; }
+
+  @media (min-width: 1040px) {
+    .layout { display: grid; grid-template-columns: 232px minmax(0, 1fr); gap: 48px; align-items: start; }
+    .toc {
+      position: sticky;
+      top: calc(env(safe-area-inset-top, 0px) + 24px);
+      margin-top: 40px;
+      max-height: calc(100vh - 80px);
+      overflow-y: auto;
+    }
+  }
+
+  main { min-width: 0; }
+
+  /* ---------- 章 ---------- */
+  .chapter { padding-block: 48px 8px; border-top: 1px solid var(--border); }
+  .chapter:first-of-type { border-top: 0; }
+  .chapter > h2 {
+    font-size: 26px;
+    font-weight: 700;
+    line-height: 1.4;
+    display: flex;
+    align-items: baseline;
+    gap: 14px;
+  }
+  .chapter > h2 .cnum {
+    font-size: 15px;
+    font-weight: 500;
+    color: var(--accent);
+    letter-spacing: .1em;
+    font-variant-numeric: tabular-nums;
+  }
+  .chapter > .intro { margin: 16px 0 0; max-width: 40em; }
+
+  p { margin: 0 0 16px; max-width: 40em; }
+  p:last-child { margin-bottom: 0; }
+
+  /* ---------- 手順 ---------- */
+  .step {
+    margin-top: 40px;
+    padding: 24px 24px 26px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    box-shadow: var(--shadow);
+  }
+  .step > h3 {
+    font-size: 19px;
+    font-weight: 700;
+    line-height: 1.5;
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+  }
+  .step > h3 .snum {
+    flex: none;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--muted);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: .06em;
+  }
+  .step > p, .step > ol, .step > ul, .step > .note, .step > .figure, .step > .keyed { margin-top: 16px; }
+  .step > p:first-of-type { margin-top: 12px; }
+
+  /* 画像の赤枠番号と本文を対応させる箇条書き */
+  .keyed { list-style: none; margin: 16px 0 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+  .keyed > li { display: grid; grid-template-columns: 26px minmax(0, 1fr); gap: 12px; align-items: start; }
+  .keyed .k {
+    width: 24px; height: 24px; border-radius: 50%;
+    display: grid; place-items: center;
+    background: var(--mark); color: #fff;
+    font-size: 13px; font-weight: 700; line-height: 1;
+    font-family: var(--display);
+    font-variant-numeric: tabular-nums;
+    margin-top: 3px;
+  }
+  .keyed .kt { min-width: 0; }
+  .keyed strong { color: var(--ink); font-weight: 600; }
+
+  ul.plain { margin: 16px 0 0; padding-left: 1.25em; }
+  ul.plain li { margin-bottom: 8px; max-width: 38em; }
+  ul.plain li:last-child { margin-bottom: 0; }
+
+  code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: .92em;
+    background: var(--surface-sunk);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 1px 5px;
+  }
+
+  /* ---------- 画面キャプチャ ---------- */
+  .figure { margin: 20px 0 0; }
+  .shot-frame {
+    position: relative;
+    display: block;
+    width: 100%;
+    padding: 0;
+    border: 1px solid var(--border-strong);
+    border-radius: 8px;
+    overflow: hidden;
+    background: var(--surface-sunk);
+    cursor: zoom-in;
+    line-height: 0;
+  }
+  .shot-frame img { display: block; width: 100%; height: auto; }
+  .mark {
+    position: absolute;
+    border: 2.5px solid var(--mark);
+    border-radius: 5px;
+    box-shadow: 0 0 0 2px rgba(255, 255, 255, .55);
+    pointer-events: none;
+  }
+  .mark span {
+    position: absolute;
+    top: -2px; left: -2px;
+    min-width: 22px; height: 22px;
+    padding: 0 5px;
+    box-sizing: border-box;
+    background: var(--mark);
+    color: #fff;
+    font-family: var(--display);
+    font-size: 13px;
+    font-weight: 700;
+    line-height: 22px;
+    text-align: center;
+    border-radius: 5px 0 5px 0;
+  }
+  figcaption { margin-top: 10px; font-size: 13.5px; color: var(--muted); line-height: 1.7; }
+
+  /* ---------- 補足ブロック ---------- */
+  .note {
+    padding: 14px 16px;
+    border-radius: 8px;
+    background: var(--accent-soft);
+    border: 1px solid transparent;
+    font-size: 15px;
+  }
+  .note p { max-width: none; }
+  .note .label {
+    display: block;
+    font-family: var(--display);
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: .04em;
+    color: var(--accent);
+    margin-bottom: 4px;
+  }
+  .note.caution { background: var(--warn-soft); }
+  .note.caution .label { color: var(--warn); }
+
+  /* ---------- 流れ図 ---------- */
+  .flow { display: grid; gap: 12px; margin: 28px 0 0; grid-template-columns: 1fr; }
+  @media (min-width: 720px) { .flow { grid-template-columns: repeat(3, 1fr); } }
+  .flow .phase {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 18px 18px 20px;
+  }
+  .flow .when { font-size: 12.5px; letter-spacing: .08em; color: var(--accent); margin: 0 0 6px; }
+  .flow h3 { font-size: 17px; font-weight: 700; }
+  .flow p { margin: 8px 0 0; font-size: 14.5px; color: var(--muted); line-height: 1.75; }
+
+  /* ---------- Q&A ---------- */
+  .qa { margin-top: 28px; border-top: 1px solid var(--border); }
+  .qa details {
+    border-bottom: 1px solid var(--border);
+    padding: 4px 0;
+  }
+  .qa summary {
+    cursor: pointer;
+    list-style: none;
+    padding: 14px 28px 14px 0;
+    position: relative;
+    font-family: var(--display);
+    font-weight: 500;
+    color: var(--ink);
+    font-size: 16px;
+  }
+  .qa summary::-webkit-details-marker { display: none; }
+  .qa summary::after {
+    content: "＋";
+    position: absolute; right: 4px; top: 13px;
+    color: var(--muted);
+    font-size: 15px;
+  }
+  .qa details[open] summary::after { content: "−"; }
+  .qa .answer { padding: 0 4px 18px; font-size: 15px; }
+
+  /* ---------- 索引 ---------- */
+  .index-wrap { margin-top: 24px; overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; min-width: 560px; font-size: 14.5px; }
+  th, td { text-align: left; padding: 12px 14px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  th { font-family: var(--display); font-size: 13px; letter-spacing: .06em; color: var(--muted); font-weight: 500; }
+  td strong { color: var(--ink); font-weight: 600; }
+  td:last-child { white-space: nowrap; color: var(--muted); }
+
+  footer.colophon {
+    margin-top: 56px;
+    padding-top: 24px;
+    border-top: 1px solid var(--border);
+    font-size: 13px;
+    color: var(--muted);
+  }
+
+  /* ---------- 拡大表示 ---------- */
+  #zoom {
+    position: fixed; inset: 0; z-index: 50;
+    background: rgba(16, 20, 23, .82);
+    display: grid; place-items: center;
+    padding: 24px;
+    border: 0;
+  }
+  #zoom[hidden] { display: none !important; }
+  #zoom img { max-width: 100%; max-height: 100%; border-radius: 6px; box-shadow: 0 20px 60px rgba(0,0,0,.4); }
+  #zoom .close {
+    position: absolute; top: 16px; right: 16px;
+    background: rgba(255,255,255,.92); color: #1e2429;
+    border: 0; border-radius: 6px;
+    font-size: 14px; padding: 8px 14px; cursor: pointer;
+    font-family: var(--text);
+  }
+
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+
+  @media print {
+    .toc, #zoom { display: none !important; }
+    .layout { display: block; }
+    .step, .flow .phase { box-shadow: none; break-inside: avoid; }
+    body { background: #fff; }
+  }
+</style>
+
+<div class="page">
+  <header class="masthead">
+    <p class="eyebrow">教員向け操作ガイド</p>
+    <h1>記録ノートの使い方</h1>
+    <p class="lead">
+      授業ごとに残した短いメモが、学期末の所見の下書きになります。
+      最初の準備から毎日の記録、学期末の所見づくりまでを、実際の画面で順番に説明します。
+    </p>
+    <p class="meta">対応機器: パソコン・タブレット(スマートフォンには対応していません)/ 画面例はすべて練習用のダミーデータです</p>
+  </header>
+
+  <div class="layout">
+    <nav class="toc" aria-label="目次">
+      <h2>もくじ</h2>
+      <ol>
+        <li><a href="#intro"><span class="num">1</span>はじめに</a></li>
+        <li>
+          <a href="#setup"><span class="num">2</span>最初の準備</a>
+          <ol>
+            <li><a href="#setup-account">アカウントをつくる</a></li>
+            <li><a href="#setup-subjects">科目を確かめる</a></li>
+            <li><a href="#setup-class">クラスをつくる</a></li>
+            <li><a href="#setup-students">生徒を登録する</a></li>
+            <li><a href="#setup-timetable">時間割をつくる</a></li>
+          </ol>
+        </li>
+        <li>
+          <a href="#daily"><span class="num">3</span>毎日の記録</a>
+          <ol>
+            <li><a href="#daily-week">その週の時間割を開く</a></li>
+            <li><a href="#daily-open">授業のマスを開く</a></li>
+            <li><a href="#daily-memo">メモを書いて保存する</a></li>
+            <li><a href="#daily-life">生活の記録をつける</a></li>
+            <li><a href="#daily-review">生徒ごとに見返す</a></li>
+          </ol>
+        </li>
+        <li>
+          <a href="#comments"><span class="num">4</span>学期末の所見づくり</a>
+          <ol>
+            <li><a href="#comments-key">AIのキーを登録する</a></li>
+            <li><a href="#comments-make">所見の下書きをつくる</a></li>
+            <li><a href="#comments-tune">ひな形とデータの保存</a></li>
+          </ol>
+        </li>
+        <li><a href="#faq"><span class="num">5</span>困ったときは</a></li>
+        <li><a href="#screens"><span class="num">6</span>画面別さくいん</a></li>
+      </ol>
+    </nav>
+
+    <main>
+      <!-- ============================ 1 ============================ -->
+      <section class="chapter" id="intro">
+        <h2><span class="cnum">1</span>はじめに</h2>
+        <p class="intro">
+          記録ノートは、週の時間割から授業を開いて、生徒一人ひとりに短いメモを残していくツールです。
+          学期末には、そのメモをもとにAIが所見の下書きをつくります。
+          アカウントは先生ごとに1つで、記録したメモが他の先生に見えることはありません。
+        </p>
+
+        <div class="flow">
+          <div class="phase">
+            <p class="when">学期のはじめに一度</p>
+            <h3>最初の準備</h3>
+            <p>科目・クラス・生徒・時間割を登録します。ここまで済ませると、あとは毎日の記録だけになります。</p>
+          </div>
+          <div class="phase">
+            <p class="when">授業の合間・放課後</p>
+            <h3>毎日の記録</h3>
+            <p>時間割から授業を開き、気づいた生徒だけメモを残します。全員分を埋める必要はありません。</p>
+          </div>
+          <div class="phase">
+            <p class="when">学期末</p>
+            <h3>所見づくり</h3>
+            <p>期間を指定すると、その間のメモを材料にAIが所見の下書きをつくります。仕上げは先生が行います。</p>
+          </div>
+        </div>
+
+        <div class="step">
+          <h3>画面の移動はすべて左側のメニューから</h3>
+          <p>
+            ログインすると、画面の左にメニューが並びます。どの画面にいても、ここから他の画面へ移動できます。
+            いちばん下の「ログアウト」で終了します。
+          </p>
+          <figure class="figure">
+            <span class="shot-frame" data-shot="03-nav" role="button" tabindex="0" aria-label="左メニューの画面を拡大する">
+              <img src="images/03-nav.png" alt="左側にメニューが並んだ記録ノートの画面" loading="lazy">
+            </span>
+            <figcaption>ログイン直後の画面。左のメニューは常に同じ位置に表示されます。</figcaption>
+          </figure>
+        </div>
+      </section>
+
+      <!-- ============================ 2 ============================ -->
+      <section class="chapter" id="setup">
+        <h2><span class="cnum">2</span>最初の準備</h2>
+        <p class="intro">
+          登録する順番は <strong>科目 → クラス → 生徒 → 時間割</strong> です。
+          時間割は、科目とクラスが登録されていないとマスを選べないため、この順番が確実です。
+          30分ほどで終わります。
+        </p>
+
+        <div class="step" id="setup-account">
+          <h3><span class="snum">2-1</span>アカウントをつくる</h3>
+          <p>
+            はじめて使うときは、ログイン画面の「新規登録」からアカウントをつくります。
+            メールアドレスとパスワード(6文字以上)だけで登録でき、確認メールを待つ必要はありません。
+          </p>
+          <ol class="keyed">
+            <li><span class="k">1</span><span class="kt">ふだん使っているメールアドレスを入力します。</span></li>
+            <li><span class="k">2</span><span class="kt">パスワードを決めて入力します。<strong>6文字以上</strong>にしてください。</span></li>
+            <li><span class="k">3</span><span class="kt">学校区分で<strong>「小学校」</strong>を選びます。国語・算数など標準的な科目が自動で登録され、次の準備が楽になります。</span></li>
+            <li><span class="k">4</span><span class="kt">「サインアップ」を押すと登録が完了し、そのままログインした状態になります。</span></li>
+          </ol>
+          <figure class="figure">
+            <span class="shot-frame" data-shot="02-signup" role="button" tabindex="0" aria-label="サインアップ画面を拡大する">
+              <img src="images/02-signup.png" alt="サインアップ画面。メールアドレス、パスワード、学校区分の入力欄がある" loading="lazy">
+            </span>
+            <figcaption>サインアップ画面。学校区分は後から変えられませんが、科目は科目管理画面でいつでも追加・修正できます。</figcaption>
+          </figure>
+          <p>2回目からは、ログイン画面から入ります。</p>
+          <ol class="keyed">
+            <li><span class="k">1</span><span class="kt">登録したメールアドレスを入力します。</span></li>
+            <li><span class="k">2</span><span class="kt">パスワードを入力します。</span></li>
+            <li><span class="k">3</span><span class="kt">「ログイン」を押します。</span></li>
+          </ol>
+          <figure class="figure">
+            <span class="shot-frame" data-shot="01-login" role="button" tabindex="0" aria-label="ログイン画面を拡大する">
+              <img src="images/01-login.png" alt="ログイン画面。メールアドレスとパスワードの入力欄がある" loading="lazy">
+            </span>
+            <figcaption>ログイン画面。パスワードを忘れたときは「パスワードを忘れた場合」からメールで再設定できます。</figcaption>
+          </figure>
+        </div>
+
+        <div class="step" id="setup-subjects">
+          <h3><span class="snum">2-2</span>科目を確かめる</h3>
+          <p>
+            左メニューの<strong>「科目管理」</strong>を開きます。サインアップで学校区分を選んでいれば、
+            国語・算数・理科・社会・英語・図画工作・体育・音楽・生活・総合・学活がすでに登録されています。
+          </p>
+          <p>学校区分を選ばずに登録した場合や、あとから足したい場合は次のようにします。</p>
+          <ol class="keyed">
+            <li><span class="k">1</span><span class="kt"><strong>「標準科目セットを追加」</strong>を押すと、学校区分を選ぶ欄が開きます。</span></li>
+            <li><span class="k">2</span><span class="kt">学校区分(小学校・中学校)を選びます。</span></li>
+            <li><span class="k">3</span><span class="kt">「追加する」を押すと、まだ登録されていない科目だけが追加されます。すでにある科目が重複することはありません。</span></li>
+          </ol>
+          <figure class="figure">
+            <span class="shot-frame" data-shot="04-subjects-seed" role="button" tabindex="0" aria-label="標準科目セットの追加画面を拡大する">
+              <img src="images/04-subjects-seed.png" alt="科目管理画面で標準科目セットの追加欄を開いたところ" loading="lazy">
+            </span>
+            <figcaption>科目管理画面。「標準科目セットを追加」は何度押しても、足りない科目だけが足されます。</figcaption>
+          </figure>
+          <p>「書写」「クラブ」など学校独自の科目は、画面下の入力欄から1つずつ足せます。</p>
+          <ol class="keyed">
+            <li><span class="k">1</span><span class="kt">科目名を入力します。</span></li>
+            <li><span class="k">2</span><span class="kt">「登録」を押すと一覧に加わります。登録済みの科目名は、一覧の鉛筆ボタンから直せます。</span></li>
+          </ol>
+          <figure class="figure">
+            <span class="shot-frame" data-shot="05-subjects-list" role="button" tabindex="0" aria-label="科目一覧を拡大する">
+              <img src="images/05-subjects-list.png" alt="登録済みの科目が一覧表示された科目管理画面" loading="lazy">
+            </span>
+            <figcaption>登録された科目の一覧。ここに並んだ科目が、時間割のマスで選べるようになります。</figcaption>
+          </figure>
+        </div>
+
+        <div class="step" id="setup-class">
+          <h3><span class="snum">2-3</span>クラスをつくる</h3>
+          <p>左メニューの<strong>「クラス管理」</strong>を開き、「クラスを作成」を押します。</p>
+          <figure class="figure">
+            <span class="shot-frame" data-shot="06-classes-empty" role="button" tabindex="0" aria-label="クラス管理画面を拡大する">
+              <img src="images/06-classes-empty.png" alt="クラスがまだ登録されていないクラス管理画面" loading="lazy">
+            </span>
+            <figcaption>まだクラスがないときの画面。赤い枠の「クラスを作成」から始めます。</figcaption>
+          </figure>
+          <ol class="keyed">
+            <li><span class="k">1</span><span class="kt">学年を半角数字で入力します(例: 3)。特別支援学級のときは「特別支援学級(特支)」にチェックを入れます。</span></li>
+            <li><span class="k">2</span><span class="kt">クラス表示名を入力します。画面に出るのはこの名前です(例: 3年2組、ひまわり組)。</span></li>
+            <li><span class="k">3</span><span class="kt">「保存」を押します。</span></li>
+          </ol>
+          <figure class="figure">
+            <span class="shot-frame" data-shot="07-classes-create" role="button" tabindex="0" aria-label="クラス作成画面を拡大する">
+              <img src="images/07-classes-create.png" alt="クラス作成の入力欄。学年とクラス表示名を入力する" loading="lazy">
+            </span>
+            <figcaption>教科担任の先生は、受け持つクラスをここで全部つくっておきます。</figcaption>
+          </figure>
+          <figure class="figure">
+            <span class="shot-frame" data-shot="08-classes-list" role="button" tabindex="0" aria-label="クラス一覧を拡大する">
+              <img src="images/08-classes-list.png" alt="作成したクラスが一覧表示されたクラス管理画面" loading="lazy">
+            </span>
+            <figcaption>作成したクラスの一覧。鉛筆ボタンで表示名や学年を直せます。</figcaption>
+          </figure>
+          <div class="note">
+            <span class="label">組番号について</span>
+            <p>一覧の「組番号」は、クラスをつくった順に自動で振られる番号です。次に出てくる仮名コードに使われます。先生が決める必要はありません。</p>
+          </div>
+        </div>
+
+        <div class="step" id="setup-students">
+          <h3><span class="snum">2-4</span>生徒を登録する</h3>
+          <p>
+            左メニューの<strong>「生徒名簿」</strong>を開きます。名簿は1人ずつ入力しなくても、
+            Excelや名簿ソフトからコピーした文字を貼り付けて、まとめて登録できます。
+          </p>
+          <ol class="keyed">
+            <li><span class="k">1</span><span class="kt">登録先のクラスを選びます。</span></li>
+            <li><span class="k">2</span><span class="kt">「テキスト貼り付け」を選びます(CSVファイルを読み込ませることもできます)。</span></li>
+            <li><span class="k">3</span><span class="kt">1行に1人ずつ、<code>出席番号,氏名</code> の形で貼り付けます。例: <code>1,青木 陽菜</code></span></li>
+            <li><span class="k">4</span><span class="kt">「取り込む」を押すと、まとめて登録されます。</span></li>
+          </ol>
+          <figure class="figure">
+            <span class="shot-frame" data-shot="09-students-paste" role="button" tabindex="0" aria-label="生徒の貼り付け登録画面を拡大する">
+              <img src="images/09-students-paste.png" alt="生徒名簿画面で出席番号と氏名を貼り付けたところ" loading="lazy">
+            </span>
+            <figcaption>出席番号の重複や空欄があると、取り込む前に行番号つきで知らせてくれます。直してからもう一度貼り付けてください。</figcaption>
+          </figure>
+          <figure class="figure">
+            <span class="shot-frame" data-shot="10-students-list" role="button" tabindex="0" aria-label="生徒一覧を拡大する">
+              <img src="images/10-students-list.png" alt="登録された生徒の一覧" loading="lazy">
+            </span>
+            <figcaption>登録後の名簿。氏名の横の <code>3-01-01</code> のような表示が仮名コードです。</figcaption>
+          </figure>
+          <div class="note">
+            <span class="label">仮名コードとは</span>
+            <p>学年・組番号・出席番号を組み合わせた記号です。所見をAIにつくってもらうとき、生徒の氏名の代わりにこの記号を送ります。</p>
+          </div>
+        </div>
+
+        <div class="step" id="setup-timetable">
+          <h3><span class="snum">2-5</span>時間割をつくる</h3>
+          <p>
+            左メニューの<strong>「時間割マスタ設定」</strong>を開きます。ここでつくるのは、毎週くりかえす基本の時間割です。
+            学級担任のように全部の授業が同じクラスなら、<strong>一括モード</strong>を使うと早く終わります。
+          </p>
+          <ol class="keyed">
+            <li><span class="k">1</span><span class="kt">「一括モード」を選びます。教科ごとに受け持つクラスが違う先生は「教科担任制モード」を選びます。</span></li>
+            <li><span class="k">2</span><span class="kt">「CSV/貼り付けで取り込む」を開き、月〜金の5列 × 1〜6限の6行ぶんの科目名を貼り付けます。学校の時間割表からそのままコピーできます。</span></li>
+            <li><span class="k">3</span><span class="kt">「取り込む」を押すと、下の表に反映されます。</span></li>
+          </ol>
+          <figure class="figure">
+            <span class="shot-frame" data-shot="11-master-paste" role="button" tabindex="0" aria-label="時間割の貼り付け画面を拡大する">
+              <img src="images/11-master-paste.png" alt="時間割マスタ設定画面で科目名を貼り付けたところ" loading="lazy">
+            </span>
+            <figcaption>科目名は、科目管理画面に登録済みの名前と同じでないと取り込めません。ちがう名前のときは、先に科目を登録してください。</figcaption>
+          </figure>
+          <p>貼り付けを使わず、マスを1つずつ選んでいくこともできます。</p>
+          <ol class="keyed">
+            <li><span class="k">1</span><span class="kt">「クラス(全マスに適用)」で、担任しているクラスを選びます。30マスすべてがそのクラスになります。</span></li>
+            <li><span class="k">2</span><span class="kt">各マスの科目を選び直せます。空き時間は「未設定」のままにしておきます。</span></li>
+            <li><span class="k">3</span><span class="kt"><strong>「保存」を押すまで確定しません。</strong>最後に必ず保存してください。</span></li>
+          </ol>
+          <figure class="figure">
+            <span class="shot-frame" data-shot="12-master-grid" role="button" tabindex="0" aria-label="時間割マスタの表を拡大する">
+              <img src="images/12-master-grid.png" alt="月曜から金曜、1限から6限までの時間割マスタの表" loading="lazy">
+            </span>
+            <figcaption>これで準備は完了です。次の章から、毎日の記録に入ります。</figcaption>
+          </figure>
+          <div class="note caution">
+            <span class="label">気をつけること</span>
+            <p>ここでつくった時間割は毎週くりかえし使われます。「今週だけ3限が体育に変わった」という変更は、次に説明する週次時間割の画面で行います。マスタを書きかえる必要はありません。</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================ 3 ============================ -->
+      <section class="chapter" id="daily">
+        <h2><span class="cnum">3</span>毎日の記録</h2>
+        <p class="intro">
+          ここからが毎日使う部分です。気づいたことがあった生徒だけ、ひとこと残せば十分です。
+          全員ぶんを埋めなくてもかまいません。
+        </p>
+
+        <div class="step" id="daily-week">
+          <h3><span class="snum">3-1</span>その週の時間割を開く</h3>
+          <p>左メニューの<strong>「週次時間割」</strong>を開きます。開いた時点で今週が表示されます。</p>
+          <ol class="keyed">
+            <li><span class="k">1</span><span class="kt">別の週を見たいときは、日付を選ぶか「前の週へ」「次の週へ」を押します。週は月曜はじまりです。</span></li>
+            <li><span class="k">2</span><span class="kt">記録したい授業のマスを押します。</span></li>
+          </ol>
+          <figure class="figure">
+            <span class="shot-frame" data-shot="13-weekly" role="button" tabindex="0" aria-label="週次時間割を拡大する">
+              <img src="images/13-weekly.png" alt="月曜から金曜までの週次時間割" loading="lazy">
+            </span>
+            <figcaption>その週だけ科目を変えたマスには「変更あり」の印がつきます。</figcaption>
+          </figure>
+        </div>
+
+        <div class="step" id="daily-open">
+          <h3><span class="snum">3-2</span>授業のマスを開く</h3>
+          <p>マスを押すと、小さな画面が開きます。</p>
+          <ol class="keyed">
+            <li><span class="k">1</span><span class="kt">その週だけ科目やクラスを変えたいときは、ここで選び直して保存します。基本の時間割(マスタ)はそのまま残ります。「マスタの内容に戻す」でいつでも元に戻せます。</span></li>
+            <li><span class="k">2</span><span class="kt">メモを書くときは<strong>「この授業を記録する」</strong>を押します。</span></li>
+          </ol>
+          <figure class="figure">
+            <span class="shot-frame" data-shot="14-weekly-modal" role="button" tabindex="0" aria-label="マスの編集画面を拡大する">
+              <img src="images/14-weekly-modal.png" alt="時間割のマスを押して開いた編集画面" loading="lazy">
+            </span>
+            <figcaption>科目とクラスの両方が決まっていないマスは、記録できません。</figcaption>
+          </figure>
+        </div>
+
+        <div class="step" id="daily-memo">
+          <h3><span class="snum">3-3</span>メモを書いて保存する</h3>
+          <p>授業記録の画面には、そのクラスの生徒が出席番号順に並びます。</p>
+          <ol class="keyed">
+            <li><span class="k">1</span><span class="kt">メモを書きたい生徒の名前を押すと、その生徒の行だけが開きます。</span></li>
+          </ol>
+          <figure class="figure">
+            <span class="shot-frame" data-shot="15-record-list" role="button" tabindex="0" aria-label="授業記録の生徒一覧を拡大する">
+              <img src="images/15-record-list.png" alt="授業記録画面。生徒の名前が並んでいる" loading="lazy">
+            </span>
+            <figcaption>画面の上に、その授業の日付・時限・科目・クラスが表示されます。ちがう授業を開いてしまったときは、ここで気づけます。</figcaption>
+          </figure>
+          <ol class="keyed">
+            <li><span class="k">1</span><span class="kt">気づいたことを書きます。長さは自由ですが、<strong>「何をしたか」が分かる書き方</strong>にしておくと、学期末の所見がぐっと具体的になります。</span></li>
+            <li><span class="k">2</span><span class="kt">共有区分の切り替えです。<strong>「共有する」</strong>のままなら、このメモは所見をつくるときの材料になります。<strong>「共有しない」</strong>に切り替えると、AIには送られず、先生の手元の記録としてだけ残ります。</span></li>
+            <li><span class="k">3</span><span class="kt">「保存」を押します。<strong>生徒1人ずつの保存</strong>です。他の生徒の入力には影響しません。</span></li>
+          </ol>
+          <figure class="figure">
+            <span class="shot-frame" data-shot="16-record-expanded" role="button" tabindex="0" aria-label="メモ入力欄を拡大する">
+              <img src="images/16-record-expanded.png" alt="生徒の行を開いてメモを入力したところ" loading="lazy">
+            </span>
+            <figcaption>「共有する」のときは、AIに送られることを知らせる案内が下に出ます。</figcaption>
+          </figure>
+          <p>保存できた生徒には<strong>「入力済み」</strong>の印がつきます。同じ授業をもう一度開いて、書き足すこともできます。</p>
+          <figure class="figure">
+            <span class="shot-frame" data-shot="17-record-saved" role="button" tabindex="0" aria-label="保存後の一覧を拡大する">
+              <img src="images/17-record-saved.png" alt="メモを保存した生徒に入力済みの印がついた一覧" loading="lazy">
+            </span>
+            <figcaption>赤い枠が「入力済み」の印です。記録が終わったら、右上の「戻る」で週次時間割に戻ります。</figcaption>
+          </figure>
+          <div class="note caution">
+            <span class="label">保存に失敗したときは</span>
+            <p>通信が切れているときなどは、行の中にエラーが出ます。<strong>入力した文章は消えません。</strong>電波の状態を確かめて、もう一度「保存」を押してください。勝手に送り直すことはしない作りになっています。</p>
+          </div>
+        </div>
+
+        <div class="step" id="daily-life">
+          <h3><span class="snum">3-4</span>生活の記録をつける</h3>
+          <p>
+            授業とは別に、休み時間や係活動など<strong>日ごとの様子</strong>を残せます。
+            週次時間割の下にある「生活記録」の行から、その曜日を押します。
+          </p>
+          <figure class="figure">
+            <span class="shot-frame" data-shot="18-weekly-life-row" role="button" tabindex="0" aria-label="生活記録の行を拡大する">
+              <img src="images/18-weekly-life-row.png" alt="週次時間割の下に並ぶ生活記録の行" loading="lazy">
+            </span>
+            <figcaption>赤い枠が「生活記録」の行です。6限の下にあり、曜日ごとに押せます。</figcaption>
+          </figure>
+          <ol class="keyed">
+            <li><span class="k">1</span><span class="kt">日付を確かめます。ここで別の日に変えることもできます。</span></li>
+            <li><span class="k">2</span><span class="kt">生徒の名前を押して、様子を書きます。1人につき1日1件です。</span></li>
+            <li><span class="k">3</span><span class="kt">「保存」を押します。授業のメモと同じく、1人ずつの保存です。</span></li>
+          </ol>
+          <figure class="figure">
+            <span class="shot-frame" data-shot="19-life-record" role="button" tabindex="0" aria-label="生活記録の画面を拡大する">
+              <img src="images/19-life-record.png" alt="生活記録画面で生徒の様子を入力したところ" loading="lazy">
+            </span>
+            <figcaption>ここに書いた内容は、学期末の「生活の所見」の材料になります。</figcaption>
+          </figure>
+        </div>
+
+        <div class="step" id="daily-review">
+          <h3><span class="snum">3-5</span>生徒ごとに見返す</h3>
+          <p>
+            左メニューの<strong>「生徒別メモ一覧」</strong>を開くと、1人の生徒に書きためたメモをまとめて読めます。
+            面談の前や、所見を書く前の下読みに使います。
+          </p>
+          <ol class="keyed">
+            <li><span class="k">1</span><span class="kt">クラスを選びます。</span></li>
+            <li><span class="k">2</span><span class="kt">生徒を選びます。</span></li>
+            <li><span class="k">3</span><span class="kt">並べ方を「日付順」と「教科別」で切り替えられます。</span></li>
+          </ol>
+          <figure class="figure">
+            <span class="shot-frame" data-shot="20-student-memos" role="button" tabindex="0" aria-label="生徒別メモ一覧を拡大する">
+              <img src="images/20-student-memos.png" alt="1人の生徒のメモを日付順に並べた画面" loading="lazy">
+            </span>
+            <figcaption>日付順。鉛筆ボタンで書き直し、ごみ箱ボタンで削除できます(削除は取り消せません)。</figcaption>
+          </figure>
+          <figure class="figure">
+            <span class="shot-frame" data-shot="21-student-memos-subject" role="button" tabindex="0" aria-label="教科別のメモ一覧を拡大する">
+              <img src="images/21-student-memos-subject.png" alt="1人の生徒のメモを教科別に並べた画面" loading="lazy">
+            </span>
+            <figcaption>赤い枠の切り替えで「教科別」にしたところ。「国語ではどうだったか」をまとめて見たいときに使います。</figcaption>
+          </figure>
+          <div class="note">
+            <span class="label">あとから共有を切り替えられます</span>
+            <p>この画面でも「共有する/しない」を変えられます。ただし、すでにAIへ送ったあとの内容までは取り消せません。</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================ 4 ============================ -->
+      <section class="chapter" id="comments">
+        <h2><span class="cnum">4</span>学期末の所見づくり</h2>
+        <p class="intro">
+          ためてきたメモを材料に、所見の下書きをAIにつくってもらいます。
+          最初に一度だけ、AIを使うための「APIキー」を登録します。
+        </p>
+
+        <div class="step" id="comments-key">
+          <h3><span class="snum">4-1</span>AIのキーを登録する(最初の1回だけ)</h3>
+          <p>
+            ここでは、Googleアカウントがあれば使える<strong>Gemini</strong>を例に説明します。
+            パソコンのブラウザで <code>aistudio.google.com</code> を開き、ふだん使っているGoogleアカウントでログインしてください。
+          </p>
+          <ul class="plain">
+            <li>画面の「Get API key」(APIキーを取得)を開きます。</li>
+            <li>利用規約への同意を求められたら、内容を確認して同意します。</li>
+            <li>「Create API key」(APIキーを作成)を押します。</li>
+            <li><code>AIza…</code> で始まる文字列が表示されます。これがAPIキーです。コピーボタンで丸ごとコピーします。</li>
+          </ul>
+          <div class="note caution">
+            <span class="label">APIキーの扱い</span>
+            <p>APIキーは、学校の鍵と同じように取り扱ってください。メールやチャットで人に送らない、他の先生と共用しない、画面を共有したまま表示しない。もし外に出てしまったときは、同じ画面からキーを削除して作り直します。</p>
+          </div>
+          <p>コピーできたら、記録ノートに戻って左メニューの<strong>「AIプロバイダ設定」</strong>を開きます。</p>
+          <ol class="keyed">
+            <li><span class="k">1</span><span class="kt">AIプロバイダで<strong>「Gemini」</strong>を選びます。</span></li>
+            <li><span class="k">2</span><span class="kt">モデルを選びます。迷ったら初期値のままで十分です。</span></li>
+            <li><span class="k">3</span><span class="kt">コピーしたAPIキーを貼り付けます。</span></li>
+            <li><span class="k">4</span><span class="kt">「保存」を押します。</span></li>
+          </ol>
+          <figure class="figure">
+            <span class="shot-frame" data-shot="22-ai-provider" role="button" tabindex="0" aria-label="AIプロバイダ設定を拡大する">
+              <img src="images/22-ai-provider.png" alt="AIプロバイダ設定画面。プロバイダ、モデル、APIキーの入力欄がある" loading="lazy">
+            </span>
+            <figcaption>保存したキーは暗号化して保管され、画面に再表示されません。変えたいときは新しいキーを入力して保存し直します。</figcaption>
+          </figure>
+        </div>
+
+        <div class="step" id="comments-make">
+          <h3><span class="snum">4-2</span>所見の下書きをつくる</h3>
+          <p>左メニューの<strong>「所見管理」</strong>を開きます。</p>
+          <ol class="keyed">
+            <li><span class="k">1</span><span class="kt">所見の種類を選びます。<strong>学習の所見</strong>は授業のメモから、<strong>生活の所見</strong>は生活記録から、<strong>総合の所見</strong>は「総合」の授業のメモからつくられます。</span></li>
+            <li><span class="k">2</span><span class="kt">対象期間の開始日を入力します(例: 学期のはじまりの日)。</span></li>
+            <li><span class="k">3</span><span class="kt">終了日を入力します。この期間のメモだけが材料になります。</span></li>
+          </ol>
+          <figure class="figure">
+            <span class="shot-frame" data-shot="23-comments-list" role="button" tabindex="0" aria-label="所見管理画面を拡大する">
+              <img src="images/23-comments-list.png" alt="所見管理画面。クラスと対象期間を指定して生徒が並んでいる" loading="lazy">
+            </span>
+            <figcaption>期間を入れると、そのクラスの生徒が並びます。期間はクラスごとに記憶されます。</figcaption>
+          </figure>
+          <p>生徒の行にある「AIで生成する」を押すと、生成のための欄が開きます。</p>
+          <ol class="keyed">
+            <li><span class="k">1</span><span class="kt">作成方法を選びます。<strong>「AIで直接生成」</strong>は、この画面の中で下書きができあがります。<strong>「プロンプトを作成」</strong>は、AIに渡す文章を組み立てるだけなので、APIキーがなくても使えます(次の囲みを参照)。</span></li>
+            <li><span class="k">2</span><span class="kt">学年と目安文字数を確かめて<strong>「生成して所見欄に反映」</strong>を押します。数秒から数十秒かかります。</span></li>
+          </ol>
+          <figure class="figure">
+            <span class="shot-frame" data-shot="24-comments-ai" role="button" tabindex="0" aria-label="AI生成の欄を拡大する">
+              <img src="images/24-comments-ai.png" alt="所見をAIで生成するための欄" loading="lazy">
+            </span>
+            <figcaption>目安文字数は、通知表の欄の大きさに合わせて決めます。</figcaption>
+          </figure>
+          <ol class="keyed">
+            <li><span class="k">1</span><span class="kt">できあがった文章が所見欄に入ります。<strong>ここで必ず読み返し、先生の言葉に直してください。</strong>直接書き足しても構いません。</span></li>
+            <li><span class="k">2</span><span class="kt">「保存」を押します。保存すると「AI生成(直接呼び出し)」「手動作成」といった作成方法の印がつき、あとから見分けられます。</span></li>
+          </ol>
+          <figure class="figure">
+            <span class="shot-frame" data-shot="25-comments-generated" role="button" tabindex="0" aria-label="生成された所見を拡大する">
+              <img src="images/25-comments-generated.png" alt="AIが生成した所見の下書きが所見欄に入った状態" loading="lazy">
+            </span>
+            <figcaption>生成は何度でもやり直せます。気に入らなければ、もう一度押してください。</figcaption>
+          </figure>
+          <div class="note">
+            <span class="label">APIキーを登録しない使い方</span>
+            <p>「プロンプトを作成」に切り替えると、メモをまとめた指示文がその場で組み立てられます。それをコピーして、ふだん使っているAIサービスに貼り付け、返ってきた文章を「AIの応答を貼り付け」欄に戻せば、同じように所見欄に反映できます。</p>
+          </div>
+          <div class="note caution">
+            <span class="label">AIに送られるもの</span>
+            <p>
+              送られるのは、指定した期間の<strong>「共有する」メモの本文</strong>と、学年・仮名コード・目安文字数です。
+              氏名は送らず、<code>3-01-01</code> のような仮名コードに置きかえています。
+              ただし<strong>メモの本文に書いた名前はそのまま送られます</strong>。本文には「○○さん」ではなく「本人」と書くなど、書き方で工夫してください。
+            </p>
+          </div>
+        </div>
+
+        <div class="step" id="comments-tune">
+          <h3><span class="snum">4-3</span>ひな形とデータの保存</h3>
+          <p>
+            AIへの指示文(プロンプト)は、左メニューの<strong>「プロンプトひな形編集」</strong>で書きかえられます。
+            「常体で書く」「◯◯の観点を入れる」など、学校の書き方に合わせたいときに使います。
+            元に戻したいときは、初期値に戻すこともできます。
+          </p>
+          <figure class="figure">
+            <span class="shot-frame" data-shot="26-prompt-template" role="button" tabindex="0" aria-label="プロンプトひな形編集を拡大する">
+              <img src="images/26-prompt-template.png" alt="学習・生活・総合それぞれのプロンプトひな形を編集する画面" loading="lazy">
+            </span>
+            <figcaption>学習・生活・総合の3種類を、それぞれ別に編集できます。</figcaption>
+          </figure>
+          <p>
+            記録したものを手元にも残しておきたいときは、<strong>「データエクスポート」</strong>から全データをファイルで保存できます。
+            年度末の引き継ぎや、念のための控えに使ってください。
+          </p>
+          <figure class="figure">
+            <span class="shot-frame" data-shot="27-export" role="button" tabindex="0" aria-label="データエクスポート画面を拡大する">
+              <img src="images/27-export.png" alt="全データをエクスポートする画面" loading="lazy">
+            </span>
+            <figcaption>赤い枠のボタンを押し、確認画面で「エクスポートする」を選びます。ダウンロードされるファイルには生徒の氏名がそのまま入るため、保存先の取り扱いにご注意ください。</figcaption>
+          </figure>
+        </div>
+      </section>
+
+      <!-- ============================ 5 ============================ -->
+      <section class="chapter" id="faq">
+        <h2><span class="cnum">5</span>困ったときは</h2>
+        <div class="qa">
+          <details>
+            <summary>ログインできません</summary>
+            <div class="answer">
+              <p>メールアドレスとパスワードのどちらかが違うと、同じメッセージが出ます。まずは入力を確かめてください。思い出せないときは、ログイン画面の「パスワードを忘れた場合」からメールアドレスを送ると、再設定用のリンクが届きます。</p>
+            </div>
+          </details>
+          <details>
+            <summary>時間割のマスで、使いたい科目が選べません</summary>
+            <div class="answer">
+              <p>科目管理画面に登録されている科目だけが選べます。左メニューの「科目管理」で科目を足してから、時間割の画面に戻ってください。貼り付けで取り込む場合も、科目名が登録済みの名前と1文字でも違うと取り込めません。</p>
+            </div>
+          </details>
+          <details>
+            <summary>授業のマスを押しても「この授業を記録する」が押せません</summary>
+            <div class="answer">
+              <p>そのマスに科目とクラスの両方が入っていないと記録できません。マスを開いて、科目とクラスを選んで保存してから、もう一度お試しください。</p>
+            </div>
+          </details>
+          <details>
+            <summary>メモを保存できませんでした</summary>
+            <div class="answer">
+              <p>入力した文章は画面に残っています。通信状態を確かめて、もう一度「保存」を押してください。自動で送り直す仕組みはあえて入れていません(知らないうちに古い内容が上書きされるのを防ぐためです)。</p>
+            </div>
+          </details>
+          <details>
+            <summary>所見の「AIで生成する」で、直接生成が選べません</summary>
+            <div class="answer">
+              <p>APIキーが登録されていないときは、直接生成はできません。「AIプロバイダ設定」でキーを登録するか、「プロンプトを作成」に切り替えて、お手持ちのAIサービスに貼り付ける方法をお使いください。</p>
+            </div>
+          </details>
+          <details>
+            <summary>所見が短すぎる/長すぎる、内容が薄い</summary>
+            <div class="answer">
+              <p>目安文字数を変えて、もう一度生成してみてください。内容が薄いときは、材料になるメモが少ないか、「がんばっていた」のような評価だけのメモが多い可能性があります。「何を」「どのように」したかが入ったメモほど、具体的な所見になります。</p>
+            </div>
+          </details>
+          <details>
+            <summary>転入・転出で名簿を直したい</summary>
+            <div class="answer">
+              <p>生徒名簿の画面で、生徒の追加・氏名の修正・削除ができます。削除すると、その生徒に書いたメモや所見も一緒に消え、取り消せません。転出の記録を残しておきたいときは、先に「データエクスポート」で保存しておくと安心です。</p>
+            </div>
+          </details>
+          <details>
+            <summary>スマートフォンで開けますか</summary>
+            <div class="answer">
+              <p>パソコンとタブレットでの利用を想定しています。スマートフォンの画面幅には対応していないため、表示がくずれます。</p>
+            </div>
+          </details>
+        </div>
+      </section>
+
+      <!-- ============================ 6 ============================ -->
+      <section class="chapter" id="screens">
+        <h2><span class="cnum">6</span>画面別さくいん</h2>
+        <p class="intro">左メニューに並ぶ画面と、その画面でできることの一覧です。</p>
+        <div class="index-wrap">
+          <table>
+            <thead>
+              <tr><th scope="col">画面</th><th scope="col">できること</th><th scope="col">説明</th></tr>
+            </thead>
+            <tbody>
+              <tr><td><strong>クラス管理</strong></td><td>クラスの作成・表示名の変更・削除。特別支援学級の指定</td><td><a href="#setup-class">2-3</a></td></tr>
+              <tr><td><strong>生徒名簿</strong></td><td>生徒の一括登録(貼り付け・CSV)、氏名や出席番号の修正、削除</td><td><a href="#setup-students">2-4</a></td></tr>
+              <tr><td><strong>科目管理</strong></td><td>標準科目セットの追加、科目の登録・改名・削除</td><td><a href="#setup-subjects">2-2</a></td></tr>
+              <tr><td><strong>時間割マスタ設定</strong></td><td>毎週くりかえす基本の時間割づくり(30マス)</td><td><a href="#setup-timetable">2-5</a></td></tr>
+              <tr><td><strong>週次時間割</strong></td><td>その週の確認、今週だけの科目・クラス変更、授業記録と生活記録への入口</td><td><a href="#daily-week">3-1</a>, <a href="#daily-life">3-4</a></td></tr>
+              <tr><td><strong>授業記録</strong></td><td>その授業の生徒一人ひとりにメモを保存(週次時間割から開く)</td><td><a href="#daily-memo">3-3</a></td></tr>
+              <tr><td><strong>生活記録</strong></td><td>授業と関係なく、その日の様子を1人1件記録(週次時間割から開く)</td><td><a href="#daily-life">3-4</a></td></tr>
+              <tr><td><strong>生徒別メモ一覧</strong></td><td>1人ぶんのメモを日付順・教科別に確認、修正、削除、共有の切り替え</td><td><a href="#daily-review">3-5</a></td></tr>
+              <tr><td><strong>所見管理</strong></td><td>期間を指定して、学習・生活・総合の所見を作成・保存</td><td><a href="#comments-make">4-2</a></td></tr>
+              <tr><td><strong>AIプロバイダ設定</strong></td><td>AIサービスとモデルの選択、APIキーの登録</td><td><a href="#comments-key">4-1</a></td></tr>
+              <tr><td><strong>プロンプトひな形編集</strong></td><td>AIへの指示文を学校の書き方に合わせて調整</td><td><a href="#comments-tune">4-3</a></td></tr>
+              <tr><td><strong>データエクスポート</strong></td><td>全データをファイルで保存</td><td><a href="#comments-tune">4-3</a></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <footer class="colophon">
+        <p>画面例はすべて練習用のダミーデータで、実在の児童・生徒とは関係ありません。画面の細かな文言は、更新により変わることがあります。</p>
+      </footer>
+    </main>
+  </div>
+</div>
+
+<div id="zoom" hidden>
+  <button type="button" class="close">閉じる</button>
+  <img alt="">
+</div>
+
+<script id="shot-annotations" type="application/json">{"shots":[{"name":"01-login","marks":[{"n":1,"left":37.916666666666664,"top":42.44444444444444,"width":24.166666666666668,"height":6},{"n":2,"left":37.916666666666664,"top":51.77777777777778,"width":24.166666666666668,"height":6},{"n":3,"left":37.916666666666664,"top":58.22222222222222,"width":24.166666666666668,"height":6.666666666666667}]},{"name":"02-signup","marks":[{"n":1,"left":37.916666666666664,"top":39.55555555555556,"width":24.166666666666668,"height":6},{"n":2,"left":37.916666666666664,"top":48.888888888888886,"width":24.166666666666668,"height":6},{"n":3,"left":37.916666666666664,"top":58.22222222222222,"width":24.166666666666668,"height":5.555555555555555},{"n":4,"left":37.916666666666664,"top":64.22222222222223,"width":24.166666666666668,"height":6.666666666666667}]},{"name":"03-nav","marks":[]},{"name":"04-subjects-seed","marks":[{"n":1,"left":19.65277777777778,"top":11,"width":11.573350694444445,"height":3.5555555555555554},{"n":2,"left":19.65277777777778,"top":17.444444444444446,"width":11.944444444444445,"height":5.555555555555555},{"n":3,"left":31.59722222222222,"top":16.77777777777778,"width":7.5,"height":6.222222222222222}]},{"name":"05-subjects-list","marks":[{"n":1,"left":18.47222222222222,"top":29.333333333333332,"width":18.61111111111111,"height":6},{"n":2,"left":37.083333333333336,"top":29.11111111111111,"width":5.277777777777778,"height":6.222222222222222}]},{"name":"06-classes-empty","marks":[{"n":1,"left":53.499348958333336,"top":18.444444444444443,"width":9.666883680555555,"height":6.222222222222222}]},{"name":"07-classes-create","marks":[{"n":1,"left":35.69444444444444,"top":45.55555555555556,"width":28.61111111111111,"height":6},{"n":2,"left":35.69444444444444,"top":54.888888888888886,"width":28.61111111111111,"height":6},{"n":3,"left":59.02777777777778,"top":62.22222222222222,"width":5.277777777777778,"height":6.222222222222222}]},{"name":"08-classes-list","marks":[]},{"name":"09-students-paste","marks":[{"n":1,"left":18.47222222222222,"top":12,"width":18.61111111111111,"height":5.555555555555555},{"n":2,"left":29.964192708333332,"top":19.333333333333332,"width":10.230034722222223,"height":4.888888888888889},{"n":3,"left":18.47222222222222,"top":28.000000000000004,"width":79.72222222222223,"height":20.395833333333332},{"n":4,"left":18.47222222222222,"top":48.395833333333336,"width":7.5,"height":6.222222222222222}]},{"name":"10-students-list","marks":[]},{"name":"11-master-paste","marks":[{"n":1,"left":18.47222222222222,"top":9.11111111111111,"width":79.72222222222223,"height":5.777777777777778},{"n":2,"left":19.65277777777778,"top":30.777777777777775,"width":77.36111111111111,"height":20.395833333333332},{"n":3,"left":19.65277777777778,"top":65.17361111111111,"width":7.5,"height":6.222222222222222}]},{"name":"12-master-grid","marks":[{"n":1,"left":18.47222222222222,"top":54.888888888888886,"width":18.61111111111111,"height":5.555555555555555},{"n":2,"left":22.15277777777778,"top":66.44444444444444,"width":9.526909722222223,"height":4.333333333333334},{"n":3,"left":18.47222222222222,"top":92.66666666666666,"width":6.388888888888888,"height":6.666666666666667}]},{"name":"13-weekly","marks":[{"n":1,"left":52.36328125000001,"top":9.222222222222221,"width":11.041666666666666,"height":4.666666666666667},{"n":2,"left":21.944444444444443,"top":34,"width":15.846354166666668,"height":8.444444444444445}]},{"name":"14-weekly-modal","marks":[{"n":1,"left":35.69444444444444,"top":44.22222222222222,"width":28.61111111111111,"height":5.555555555555555},{"n":2,"left":45.97222222222222,"top":59.111111111111114,"width":13.055555555555557,"height":6.222222222222222}]},{"name":"15-record-list","marks":[{"n":1,"left":18.541666666666668,"top":19.444444444444446,"width":79.58333333333333,"height":6.222222222222222}]},{"name":"16-record-expanded","marks":[{"n":1,"left":19.65277777777778,"top":27.22222222222222,"width":77.36111111111111,"height":11.864583333333334},{"n":2,"left":19.375,"top":38.642361111111114,"width":4.444444444444445,"height":4.888888888888889},{"n":3,"left":19.65277777777778,"top":48.685763888888886,"width":4.444444444444445,"height":4.888888888888889}]},{"name":"17-record-saved","marks":[{"n":1,"left":29.254557291666668,"top":20.77777777777778,"width":5.972222222222222,"height":3.5555555555555554}]},{"name":"18-weekly-life-row","marks":[{"n":1,"left":37.02690972222222,"top":62.88888888888889,"width":15.84743923611111,"height":6.666666666666667}]},{"name":"19-life-record","marks":[{"n":1,"left":18.47222222222222,"top":12,"width":12.777777777777777,"height":6},{"n":2,"left":19.65277777777778,"top":27.22222222222222,"width":77.36111111111111,"height":11.864583333333334},{"n":3,"left":19.65277777777778,"top":48.685763888888886,"width":4.444444444444445,"height":4.888888888888889}]},{"name":"20-student-memos","marks":[{"n":1,"left":18.47222222222222,"top":12,"width":18.61111111111111,"height":5.555555555555555},{"n":2,"left":37.361111111111114,"top":12,"width":18.61111111111111,"height":5.555555555555555},{"n":3,"left":56.25,"top":11.777777777777777,"width":10.555555555555555,"height":5.777777777777778}]},{"name":"21-student-memos-subject","marks":[{"n":1,"left":56.25,"top":11.777777777777777,"width":10.555555555555555,"height":5.777777777777778}]},{"name":"22-ai-provider","marks":[{"n":1,"left":18.47222222222222,"top":16.88888888888889,"width":31.944444444444443,"height":5.555555555555555},{"n":2,"left":18.47222222222222,"top":25.77777777777778,"width":31.944444444444443,"height":5.555555555555555},{"n":3,"left":18.47222222222222,"top":34.66666666666667,"width":31.944444444444443,"height":6},{"n":4,"left":18.47222222222222,"top":52.130208333333336,"width":6.388888888888888,"height":6.666666666666667}]},{"name":"23-comments-list","marks":[{"n":1,"left":18.47222222222222,"top":19.333333333333332,"width":79.72222222222223,"height":5.777777777777778},{"n":2,"left":37.361111111111114,"top":12,"width":12.63888888888889,"height":6},{"n":3,"left":50.27777777777778,"top":12,"width":12.63888888888889,"height":6}]},{"name":"24-comments-ai","marks":[{"n":1,"left":20.833333333333336,"top":53.37499999999999,"width":75,"height":5.777777777777778},{"n":2,"left":20.833333333333336,"top":74.97395833333333,"width":12.164713541666666,"height":4.888888888888889}]},{"name":"25-comments-generated","marks":[{"n":1,"left":19.65277777777778,"top":31.88888888888889,"width":77.36111111111111,"height":14.708333333333334},{"n":2,"left":19.65277777777778,"top":46.59722222222222,"width":4.444444444444445,"height":4.888888888888889}]},{"name":"26-prompt-template","marks":[]},{"name":"27-export","marks":[{"n":1,"left":18.47222222222222,"top":19.241319444444443,"width":16.356336805555554,"height":6.666666666666667}]}]}</script>
+<script>
+  (function () {
+    "use strict";
+
+    // --- 画像の上に赤枠と番号を重ねる(座標は撮影時に記録したもの) ---
+    var data = { shots: [] };
+    try {
+      data = JSON.parse(document.getElementById("shot-annotations").textContent) || data;
+    } catch (e) {
+      data = { shots: [] };
+    }
+    var byName = {};
+    (data.shots || []).forEach(function (s) { byName[s.name] = s; });
+
+    Array.prototype.forEach.call(document.querySelectorAll(".shot-frame"), function (frame) {
+      var shot = byName[frame.getAttribute("data-shot")];
+      if (!shot || !shot.marks) return;
+      shot.marks.forEach(function (m) {
+        var box = document.createElement("i");
+        box.className = "mark";
+        box.style.left = m.left + "%";
+        box.style.top = m.top + "%";
+        box.style.width = m.width + "%";
+        box.style.height = m.height + "%";
+        var n = document.createElement("span");
+        n.textContent = m.n;
+        box.appendChild(n);
+        frame.appendChild(box);
+      });
+    });
+
+    // --- キャプチャの拡大表示 ---
+    var zoom = document.getElementById("zoom");
+    var zoomImg = zoom.querySelector("img");
+    var lastFocus = null;
+
+    function openZoom(frame) {
+      var img = frame.querySelector("img");
+      if (!img) return;
+      lastFocus = frame;
+      zoomImg.src = img.currentSrc || img.src;
+      zoomImg.alt = img.alt;
+      zoom.hidden = false;
+      zoom.querySelector(".close").focus();
+    }
+    function closeZoom() {
+      zoom.hidden = true;
+      zoomImg.removeAttribute("src");
+      if (lastFocus) lastFocus.focus();
+    }
+
+    Array.prototype.forEach.call(document.querySelectorAll(".shot-frame"), function (frame) {
+      frame.addEventListener("click", function () { openZoom(frame); });
+      frame.addEventListener("keydown", function (e) {
+        if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openZoom(frame); }
+      });
+    });
+    zoom.addEventListener("click", closeZoom);
+    document.addEventListener("keydown", function (e) {
+      if (e.key === "Escape" && !zoom.hidden) closeZoom();
+    });
+
+    // --- 読んでいる位置を目次に反映する ---
+    var links = {};
+    Array.prototype.forEach.call(document.querySelectorAll(".toc a"), function (a) {
+      links[a.getAttribute("href").slice(1)] = a;
+    });
+    var targets = document.querySelectorAll(".chapter, .step[id]");
+    if ("IntersectionObserver" in window && targets.length) {
+      var seen = {};
+      var observer = new IntersectionObserver(function (entries) {
+        entries.forEach(function (entry) { seen[entry.target.id] = entry.isIntersecting; });
+        var current = null;
+        Array.prototype.forEach.call(targets, function (t) {
+          if (seen[t.id] && !current) current = t.id;
+        });
+        Object.keys(links).forEach(function (id) {
+          links[id].setAttribute("aria-current", id === current ? "true" : "false");
+        });
+      }, { rootMargin: "-10% 0px -70% 0px" });
+      Array.prototype.forEach.call(targets, function (t) { observer.observe(t); });
+    }
+  })();
+</script>
