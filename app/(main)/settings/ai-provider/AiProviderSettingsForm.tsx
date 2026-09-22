@@ -39,6 +39,10 @@ export function AiProviderSettingsForm({ initialSetting, saveSetting }: AiProvid
   );
   const [apiKey, setApiKey] = useState("");
   const [hasKey, setHasKey] = useState(initialSetting.hasKey);
+  // プルダウンの選択値は「保存済みの値」と「教員が選び直しただけの未保存の値」を区別できないため、
+  // 登録済みの内容を別に保持して設定状況の横に併記する(docs/features/ui-clarity/)
+  const [savedProvider, setSavedProvider] = useState(initialSetting.provider);
+  const [savedModel, setSavedModel] = useState(initialSetting.model);
 
   const handleProviderChange = (value: string) => {
     const nextProvider = value as AiProvider;
@@ -52,6 +56,8 @@ export function AiProviderSettingsForm({ initialSetting, saveSetting }: AiProvid
       await saveSetting.mutateAsync({ provider, model, apiKey: apiKey.trim() });
       setApiKey("");
       setHasKey(true);
+      setSavedProvider(provider);
+      setSavedModel(model);
       showToast("success", "AIプロバイダ設定を保存しました");
     } catch (err) {
       showToast("error", (err as Error).message || "保存に失敗しました");
@@ -63,10 +69,17 @@ export function AiProviderSettingsForm({ initialSetting, saveSetting }: AiProvid
       <h1 className="text-2xl font-semibold text-gray-900">AIプロバイダ設定</h1>
 
       <div className="flex items-center gap-2">
+        <span className="text-sm text-gray-700">APIキー</span>
         {hasKey ? (
-          <Badge variant="neutral" label="設定済み" />
+          <Badge variant="recorded" label="設定済み" />
         ) : (
           <Badge variant="neutral" label="未設定" />
+        )}
+        {hasKey && savedProvider && savedModel && (
+          <span className="text-sm text-gray-600">
+            {PROVIDER_OPTIONS.find((o) => o.value === savedProvider)?.label ?? savedProvider} /{" "}
+            {savedModel}
+          </span>
         )}
       </div>
 

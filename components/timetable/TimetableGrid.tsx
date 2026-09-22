@@ -20,7 +20,7 @@ export interface TimetableGridProps {
   mode: TimetableGridMode;
   cells: TimetableCell[];
   onCellClick?: (cell: TimetableCell) => void;
-  /** 指定した場合のみ、6限の下に曜日ごとの「生活」行を表示する(週次時間割画面のみ) */
+  /** 指定した場合のみ、6限の下に曜日ごとの「生活記録」行を表示する(週次時間割画面のみ) */
   onLifeCellClick?: (weekday: number) => void;
 }
 
@@ -99,7 +99,7 @@ export function TimetableGrid({ mode, cells, onCellClick, onLifeCellClick }: Tim
       {onLifeCellClick && (
         <>
           <div role="rowheader" className="flex items-center justify-center bg-gray-50 text-gray-500">
-            生活
+            生活記録
           </div>
           {WEEKDAY_LABELS.map((label, index) => (
             <button

@@ -24,7 +24,7 @@ export interface StudentMemosContentProps {
   from: string | null;
 }
 
-/** 一覧・操作ボタンのラベルに使う「日付 時限 科目」表記。生活メモは時限の代わりに「生活」とする */
+/** 一覧・操作ボタンのラベルに使う「日付 時限 科目」表記。生活メモは時限の代わりに「生活記録」とする */
 function memoLabel(memo: StudentMemoRow): string {
   return memo.kind === "life"
     ? `${memo.noteDate} ${memo.subjectName}`

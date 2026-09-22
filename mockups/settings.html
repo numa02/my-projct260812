@@ -88,6 +88,15 @@
         <!-- AIプロバイダ設定 -->
         <div class="bg-white rounded-lg border border-gray-200 shadow-sm p-4 tablet:p-6 space-y-4">
           <h3 class="text-base font-semibold text-gray-900">AIプロバイダ設定</h3>
+          <!-- APIキーの設定状況。登録済みは「入力済み」インジケーターと同じドット付きの強調表示にし、
+               登録済みのプロバイダ・モデルを併記する(未登録の場合は「未設定」のneutralバッジのみ) -->
+          <div class="flex items-center gap-2">
+            <span class="text-sm text-gray-700">APIキー</span>
+            <span class="inline-flex items-center gap-1 rounded-sm px-2 py-0.5 text-xs font-medium bg-success-500/10 text-success-500">
+              <span class="h-1.5 w-1.5 rounded-full bg-success-500"></span>設定済み
+            </span>
+            <span class="text-sm text-gray-600">Anthropic / claude-sonnet-5</span>
+          </div>
           <div class="grid grid-cols-1 tablet:grid-cols-2 gap-4">
             <div class="space-y-1.5">
               <label class="text-sm font-medium text-gray-700">プロバイダ</label>

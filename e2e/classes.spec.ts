@@ -18,7 +18,7 @@ test.describe("クラス管理画面(T-053, T-054)", () => {
     await expect(page.getByRole("button", { name: "クラスを作成" })).toBeVisible();
   });
 
-  test("通常学年・特支いずれでもクラスが作成され、組番号が自動採番される", async ({ page }) => {
+  test("通常学年・特支いずれでもクラスが作成され、一覧には組番号が表示されない", async ({ page }) => {
     await signUpAndLogin(page);
     await page.goto("/classes");
 
@@ -29,7 +29,7 @@ test.describe("クラス管理画面(T-053, T-054)", () => {
     await page.getByRole("button", { name: "保存" }).click();
     await expect(page.getByText("クラスを作成しました")).toBeVisible();
 
-    // 2件目(学年1、組番号2になるはず)
+    // 2件目(同じ学年区分内の2件目。組番号は内部的に採番されるが画面には出ない)
     await page.getByRole("button", { name: "クラスを作成" }).click();
     await page.getByLabel("学年").fill("1");
     await page.getByLabel("クラス表示名").fill("1年2組");
@@ -43,9 +43,12 @@ test.describe("クラス管理画面(T-053, T-054)", () => {
 
     const rows = page.locator("table tbody tr");
     await expect(rows).toHaveCount(3);
-    await expect(page.getByRole("row", { name: /1年1組/ })).toContainText("1");
-    await expect(page.getByRole("row", { name: /1年2組/ })).toContainText("2");
     await expect(page.getByRole("row", { name: /ひまわり組/ })).toContainText("特支");
+
+    // 組番号は仮名コード生成用の内部的な連番のため一覧に表示しない(採番規則自体の検証は
+    // tests/db/rpc-class.test.tsが担う)
+    await expect(page.getByRole("columnheader", { name: "組番号" })).toHaveCount(0);
+    await expect(page.locator("table")).not.toContainText("組番号");
   });
 
   test("学年変更時は確認ダイアログが表示され、続行すると更新される", async ({ page }) => {

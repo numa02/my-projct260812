@@ -163,13 +163,13 @@ test.describe("生活所見の記録(LS-)", () => {
     await page.getByRole("button", { name: "保存" }).click();
     await expect(page.getByText("生活メモを追加しました")).toBeVisible();
 
-    await expect(page.getByText("2026-04-08 ・ 生活")).toBeVisible();
+    await expect(page.getByText("2026-04-08 ・ 生活記録")).toBeVisible();
     await expect(page.getByText("給食の配膳を率先して手伝った")).toBeVisible();
     await expect(page.getByText("2026-04-06 ・ 1限 ・ 国語")).toBeVisible();
 
-    // 教科別表示では「生活」が1つのグループになる
+    // 教科別表示では「生活記録」が1つのグループになる(教科「生活」とは別グループ)
     await page.getByRole("radio", { name: "教科別" }).click();
-    await expect(page.getByRole("heading", { name: "生活" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "生活記録" })).toBeVisible();
 
     await page.getByRole("button", { name: "生活メモを追加" }).click();
     await page.getByLabel("日付").fill("2026-04-08");
