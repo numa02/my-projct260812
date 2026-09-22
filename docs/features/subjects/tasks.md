@@ -66,12 +66,12 @@ ID接頭辞: `SJ-`。既存テーブル・既存カラムへの変更を伴わ�
 
 小学校1・2年の教科「生活」が標準セットに含まれていなかったため追加する。同じPRで生活メモの表示ラベルを「生活記録」に変更する(`docs/features/ui-clarity/` UC-001)。教科「生活」が登録できる状態で生活メモのラベルが「生活」のままだと、生徒別メモ一覧の教科別表示で両者が同一グループに混ざるため、両者は必ず同時に反映する。
 
-- [ ] **SJ-011** `seed_standard_subjects`の小学校配列に「生活」を追加するマイグレーションを作成する
+- [x] **SJ-011** `seed_standard_subjects`の小学校配列に「生活」を追加するマイグレーションを作成する
   - DoD: `supabase/migrations/<timestamp>_seed_standard_subjects_add_seikatsu.sql`が`create or replace function seed_standard_subjects`で関数全体を再定義し、小学校の配列が11科目(国語、算数、理科、社会、英語、図画工作、体育、音楽、生活、総合、学活)になる。中学校の配列は変更しない。`pg_advisory_xact_lock`による直列化・既存科目名との重複スキップは維持する。ローカルで`npx supabase db reset`が最後まで適用される
   - 依存: なし
   - ロールバック: ローカル未適用ならファイル削除のみ。本番適用後は「生活」を除いた10科目の配列で`create or replace function`する新規マイグレーションを追加する。既に投入された科目レコードは削除されないため、不要なら教員が科目管理画面から個別に削除する(既存データを壊す変更ではない)
 
-- [ ] **SJ-012** `tests/db/rpc-subject.test.ts`を11科目に追従させる
+- [x] **SJ-012** `tests/db/rpc-subject.test.ts`を11科目に追従させる
   - DoD: 小学校セットの投入件数・科目名の期待値が11科目に更新され、「生活」が含まれることを検証する。中学校セットの期待値は変更しない。既存の重複スキップ・advisory lock・他教員への非干渉の各ケースが引き続き通り、`npm run test:db`が通る
   - 依存: SJ-011
   - ロールバック: テストのrevertのみ

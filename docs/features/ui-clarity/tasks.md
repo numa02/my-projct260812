@@ -35,7 +35,7 @@ ID接頭辞: `UC-`。DBスキーマ・RPCの変更を伴わないため、マイ
   - 依存: UC-001
   - ロールバック: テストのrevertのみ
 
-- [ ] **UC-006** E2Eを追従・追加する
+- [x] **UC-006** E2Eを追従・追加する
   - DoD: `e2e/life-shoken.spec.ts`の教科別グループ見出しの参照が`"生活記録"`に更新される。`e2e/classes.spec.ts`の「組番号が自動採番される」テストが「一覧に組番号が表示されない」ことの確認に置き換わる(採番規則の検証は`tests/db/rpc-class.test.ts`が継続して担う)。`e2e/settings-ai-provider.spec.ts`に、保存後にプロバイダ名・モデル名が併記されることを確認するアサーションが追加される。`npm run test:e2e`が通る
   - 依存: UC-001, UC-002, UC-003
   - ロールバック: テストのrevertのみ
@@ -50,7 +50,7 @@ ID接頭辞: `UC-`。DBスキーマ・RPCの変更を伴わないため、マイ
   - 依存: UC-001〜UC-003(E2Eの追従UC-006とは独立に更新できる)
   - ロールバック: ドキュメントのrevertのみ
 
-- [ ] **UC-009** 検証を通す
+- [x] **UC-009** 検証を通す
   - DoD: `npm run lint`・`npm run test`・`npx tsc --noEmit`・`npm run build`・`npm run test:e2e`がすべて通る。`git grep -n "未実装\|未反映\|予定" -- docs`に本改修に関する古い注記が残っていない
   - 依存: UC-001〜UC-008、SJ-011〜SJ-014
   - ロールバック: 該当なし(検証タスク)
