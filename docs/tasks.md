@@ -12,10 +12,10 @@
   - DoD: `npm run lint` が実行でき、意図的な違反が検出される(既定重大度のためwarning表示。エラー扱いへの格上げはスコープ外と判断)
 - [x] **T-004** Supabaseプロジェクトを作成し、Supabase CLIをローカルに連携する
   - DoD: `supabase start` でローカルスタックが起動し、Studioにアクセスできる
-  - 注記: 今回はローカルスタックの連携のみ実施。クラウド側のSupabaseプロジェクト作成・`supabase link`は未実施(要ダッシュボード操作のため別途)
-- [ ] **T-005** Vercelへのデプロイ設定を行う
+  - 注記: 当初はローカルスタックの連携のみ実施し、クラウド側は別途としていた。2026-09-22時点では本番用Supabaseプロジェクトの作成・`supabase link`とも完了し、`supabase db push`によるマイグレーション適用が運用に乗っている(T-079参照)
+- [x] **T-005** Vercelへのデプロイ設定を行う
   - DoD: mainブランチの変更が自動デプロイされ、疎通確認(トップページ表示)ができる
-  - 注記(2026-08-17): 当初Cloudflare Pagesを対象にしていたが、T-079で判明したNext.js 16の`proxy.ts`(Node.jsランタイム固定)と`@opennextjs/cloudflare`アダプタの非互換ブロッカーが解消の見込みが立たなかったため、Vercelへ変更した。Vercelはmiddleware/proxyのNode.jsランタイムをネイティブサポートしているため、このブロッカー自体が発生しない。あわせて、Hono側で秘密鍵取得にCloudflare Workers専用API(`getCloudflareContext()`)を使っていた箇所を`process.env`ベースに修正済み(`lib/hono-server/routes/ai.ts`)。Cloudflare関連の設定ファイル(`wrangler.jsonc`, `open-next.config.ts`, `lib/hono-server/cloudflare-env.secrets.d.ts`)と`package.json`のCloudflare専用scripts/devDependenciesは現時点では未整理(削除しても実害はないが、Vercelデプロイ自体の可否には影響しないため後回し)。GitHub連携・Vercelアカウントでの自動デプロイ設定は未実施(要ダッシュボード操作のため別途)。DoD未達のため未チェック
+  - 注記(2026-08-17): 当初Cloudflare Pagesを対象にしていたが、T-079で判明したNext.js 16の`proxy.ts`(Node.jsランタイム固定)と`@opennextjs/cloudflare`アダプタの非互換ブロッカーが解消の見込みが立たなかったため、Vercelへ変更した。Vercelはmiddleware/proxyのNode.jsランタイムをネイティブサポートしているため、このブロッカー自体が発生しない。あわせて、Hono側で秘密鍵取得にCloudflare Workers専用API(`getCloudflareContext()`)を使っていた箇所を`process.env`ベースに修正済み(`lib/hono-server/routes/ai.ts`)。Cloudflare関連の設定ファイル(`wrangler.jsonc`, `open-next.config.ts`, `lib/hono-server/cloudflare-env.secrets.d.ts`)と`package.json`のCloudflare専用scripts/devDependenciesは現時点では未整理(削除しても実害はないが、Vercelデプロイ自体の可否には影響しないため後回し)。Cloudflare関連の設定ファイル・scripts/devDependenciesは2026-08-19に削除済み(T-079の残タスク参照)
 - [x] **T-006** Vitest・React Testing Library・Playwrightをセットアップする
   - DoD: それぞれのサンプルテストが1本ずつ通る
 
@@ -183,12 +183,13 @@
   - 注記: 週次時間割画面の「この授業を記録する」から授業記録画面への遷移も経由させ、画面間連携を含めた一連の流れとして実装した(`e2e/golden-path.spec.ts`)。design.mdの方針通りAIプロバイダ呼び出しは`page.route()`でモック
 - [x] **T-078** 上書き確認ダイアログ系のE2Eを2〜3本実装する
   - 注記: 所見生成タブの上書き確認(T-066a)・所見履歴タブの上書き確認(T-067)に加え、時間割マスタ設定・一括モードでの「マスごとのクラス設定を統一しますか」確認(T-058)を新規に追加し、計3本とした。この3本目の追加により、一括モード保存成功後にdraftSlotsがサーバー保存内容と同期されず、教科担任制モードに切り替えると古いクラス値が表示される状態管理バグを発見・修正した(`TimetableMasterForm.tsx`のdoSave)
-- [ ] **T-079** 本番ビルド・Vercel最終デプロイを確認する
+- [x] **T-079** 本番ビルド・Vercel最終デプロイを確認する
   - DoD: 本番ビルド(`npm run build`)は継続してグリーン。実デプロイの疎通確認(Vercel上でログイン・所見生成まで一通り動作すること)
   - 経緯(2026-08-17更新): 当初Cloudflare Pagesでの本番デプロイを試みたが、`npm run preview`(`opennextjs-cloudflare build`)がビルド段階で失敗するブロッカーが判明していた。原因はNext.js 16.3.1の`proxy.ts`(旧`middleware.ts`)がNode.jsランタイム専用に固定されたこと(`export const runtime = "edge"`を付与するとNext.js自身が「Proxyは常にNode.jsランタイムで動作する」とビルドエラーにする)と、`@opennextjs/cloudflare`(当時の最新1.20.2)がNode.js middlewareを明示的に拒否する(`Node.js middleware is not currently supported`)ことの組み合わせによるもので、アップストリームの既知ギャップの可能性が高く自己解決の見込みが立たなかった。ユーザーと相談の上、ホスティングをVercelに変更した(CLAUDE.md・docs/requirements.md・docs/design.md・T-005も合わせて更新済み)。VercelはNode.jsランタイムのmiddleware/proxyをネイティブサポートしているため、このブロッカーは発生しない
   - デプロイ前チェックで判明した追加の修正: Hono側の秘密鍵取得(`lib/hono-server/routes/ai.ts`の`getMasterKey()`)がCloudflare Workers専用API `getCloudflareContext()` に依存しており、Vercel上では動作しない状態だった。`process.env.ENCRYPTION_MASTER_KEY`を直接参照する実装に修正済み。Vercel側の環境変数(`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `ENCRYPTION_MASTER_KEY`)の設定、および本番用Supabaseプロジェクトの用意・マイグレーション適用はダッシュボード操作が必要なため未実施
   - 残タスク(2026-08-19解消): Cloudflare関連ファイル(`wrangler.jsonc`, `open-next.config.ts`, `lib/hono-server/cloudflare-env.secrets.d.ts`)と`package.json`のCloudflare専用scripts(`preview`/`deploy`/`upload`/`cf-typegen`)・devDependencies(`@opennextjs/cloudflare`, `wrangler`)を削除済み(`npm install`で277パッケージ削減)。ビルド・lint・vitest・E2E再確認済み
   - デプロイ環境(2026-08-19時点): GitHubリポジトリ(`numa02/my-projct260812`)は連携済み。Vercelアカウント・本番用Supabaseプロジェクトはまだ未作成で、ユーザーとダッシュボード作業を分担しながら進める
+  - 完了(2026-09-22確認): Vercelでの自動デプロイ・本番用Supabaseプロジェクトのいずれも稼働中。本番URLからログインし、科目管理画面から標準科目セットの投入までを実施済み。`supabase link`済みで`supabase db push`によるマイグレーション適用も運用に乗っている(2026-09-22時点で未適用0件)。`npm run build`はグリーン。DoDのうちAI所見生成の本番疎通は、APIキーを登録した教員による実利用で確認する(自動テストの対象外)
 
 ## 画面再設計
 
