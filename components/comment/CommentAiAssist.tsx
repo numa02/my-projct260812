@@ -24,6 +24,8 @@ export interface CommentAiAssistProps {
   /** learning=授業メモから学習の所見、life=生活メモから生活の所見を生成する */
   kind: CommentKind;
   pseudonymCode: string;
+  /** 対象クラスの学年。学年欄の既定値に使う(教員が上書きできる) */
+  classGrade: string;
   periodStartDate: string;
   periodEndDate: string;
   /** 生成・貼り付けた内容を行の所見欄に反映する(この時点ではまだ保存しない) */
@@ -41,6 +43,7 @@ export function CommentAiAssist({
   studentId,
   kind,
   pseudonymCode,
+  classGrade,
   periodStartDate,
   periodEndDate,
   onApply,
@@ -53,6 +56,9 @@ export function CommentAiAssist({
   const generateComment = useGenerateComment();
 
   const [targetCharCount, setTargetCharCount] = useState("");
+  // 既定値は対象クラスの学年。クラスを切り替えると行ごと再マウントされるため前のクラスの値は残らない
+  // (ClassCommentsContentの行のkeyにクラスIDを含めている)
+  const [grade, setGrade] = useState(classGrade);
   const [pastedText, setPastedText] = useState("");
   // 未選択の場合はAPIキー設定状況から妥当な既定値を出す。教員が選び直したらそちらを優先する
   // (常にstateから直接計算することで、設定の読み込みタイミングに関わらず正しい値になる)
@@ -69,8 +75,9 @@ export function CommentAiAssist({
   const targetCharCountNumber = targetCharCount.trim() ? Number(targetCharCount) : undefined;
 
   const prompt = useMemo(
-    () => buildPrompt({ template, memos, targetCharCount: targetCharCountNumber, pseudonymCode }),
-    [template, memos, targetCharCountNumber, pseudonymCode],
+    () =>
+      buildPrompt({ template, memos, grade, targetCharCount: targetCharCountNumber, pseudonymCode }),
+    [template, memos, grade, targetCharCountNumber, pseudonymCode],
   );
 
   const handleGenerate = async () => {
@@ -118,13 +125,19 @@ export function CommentAiAssist({
         onChange={(v) => setMethodOverride(v as Method)}
       />
 
-      <div className="w-32">
-        <Input
-          label="目安文字数"
-          type="number"
-          value={targetCharCount}
-          onChange={(e) => setTargetCharCount(e.target.value)}
-        />
+      <div className="flex gap-3">
+        <div className="w-24">
+          {/* 「特支」が入るためtype="number"にはしない */}
+          <Input label="学年" type="text" value={grade} onChange={(e) => setGrade(e.target.value)} />
+        </div>
+        <div className="w-32">
+          <Input
+            label="目安文字数"
+            type="number"
+            value={targetCharCount}
+            onChange={(e) => setTargetCharCount(e.target.value)}
+          />
+        </div>
       </div>
 
       {isLoadingMemos ? (
