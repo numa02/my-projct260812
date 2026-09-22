@@ -54,4 +54,4 @@
 
 ## 後続の改修との関係
 
-総合の所見(`docs/features/general-shoken/`、次のPR)は、本改修で確定した記法(`{{grade}}`・`{{targetCharCount}}`・`{{memos}}`、学期なし、仮名コードなし)に合わせて総合用の初期値を追加する。本改修を先に入れることで、総合用のひな形を最初から新しい形式で書ける。
+総合の所見(`docs/features/general-shoken/`、次のPR)は、本改修で確定した記法(【入力情報】に`{{pseudonymCode}}`・`{{grade}}`・`{{targetCharCount}}`、続けて`{{memos}}`。学期なし)に合わせて総合用の初期値を追加する。本改修を先に入れることで、総合用のひな形を最初から同じ形式で書ける。

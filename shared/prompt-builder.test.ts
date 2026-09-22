@@ -15,7 +15,8 @@ describe("buildPrompt", () => {
     });
 
     expect(result).toContain("学年：3");
-    expect(result).toContain("目安文字数：200");
+    expect(result).toContain("最大文字数：200");
+    expect(result).toContain("対象の児童・生徒：1-03-10");
     expect(result).toContain("- 2026-04-10 1時限 国語: よく発言していた");
     expect(result).toContain("- 2026-04-11 3時限 算数: 計算が早い");
     // 置換し漏れたプレースホルダーが残っていないこと
@@ -30,9 +31,10 @@ describe("buildPrompt", () => {
       pseudonymCode: "1-03-10",
     });
 
-    expect(result).toContain("生活所見を作成してください");
+    expect(result).toContain("生活所見を作成します");
     expect(result).toContain("- 2026-04-10: 休み時間に下級生の面倒を見ていた");
-    expect(result).not.toContain("時限");
+    // メモ行に時限・科目が入らないこと(ひな形の本文には「時限」の語が出るため、行の形で検証する)
+    expect(result).not.toContain("- 2026-04-10 ");
     expect(result).not.toContain("{{");
   });
 
@@ -45,13 +47,13 @@ describe("buildPrompt", () => {
     expect(result).toContain("(該当期間の共有メモはありません)");
   });
 
-  it("目安文字数が未指定の場合は「指定なし」になる", () => {
+  it("文字数が未指定の場合は「指定なし」になる", () => {
     const result = buildPrompt({
       template: DEFAULT_PROMPT_TEMPLATE,
       memos: [],
       pseudonymCode: "1-01-01",
     });
-    expect(result).toContain("目安文字数：指定なし");
+    expect(result).toContain("最大文字数：指定なし");
   });
 
   it("学年が未指定・空白のみの場合は「指定なし」になる", () => {
@@ -117,9 +119,9 @@ describe("初期値のひな形", () => {
     }
   });
 
-  it("仮名コードのプレースホルダーは含まない(生成結果への混入を避けるため)", () => {
+  it("仮名コードのプレースホルダーを含む(教員が実名の非送信を目視確認できるようにするため)", () => {
     for (const template of [DEFAULT_PROMPT_TEMPLATE, DEFAULT_LIFE_PROMPT_TEMPLATE]) {
-      expect(template).not.toContain("{{pseudonymCode}}");
+      expect(template).toContain("{{pseudonymCode}}");
     }
   });
 });

@@ -249,8 +249,8 @@ test.describe("所見管理画面(クラス単位一覧)", () => {
 
     await page.route("**/api/comments/generate", async (route) => {
       const body = route.request().postDataJSON();
-      // 既定のひな形は仮名コードを含まない(生成結果への混入を避けるため)。
-      // 学年はクラスの学年が自動で埋まり、実名は送られない
+      // 仮名コードと学年が入り、実名は送られない
+      expect(body.prompt).toContain("対象の児童・生徒：1-01-01");
       expect(body.prompt).toContain("学年：1");
       expect(body.prompt).not.toContain("生徒A");
       await route.fulfill({
@@ -303,6 +303,7 @@ test.describe("所見管理画面(クラス単位一覧)", () => {
 
     const promptField = row.getByLabel("プロンプト");
     await expect(promptField).toBeVisible();
+    await expect(promptField).toHaveValue(/対象の児童・生徒：1-01-01/);
     await expect(promptField).toHaveValue(/学年：1/);
     await expect(promptField).toHaveValue(/音読が上手にできました/);
 
@@ -379,6 +380,7 @@ test.describe("所見管理画面(クラス単位一覧)", () => {
 
     const promptField = row.getByLabel("プロンプト");
     await expect(promptField).toBeVisible();
+    await expect(promptField).toHaveValue(/対象の児童・生徒：1-01-01/); // 仮名コードが含まれる
     await expect(promptField).toHaveValue(/学年：1/); // クラスの学年が自動で埋まる
     await expect(promptField).toHaveValue(/音読が上手にできました/);
     await expect(promptField).not.toHaveValue(/生徒A/); // 実名は含まれない
