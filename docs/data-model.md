@@ -20,6 +20,8 @@ erDiagram
     SUBJECT |o--o{ TIMETABLE_MASTER_SLOT : "assigned to (nullable)"
     SUBJECT |o--o{ WEEKLY_SUBJECT_OVERRIDE : "assigned to (nullable)"
     SUBJECT ||--o{ MEMO : "assigned to"
+    SUBJECT ||--o{ UNIT : "owns (cascade delete)"
+    UNIT |o--o{ MEMO : "assigned to (nullable)"
     STUDENT ||--o{ MEMO : "has (cascade delete)"
     STUDENT ||--o{ STUDENT_COMMENT : "has (cascade delete)"
     STUDENT ||--o{ LIFE_MEMO : "has (cascade delete)"
@@ -65,6 +67,14 @@ erDiagram
         datetime created_at
     }
 
+    UNIT {
+        uuid id PK
+        uuid subject_id FK "not null。所有者はsubject経由で決まるためteacher_idは持たない"
+        string name "単元名。同じ科目内の重複は許可する(科目名と同じ方針)"
+        datetime created_at
+        datetime updated_at
+    }
+
     TIMETABLE_MASTER_SLOT {
         uuid id PK
         uuid teacher_id FK
@@ -96,6 +106,7 @@ erDiagram
         uuid id PK
         uuid student_id FK
         uuid subject_id FK "not null。科目・クラスが未解決のマスではメモ画面自体を開けない"
+        uuid unit_id FK "nullable。単元未設定ならnull。(unit_id, subject_id)の複合外部キーで、単元が必ずそのメモの科目に属することを保証する。単元削除時はunit_idのみnullに戻る"
         date note_date "授業日"
         int period
         text content
@@ -169,6 +180,7 @@ erDiagram
 - `CLASS_NUMBER_COUNTER`: (teacher_id, grade_group) — 学年区分ごとに1行。クラスを削除しても`last_issued_number`は減らさないことで欠番を保証する
 - `STUDENT`: (class_id, attendance_number) — クラス内で出席番号は一意。登録(インポート)時・個別編集時の両方で検証する
 - `SUBJECT`: 一意制約なし(教員ごとに同名の科目を複数登録できる)。**2026-08-13の設計レビューで、当初「表記ゆれ防止のため一意にすべきでは」という設計側の仮定を提案したが、ユーザーヒアリングの結果「重複を許可する」で確定した。** `docs/design.md`のDDLでは`(teacher_id, name)`のユニーク制約を設けていない
+- `UNIT`: 単元名の一意制約は設けない(`SUBJECT`と同じ方針)。`(id, subject_id)`の複合一意制約は名前の重複防止ではなく、`MEMO`からの複合外部キーの参照先として必要なもの(`docs/features/memo-unit/design.md` §1)
 - `TIMETABLE_MASTER_SLOT`: (teacher_id, weekday, period) — マスのスロットは1つのみ
 - `WEEKLY_SUBJECT_OVERRIDE`: (teacher_id, week_start_date, weekday, period)
 - `WEEKLY_CLASS_OVERRIDE`: (teacher_id, week_start_date, weekday, period)
@@ -182,6 +194,8 @@ erDiagram
 
 `STUDENT`・`MEMO`・`STUDENT_COMMENT`・`LIFE_MEMO`・`STUDENT_LIFE_COMMENT`・`STUDENT_GENERAL_COMMENT`は生徒削除時に物理削除で連鎖する(ON DELETE CASCADE相当)。`CLASS`は生徒が0人の場合のみ物理削除でき、`TIMETABLE_MASTER_SLOT`・`WEEKLY_CLASS_OVERRIDE`からの参照は削除前に自動でnull/削除に置き換わる(F1)。
 
+`UNIT`は科目削除時に物理削除で連鎖する(ON DELETE CASCADE)。ただし科目はメモで使用中なら削除自体が拒否されるため(F3)、メモが参照している単元が科目削除で巻き込まれることはない。単元を単体で削除した場合は、`MEMO.unit_id`のみが`on delete set null (unit_id)`でnullに戻り、メモ本体は残る(`MEMO.subject_id`はnot nullなので、複数列の外部キーでも列リストを指定して`unit_id`だけをnullにする必要がある)。
+
 `TEACHER`エンティティの`email`はER図上の概念的な項目であり、`docs/design.md`の実テーブル(`teacher_profile`)には複製しない。`auth.users.email`と二重管理してズレが生じるのを避けるため、表示が必要な箇所ではSupabase Authのセッションから直接取得する想定とする。
 
 学習の所見(`STUDENT_COMMENT`)・生活の所見(`STUDENT_LIFE_COMMENT`)・総合の所見(`STUDENT_GENERAL_COMMENT`)を別テーブルにしているのは、`STUDENT_COMMENT`の一意制約`(student_id)`を`(student_id, 種別)`に入れ替えると稼働中のコードのupsertが失敗する破壊的変更になるため(`docs/features/life-shoken/design.md`・`docs/features/general-shoken/design.md`)。似た構造のテーブルが3つ並ぶ点は承知のうえで、既存データ・既存コードに触れない加算的な変更を優先している。
@@ -190,7 +204,7 @@ erDiagram
 
 ## データエクスポート(F14)について
 
-F14は既存エンティティを横断的に読み取ってJSONにまとめる機能であり、新しいエンティティは追加していない。目的は生徒ごとのメモ・所見を長期的に手元へ保管しておくことにあるため、出力は生徒ごとにメモ・所見がまとまる形にする(生活メモ`lifeMemos`・生活の所見`lifeComments`も生徒ごとに含める)。`AI_PROVIDER_SETTING`(APIキーを含む)はエクスポート対象から除外する。インポート(復元)機能は持たないため、エクスポートしたファイルからDBの状態を再現する経路は現時点で存在しない。バックアップ目的で定期的にエクスポートを促す仕組み(リマインダー等)は要件に含まれておらず、教員が自発的に実行しなければ手元にファイルは残らない。
+F14は既存エンティティを横断的に読み取ってJSONにまとめる機能であり、新しいエンティティは追加していない。目的は生徒ごとのメモ・所見を長期的に手元へ保管しておくことにあるため、出力は生徒ごとにメモ・所見がまとまる形にする(生活メモ`lifeMemos`・生活の所見`lifeComments`・総合の所見`generalComments`も生徒ごとに含める)。科目ごとの単元は`subjects[].units`、授業メモに記録された単元は`memos[].unitId`として出力する。`AI_PROVIDER_SETTING`(APIキーを含む)はエクスポート対象から除外する。インポート(復元)機能は持たないため、エクスポートしたファイルからDBの状態を再現する経路は現時点で存在しない。バックアップ目的で定期的にエクスポートを促す仕組み(リマインダー等)は要件に含まれておらず、教員が自発的に実行しなければ手元にファイルは残らない。
 
 ## 残っている矛盾・未決事項
 

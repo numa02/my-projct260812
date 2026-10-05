@@ -93,17 +93,17 @@ ID接頭辞: `UN-`。**加算的な変更のみ(テーブル追加・nullable列
   - 依存: UN-010〜UN-015
   - ロールバック: テストのrevertのみ
 
-- [ ] **UN-018** プロジェクト全体のドキュメントを更新する
-  - DoD: (1)`docs/requirements.md`のF6・F7・F9・F10の**本文**に単元が反映され、用語集に「単元」が追加される(旧本文に注記を足すのではなく本文を書き換える)。(2)`docs/data-model.md`のER図に`UNIT`と`MEMO.unit_id`が入る。(3)`docs/design.md` §4.2のDDLが`supabase/migrations/`の適用結果と一致し、§5.4・§5.5・§5.7に単元関連の追加が入る。(4)`docs/design/screens.md`の該当4画面に単元が反映される。(5)`docs/features/README.md`の実装済み一覧に本機能の行が追加され、科目管理・授業記録・生徒別メモ一覧・所見管理の行にタスクID範囲が追記される。(6)`docs/tasks.md`に本機能の行が追加される。(7)`git grep -n "未実装\|未反映\|予定" -- docs`で本機能に関する古い注記が残っていない
+- [x] **UN-018** プロジェクト全体のドキュメントを更新する
+  - DoD: (1)`docs/requirements.md`のF6・F7・F9・F10の**本文**に単元が反映され、用語集に「単元」が追加される(旧本文に注記を足すのではなく本文を書き換える)。(2)`docs/data-model.md`のER図に`UNIT`と`MEMO.unit_id`が入る。(3)`docs/design.md` §4.2のDDLが`supabase/migrations/`の適用結果と一致し、§5.4・§5.5・§5.7に単元関連の追加が入る。(4)`docs/design/screens.md`の該当4画面に単元が反映される。(5)`docs/features/README.md`の実装済み一覧に本機能の行が追加され、科目管理・授業記録・生徒別メモ一覧・所見管理の行にタスクID範囲が追記される。(6)`docs/tasks.md`の冒頭に、機能改修のタスクは`docs/features/<機能名>/tasks.md`が正であることを明記する(本機能の行を`docs/tasks.md`に足すと`docs/features/README.md`と二重管理になるため、索引を1箇所に寄せる)。(7)`git grep -n "未実装\|未反映\|予定" -- docs`で本機能に関する古い注記が残っていない
   - 依存: UN-001〜UN-017
   - ロールバック: ドキュメントのrevertのみ
 
-- [ ] **UN-019** `docs/features/memo-unit/test-cases.md`と使い方説明書を更新する
-  - DoD: `test-cases.md`に最低限のテスト(P0)と後で確認するテスト(P1〜P3)が、既存の機能ディレクトリと同じ形式で書かれる。`docs/manual/`に単元の登録・授業記録での選択・単元ごとの所見生成の手順が追加される
+- [x] **UN-019** `docs/features/memo-unit/test-cases.md`と使い方説明書を更新する
+  - DoD: `test-cases.md`に最低限のテスト(P0)と後で確認するテスト(P1〜P3)が、既存の機能ディレクトリと同じ形式で書かれる。`docs/manual/index.html`に単元の登録(2-3)・授業記録での選択(3-3)・生徒別メモ一覧での見え方(3-5)・単元ごとの所見生成(4-2)が追加され、`docs/manual/README.md`の手順でキャプチャを撮り直して`public/manual/`を再生成する(単元のUIが入った画面は画像も差し替わる)
   - 依存: UN-017
   - ロールバック: ドキュメントのrevertのみ
 
-- [ ] **UN-020** 検証をすべて通す
+- [x] **UN-020** 検証をすべて通す
   - DoD: `npm run lint`・`npm run test`・`npm run test:db`・`npx tsc --noEmit`・`npm run build`・`npm run test:e2e`がすべて通る。`docs/design.md` §4.2のDDLとマイグレーションの適用結果を突き合わせて差異がない
   - 依存: UN-001〜UN-019
   - ロールバック: なし(検証タスク)

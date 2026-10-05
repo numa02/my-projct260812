@@ -52,19 +52,26 @@ test.describe("科目管理画面(T-057)", () => {
     // 閉じている間は単元の欄が出ない
     await expect(page.getByRole("heading", { name: "単元" })).toHaveCount(0);
 
-    await page.getByRole("button", { name: "算数の単元" }).click();
+    const nameInput = page.getByLabel("算数の単元名", { exact: true });
+    const addButton = page.getByRole("button", { name: "単元を追加", exact: true });
+
+    await page.getByRole("button", { name: "算数の単元", exact: true }).click();
     await expect(page.getByText("まだ単元が登録されていません")).toBeVisible();
 
-    await page.getByLabel("算数の単元名").fill("分数のかけ算");
-    await page.getByRole("button", { name: "単元を追加" }).click();
+    await nameInput.fill("分数のかけ算");
+    await addButton.click();
     await expect(page.getByText("単元を登録しました")).toBeVisible();
     await expect(page.getByText("分数のかけ算", { exact: true })).toBeVisible();
-    // 追加後は入力欄がクリアされ、続けて次の単元を登録できる
-    await expect(page.getByLabel("算数の単元名")).toHaveValue("");
+    // 追加後は入力欄がクリアされ、続けて次の単元を登録できる。
+    // 2件目に進む合図にはトーストを使わない(4秒で消えるため、1件目のトーストを
+    // 見てしまい、保存中の状態で次の操作に進むことがある)
+    await expect(nameInput).toHaveValue("");
 
-    await page.getByLabel("算数の単元名").fill("円の面積");
-    await page.getByRole("button", { name: "単元を追加" }).click();
-    await expect(page.getByText("単元を登録しました")).toBeVisible();
+    await nameInput.fill("円の面積");
+    await expect(addButton).toBeEnabled();
+    await addButton.click();
+    await expect(page.getByText("円の面積", { exact: true })).toBeVisible();
+    await expect(nameInput).toHaveValue("");
 
     await page.getByRole("button", { name: "単元「円の面積」を編集" }).click();
     await page.getByLabel("円の面積の単元名").fill("円の面積の求め方");
