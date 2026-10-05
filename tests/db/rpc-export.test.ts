@@ -25,9 +25,15 @@ describe("export_teacher_data", () => {
       .insert({ class_id: klass!.id, attendance_number: 1, name: "生徒A" })
       .select()
       .single<{ id: string }>();
+    const { data: unit } = await teacher.client
+      .from("unit")
+      .insert({ subject_id: subject!.id, name: "詩を読もう" })
+      .select()
+      .single<{ id: string }>();
     await teacher.client.from("memo").insert({
       student_id: student!.id,
       subject_id: subject!.id,
+      unit_id: unit!.id,
       note_date: "2026-04-10",
       period: 1,
       content: "メモ内容",
@@ -72,10 +78,10 @@ describe("export_teacher_data", () => {
 
     const result = data as {
       classes: Array<{ displayName: string }>;
-      subjects: Array<{ name: string }>;
+      subjects: Array<{ name: string; units: Array<{ id: string; name: string }> }>;
       students: Array<{
         name: string;
-        memos: Array<{ content: string }>;
+        memos: Array<{ content: string; unitId: string | null }>;
         comments: Array<{ content: string }>;
         lifeMemos: Array<{ content: string; noteDate: string }>;
         lifeComments: Array<{ content: string }>;
@@ -91,9 +97,15 @@ describe("export_teacher_data", () => {
 
     expect(result.classes).toEqual([expect.objectContaining({ displayName: "1年1組" })]);
     expect(result.subjects).toEqual([expect.objectContaining({ name: "国語" })]);
+    // 科目ごとの単元一覧(UN-003)
+    expect(result.subjects[0].units).toEqual([
+      expect.objectContaining({ id: unit!.id, name: "詩を読もう" }),
+    ]);
     expect(result.students).toHaveLength(1);
     expect(result.students[0].name).toBe("生徒A");
-    expect(result.students[0].memos).toEqual([expect.objectContaining({ content: "メモ内容" })]);
+    expect(result.students[0].memos).toEqual([
+      expect.objectContaining({ content: "メモ内容", unitId: unit!.id }),
+    ]);
     expect(result.students[0].comments).toEqual([
       expect.objectContaining({ content: "所見内容" }),
     ]);
@@ -127,5 +139,40 @@ describe("export_teacher_data", () => {
     expect(result.classes).toEqual([]);
     expect(result.subjects).toEqual([]);
     expect(result.students).toEqual([]);
+  });
+
+  it("単元が未登録・未設定でも空配列とnullを返す(UN-003)", async () => {
+    teacher = await createTestTeacher();
+
+    const { data: klass } = await teacher.client
+      .rpc("create_class", { p_grade: "1", p_display_name: "1年1組" })
+      .single<{ id: string }>();
+    const { data: subject } = await teacher.client
+      .from("subject")
+      .insert({ teacher_id: teacher.id, name: "国語" })
+      .select()
+      .single<{ id: string }>();
+    const { data: student } = await teacher.client
+      .from("student")
+      .insert({ class_id: klass!.id, attendance_number: 1, name: "生徒A" })
+      .select()
+      .single<{ id: string }>();
+    await teacher.client.from("memo").insert({
+      student_id: student!.id,
+      subject_id: subject!.id,
+      note_date: "2026-04-10",
+      period: 1,
+      content: "単元未設定のメモ",
+    });
+
+    const { data, error } = await teacher.client.rpc("export_teacher_data");
+    expect(error).toBeNull();
+
+    const result = data as {
+      subjects: Array<{ units: unknown[] }>;
+      students: Array<{ memos: Array<{ unitId: string | null }> }>;
+    };
+    expect(result.subjects[0].units).toEqual([]);
+    expect(result.students[0].memos[0].unitId).toBeNull();
   });
 });

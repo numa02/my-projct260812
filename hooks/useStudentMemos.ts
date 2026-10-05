@@ -12,6 +12,8 @@ export interface StudentMemoRow {
   kind: MemoKind;
   /** 生活メモでは「生活記録」(小学校の教科「生活」と区別するため) */
   subjectName: string;
+  /** 授業メモの単元名。単元未設定の授業メモ・生活メモではnull */
+  unitName: string | null;
   noteDate: string;
   /** 生活メモではnull */
   period: number | null;
@@ -43,8 +45,9 @@ export function useStudentMemos(studentId: string | null) {
       if (!studentId) return [];
       const [lessonResult, lifeResult] = await Promise.all([
         supabase
+          // unitは左結合(既定)のままにする。!innerにすると単元未設定のメモが落ちてしまう
           .from("memo")
-          .select("id, note_date, period, content, share_flag, subject(name)")
+          .select("id, note_date, period, content, share_flag, subject(name), unit(name)")
           .eq("student_id", studentId),
         supabase
           .from("life_memo")
@@ -61,12 +64,14 @@ export function useStudentMemos(studentId: string | null) {
         content: string;
         share_flag: "shared" | "private";
         subject: { name: string } | null;
+        unit: { name: string } | null;
       }>;
       const rows: StudentMemoRow[] = [
         ...lessonRows.map((m) => ({
           id: m.id,
           kind: "lesson" as const,
           subjectName: m.subject?.name ?? "",
+          unitName: m.unit?.name ?? null,
           noteDate: m.note_date,
           period: m.period,
           content: m.content,
@@ -76,6 +81,8 @@ export function useStudentMemos(studentId: string | null) {
           id: m.id,
           kind: "life" as const,
           subjectName: LIFE_MEMO_LABEL,
+          // 生活メモは授業に紐づかないため単元を持たない
+          unitName: null,
           noteDate: m.note_date,
           period: null,
           content: m.content,

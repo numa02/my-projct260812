@@ -53,7 +53,7 @@ export function PromptTemplateForm({ kind, initialTemplate, saveTemplate }: Prom
 
       <InlineMessage
         variant="info"
-        message={`{{pseudonymCode}}(仮名コード)・{{grade}}(学年)・{{targetCharCount}}(目安文字数)・{{memos}}(${label.memos})のプレースホルダーが、生成時に実際の値へ置き換えられます`}
+        message={`{{pseudonymCode}}(仮名コード)・{{grade}}(学年)・{{targetCharCount}}(目安文字数)・{{memos}}(${label.memos})・{{unitName}}(単元名。「単元ごとに生成」のときだけ値が入り、まとめて生成では「指定なし」になります)のプレースホルダーが、生成時に実際の値へ置き換えられます`}
       />
 
       <Textarea label={label.title} value={content} onChange={(e) => setContent(e.target.value)} rows={10} />

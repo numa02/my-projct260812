@@ -5,6 +5,8 @@ export interface PromptMemo {
   subjectName?: string;
   /** 授業メモのみ。生活メモでは省略する */
   period?: number;
+  /** 授業メモのみ。単元未設定のメモ・生活メモではnull/省略 */
+  unitName?: string | null;
 }
 
 /**
@@ -342,7 +344,10 @@ export const DEFAULT_GENERAL_PROMPT_TEMPLATE = `あなたは、教員が日々�
 
 function formatMemoLine(m: PromptMemo): string {
   if (m.period != null) {
-    return `- ${m.noteDate} ${m.period}時限 ${m.subjectName ?? ""}: ${m.content}`;
+    // 単元が記録されているメモは科目名に続けて括弧で単元名を添える。
+    // 既定のひな形は{{unitName}}を持たないため、単元名はこの行を通じてAIに伝わる
+    const subject = m.unitName ? `${m.subjectName ?? ""}(${m.unitName})` : (m.subjectName ?? "");
+    return `- ${m.noteDate} ${m.period}時限 ${subject}: ${m.content}`;
   }
   return `- ${m.noteDate}: ${m.content}`;
 }
@@ -360,13 +365,21 @@ export function buildPrompt(params: {
   grade?: string;
   targetCharCount?: number;
   pseudonymCode: string;
+  /**
+   * 「単元ごとに生成」のときの対象の単元名。まとめて生成では複数の単元が混在するため渡さない。
+   * 既定のひな形3種は{{unitName}}を含まないため、渡しても既定の挙動は変わらない
+   */
+  unitName?: string;
 }): string {
   const memoLines = params.memos.map(formatMemoLine).join("\n");
   const grade = params.grade?.trim();
 
+  const unitName = params.unitName?.trim();
+
   return params.template
     .replaceAll("{{pseudonymCode}}", params.pseudonymCode)
     .replaceAll("{{grade}}", grade ? grade : "指定なし")
+    .replaceAll("{{unitName}}", unitName ? unitName : "指定なし")
     .replaceAll(
       "{{targetCharCount}}",
       params.targetCharCount != null ? String(params.targetCharCount) : "指定なし",

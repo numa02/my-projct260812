@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { Pencil, Trash2, X, Check } from "lucide-react";
+import { ChevronDown, ChevronRight, Pencil, Trash2, X, Check } from "lucide-react";
 import { useSubjects, type SubjectRow, type SchoolLevel } from "@/hooks/useSubjects";
+import { SubjectUnitList } from "./SubjectUnitList";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { Select } from "@/components/ui/Select";
@@ -39,6 +40,8 @@ export default function SubjectsPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState("");
   const [deleteTarget, setDeleteTarget] = useState<SubjectRow | null>(null);
+  // 単元を表示している科目。同時に開けるのは1つ(CollapsibleListと同じ挙動に揃える)
+  const [expandedSubjectId, setExpandedSubjectId] = useState<string | null>(null);
   const [seedOpen, setSeedOpen] = useState(false);
   const [seedSchoolLevel, setSeedSchoolLevel] = useState<SchoolLevel>("elementary");
   const [importOpen, setImportOpen] = useState(false);
@@ -193,64 +196,87 @@ export default function SubjectsPage() {
         <EmptyState message="まだ科目が登録されていません" />
       ) : (
         <ul className="flex max-w-md flex-col divide-y divide-gray-100 rounded-md border border-gray-200">
-          {subjects.map((subject) => (
-            <li key={subject.id} className="flex items-center justify-between gap-2 px-4 py-2">
-              {editingId === subject.id ? (
-                <>
-                  <input
-                    value={editingName}
-                    onChange={(e) => setEditingName(e.target.value)}
-                    className="flex-1 rounded-sm border border-gray-300 px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-gray-400"
-                    autoFocus
-                  />
-                  <button
-                    type="button"
-                    onClick={saveEdit}
-                    aria-label="保存"
-                    className="flex h-11 w-11 items-center justify-center rounded-sm text-gray-500 hover:bg-gray-100"
-                  >
-                    <Check className="h-4 w-4" aria-hidden />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setEditingId(null)}
-                    aria-label="キャンセル"
-                    className="flex h-11 w-11 items-center justify-center rounded-sm text-gray-500 hover:bg-gray-100"
-                  >
-                    <X className="h-4 w-4" aria-hidden />
-                  </button>
-                </>
-              ) : (
-                <>
-                  <span className="text-sm text-gray-700">{subject.name}</span>
-                  <div className="flex gap-2">
-                    <button
-                      type="button"
-                      onClick={() => startEdit(subject)}
-                      aria-label={`${subject.name}を編集`}
-                      className="flex h-11 w-11 items-center justify-center rounded-sm text-gray-500 hover:bg-gray-100"
-                    >
-                      <Pencil className="h-4 w-4" aria-hidden />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setDeleteTarget(subject)}
-                      aria-label={`${subject.name}を削除`}
-                      className="flex h-11 w-11 items-center justify-center rounded-sm text-gray-500 hover:bg-gray-100"
-                    >
-                      <Trash2 className="h-4 w-4" aria-hidden />
-                    </button>
-                  </div>
-                </>
-              )}
-            </li>
-          ))}
+          {subjects.map((subject) => {
+            const expanded = expandedSubjectId === subject.id;
+            return (
+              <li key={subject.id} className="flex flex-col">
+                <div className="flex items-center justify-between gap-2 px-4 py-2">
+                  {editingId === subject.id ? (
+                    <>
+                      <input
+                        value={editingName}
+                        onChange={(e) => setEditingName(e.target.value)}
+                        className="flex-1 rounded-sm border border-gray-300 px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-gray-400"
+                        autoFocus
+                      />
+                      <button
+                        type="button"
+                        onClick={saveEdit}
+                        aria-label="保存"
+                        className="flex h-11 w-11 items-center justify-center rounded-sm text-gray-500 hover:bg-gray-100"
+                      >
+                        <Check className="h-4 w-4" aria-hidden />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setEditingId(null)}
+                        aria-label="キャンセル"
+                        className="flex h-11 w-11 items-center justify-center rounded-sm text-gray-500 hover:bg-gray-100"
+                      >
+                        <X className="h-4 w-4" aria-hidden />
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setExpandedSubjectId((prev) => (prev === subject.id ? null : subject.id))
+                        }
+                        aria-expanded={expanded}
+                        aria-label={`${subject.name}の単元`}
+                        className="flex flex-1 items-center gap-1.5 rounded-sm py-2 text-left text-sm text-gray-700 hover:bg-gray-100"
+                      >
+                        {expanded ? (
+                          <ChevronDown className="h-4 w-4 text-gray-500" aria-hidden />
+                        ) : (
+                          <ChevronRight className="h-4 w-4 text-gray-500" aria-hidden />
+                        )}
+                        {subject.name}
+                      </button>
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={() => startEdit(subject)}
+                          aria-label={`${subject.name}を編集`}
+                          className="flex h-11 w-11 items-center justify-center rounded-sm text-gray-500 hover:bg-gray-100"
+                        >
+                          <Pencil className="h-4 w-4" aria-hidden />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setDeleteTarget(subject)}
+                          aria-label={`${subject.name}を削除`}
+                          className="flex h-11 w-11 items-center justify-center rounded-sm text-gray-500 hover:bg-gray-100"
+                        >
+                          <Trash2 className="h-4 w-4" aria-hidden />
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
+                {expanded && editingId !== subject.id && (
+                  <SubjectUnitList subjectId={subject.id} subjectName={subject.name} />
+                )}
+              </li>
+            );
+          })}
         </ul>
       )}
 
       <ConfirmDialog
         title="科目を削除しますか"
-        body={`「${deleteTarget?.name}」を削除します。この操作は取り消せません。`}
+        body={`「${deleteTarget?.name}」を削除します。この科目に登録済みの単元もまとめて削除されます。この操作は取り消せません。`}
         variant="danger"
         confirmLabel="削除する"
         open={deleteTarget !== null}

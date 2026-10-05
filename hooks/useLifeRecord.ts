@@ -6,9 +6,18 @@ import { createSupabaseBrowserClient } from "@/lib/supabase-browser";
 import { useClasses, type ClassRow } from "./useClasses";
 import { useStudents } from "./useStudents";
 import { useWeeklyTimetable } from "./useWeeklyTimetable";
-import type { ExistingMemo } from "./useMemoRecord";
 import { formatISODate, getWeekdayNumber, getWeekStartDate } from "@/shared/week";
 import { resolveLifeRecordClassCandidates } from "@/shared/life-record";
+
+/**
+ * 生活記録画面で表示する既存の生活メモ。授業メモ(`ExistingMemo`)とは違い、
+ * 授業に紐づかないため単元を持たない
+ */
+export interface ExistingLifeMemo {
+  studentId: string;
+  content: string;
+  shareFlag: "shared" | "private";
+}
 
 function parseJstDate(dateISO: string): Date {
   return new Date(`${dateISO}T00:00:00+09:00`);
@@ -56,7 +65,7 @@ export function useLifeRecord(dateISO: string, selectedClassId: string | null) {
 
   const memosQuery = useQuery({
     queryKey: ["life-record-memos", dateISO, classId],
-    queryFn: async (): Promise<ExistingMemo[]> => {
+    queryFn: async (): Promise<ExistingLifeMemo[]> => {
       if (studentIds.length === 0) return [];
       const { data, error } = await supabase
         .from("life_memo")

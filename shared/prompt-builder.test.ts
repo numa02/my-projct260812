@@ -49,6 +49,68 @@ describe("buildPrompt", () => {
     expect(result).not.toContain("{{");
   });
 
+  it("単元が記録されたメモは科目名に続けて単元名が入る", () => {
+    const result = buildPrompt({
+      template: DEFAULT_PROMPT_TEMPLATE,
+      memos: [
+        {
+          subjectName: "算数",
+          unitName: "分数のかけ算",
+          noteDate: "2026-04-11",
+          period: 3,
+          content: "計算が早い",
+        },
+        // 単元未設定のメモは従来どおりの表記のまま
+        { subjectName: "国語", noteDate: "2026-04-10", period: 1, content: "よく発言していた" },
+      ],
+      pseudonymCode: "1-03-10",
+    });
+
+    expect(result).toContain("- 2026-04-11 3時限 算数(分数のかけ算): 計算が早い");
+    expect(result).toContain("- 2026-04-10 1時限 国語: よく発言していた");
+  });
+
+  it("unitNameがnullのメモは単元なしとして扱う", () => {
+    const result = buildPrompt({
+      template: "{{memos}}",
+      memos: [
+        { subjectName: "算数", unitName: null, noteDate: "2026-04-11", period: 3, content: "計算が早い" },
+      ],
+      pseudonymCode: "1-03-10",
+    });
+    expect(result).toBe("- 2026-04-11 3時限 算数: 計算が早い");
+  });
+
+  it("{{unitName}}は渡した単元名に置換される", () => {
+    const result = buildPrompt({
+      template: "単元は{{unitName}}。",
+      memos: [],
+      pseudonymCode: "1-03-10",
+      unitName: "分数のかけ算",
+    });
+    expect(result).toBe("単元は分数のかけ算。");
+  });
+
+  it("{{unitName}}を渡さない(まとめて生成)場合は「指定なし」になる", () => {
+    const result = buildPrompt({
+      template: "単元は{{unitName}}。",
+      memos: [],
+      pseudonymCode: "1-03-10",
+    });
+    expect(result).toBe("単元は指定なし。");
+  });
+
+  it("ひな形に{{unitName}}がない場合、単元名を渡しても出力は従来と同一になる", () => {
+    const params = {
+      template: DEFAULT_PROMPT_TEMPLATE,
+      memos: [{ subjectName: "国語", noteDate: "2026-04-10", period: 1, content: "よく発言していた" }],
+      grade: "3",
+      targetCharCount: 200,
+      pseudonymCode: "1-03-10",
+    };
+    expect(buildPrompt({ ...params, unitName: "分数のかけ算" })).toBe(buildPrompt(params));
+  });
+
   it("メモが0件の場合は代替文言になる", () => {
     const result = buildPrompt({
       template: DEFAULT_PROMPT_TEMPLATE,
@@ -133,6 +195,14 @@ describe("初期値のひな形", () => {
   it("仮名コードのプレースホルダーを含む(教員が実名の非送信を目視確認できるようにするため)", () => {
     for (const template of ALL_DEFAULT_TEMPLATES) {
       expect(template).toContain("{{pseudonymCode}}");
+    }
+  });
+
+  // {{unitName}}は「必要な教員が自分のひな形に入れる」任意の拡張として提供する。
+  // 既定値に入れると、ひな形を保存していない教員の生成結果が本機能の追加だけで変わってしまう
+  it("{{unitName}}は含まない(既定の生成結果を変えないため)", () => {
+    for (const template of ALL_DEFAULT_TEMPLATES) {
+      expect(template).not.toContain("{{unitName}}");
     }
   });
 });

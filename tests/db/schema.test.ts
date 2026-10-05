@@ -182,6 +182,133 @@ describe("memo", () => {
   });
 });
 
+describe("unit(UN-001)", () => {
+  let teacher: TestTeacher | undefined;
+
+  afterEach(async () => {
+    if (teacher) await deleteTestTeacher(teacher.id);
+    teacher = undefined;
+  });
+
+  /** 単元を1件作る。unitはteacher_idを持たないため、subject_idだけを渡す */
+  async function createUnit(t: TestTeacher, subjectId: string, name: string) {
+    const { data, error } = await t.client
+      .from("unit")
+      .insert({ subject_id: subjectId, name })
+      .select()
+      .single<{ id: string }>();
+    expect(error).toBeNull();
+    return data!.id;
+  }
+
+  it("teacher_idを渡さずに自分の科目の単元を作れる(所有者はsubject経由で決まる)", async () => {
+    teacher = await createTestTeacher();
+    const { subjectId } = await createClassWithStudent(teacher);
+
+    const unitId = await createUnit(teacher, subjectId, "分数のかけ算");
+
+    const { data } = await teacher.client.from("unit").select("id, name, subject_id").eq("id", unitId);
+    expect(data).toEqual([{ id: unitId, name: "分数のかけ算", subject_id: subjectId }]);
+  });
+
+  it("同じ科目内の単元名の重複が許可される(科目名と同じ方針)", async () => {
+    teacher = await createTestTeacher();
+    const { subjectId } = await createClassWithStudent(teacher);
+
+    await createUnit(teacher, subjectId, "分数のかけ算");
+    await createUnit(teacher, subjectId, "分数のかけ算");
+
+    const { data } = await teacher.client.from("unit").select("id").eq("name", "分数のかけ算");
+    expect(data).toHaveLength(2);
+  });
+
+  it("メモの単元は同じ科目の単元でなければ保存できない(複合外部キー)", async () => {
+    teacher = await createTestTeacher();
+    const { studentId, subjectId } = await createClassWithStudent(teacher);
+    // 別の科目に属する単元
+    const { data: otherSubject } = await teacher.client
+      .from("subject")
+      .insert({ teacher_id: teacher.id, name: "算数" })
+      .select()
+      .single<{ id: string }>();
+    const otherUnitId = await createUnit(teacher, otherSubject!.id, "分数のかけ算");
+
+    const { error } = await teacher.client.from("memo").insert({
+      student_id: studentId,
+      subject_id: subjectId,
+      unit_id: otherUnitId,
+      note_date: "2026-04-10",
+      period: 1,
+      content: "メモ",
+    });
+    expect(error).not.toBeNull();
+  });
+
+  it("単元未設定(unit_id=null)のメモは従来どおり保存できる", async () => {
+    teacher = await createTestTeacher();
+    const { studentId, subjectId } = await createClassWithStudent(teacher);
+
+    const { error } = await teacher.client.from("memo").insert({
+      student_id: studentId,
+      subject_id: subjectId,
+      unit_id: null,
+      note_date: "2026-04-10",
+      period: 1,
+      content: "メモ",
+    });
+    expect(error).toBeNull();
+  });
+
+  it("単元を削除するとメモの単元だけがnullに戻り、メモ自体は残る", async () => {
+    teacher = await createTestTeacher();
+    const { studentId, subjectId } = await createClassWithStudent(teacher);
+    const unitId = await createUnit(teacher, subjectId, "分数のかけ算");
+
+    await teacher.client.from("memo").insert({
+      student_id: studentId,
+      subject_id: subjectId,
+      unit_id: unitId,
+      note_date: "2026-04-10",
+      period: 1,
+      content: "メモ",
+    });
+
+    const { error: deleteError } = await teacher.client.from("unit").delete().eq("id", unitId);
+    expect(deleteError).toBeNull();
+
+    const { data } = await teacher.client
+      .from("memo")
+      .select("unit_id, subject_id, content")
+      .eq("student_id", studentId);
+    // subject_id は not null のため、複合外部キーのset nullがunit_idだけに効いている必要がある
+    expect(data).toEqual([{ unit_id: null, subject_id: subjectId, content: "メモ" }]);
+  });
+
+  it("単元名を更新するとupdated_atが進む", async () => {
+    teacher = await createTestTeacher();
+    const { subjectId } = await createClassWithStudent(teacher);
+    const unitId = await createUnit(teacher, subjectId, "分数のかけ算");
+
+    const { data: before } = await teacher.client
+      .from("unit")
+      .select("updated_at")
+      .eq("id", unitId)
+      .single<{ updated_at: string }>();
+
+    await teacher.client.from("unit").update({ name: "円の面積" }).eq("id", unitId);
+
+    const { data: after } = await teacher.client
+      .from("unit")
+      .select("updated_at")
+      .eq("id", unitId)
+      .single<{ updated_at: string }>();
+
+    expect(new Date(after!.updated_at).getTime()).toBeGreaterThan(
+      new Date(before!.updated_at).getTime(),
+    );
+  });
+});
+
 describe("student_comment", () => {
   let teacher: TestTeacher | undefined;
 

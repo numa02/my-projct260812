@@ -54,6 +54,12 @@ export const subjectInputSchema = z.object({
 });
 export type SubjectInput = z.infer<typeof subjectInputSchema>;
 
+/** 単元(科目に属する教科書の章・題材のまとまり)。同じ科目内の同名は科目名と同じ方針で許す */
+export const unitInputSchema = z.object({
+  name: z.string().trim().min(1, "単元名を入力してください"),
+});
+export type UnitInput = z.infer<typeof unitInputSchema>;
+
 export const timetableSlotSchema = z.object({
   weekday: z.number().int().min(1).max(5),
   period: z.number().int().min(1).max(6),
@@ -65,6 +71,8 @@ export type TimetableSlot = z.infer<typeof timetableSlotSchema>;
 export const memoInputSchema = z.object({
   studentId: z.string().uuid(),
   subjectId: z.string().uuid(),
+  /** そのコマの単元。選択は任意で、未選択はnull(単元未設定) */
+  unitId: z.string().uuid().nullable().default(null),
   noteDate: z.string().date(),
   period: z.number().int().min(1).max(6),
   content: z.string().min(1),
@@ -86,6 +94,14 @@ export type LifeMemoInput = z.infer<typeof lifeMemoInputSchema>;
  */
 export const commentKindSchema = z.enum(["learning", "life", "general"]);
 export type CommentKind = z.infer<typeof commentKindSchema>;
+
+/**
+ * 所見のAI生成の単位。whole=対象期間の共有メモ全体から1件生成する(従来の挙動)、
+ * per_unit=共有メモを単元ごとに分けて単元ごとに所見案を生成し、教員が採用するものを選ぶ。
+ * 生活の所見は単元を持たないため`whole`のみ(制約はUI側で表現する)
+ */
+export const generationScopeSchema = z.enum(["whole", "per_unit"]);
+export type GenerationScope = z.infer<typeof generationScopeSchema>;
 
 export const commentSaveInputSchema = z.object({
   content: z.string().min(1),

@@ -45,9 +45,10 @@ export function useSharedMemosForPeriod(
       // 埋め込みリソースへのフィルタを効かせるため!innerで内部結合にする
       // (既定の左結合だと条件に合わない行が subject: null として残ってしまう)。
       // memo.subject_idはnot nullなので、内部結合にしても取り漏らしは起きない
+      // unitは左結合(既定)のままにする。!innerにすると単元未設定のメモが材料から落ちてしまう
       const query = supabase
         .from("memo")
-        .select("note_date, period, content, subject!inner(name)");
+        .select("note_date, period, content, subject!inner(name), unit(name)");
       if (kind === "general") {
         query.eq("subject.name", GENERAL_SUBJECT_NAME);
       } else {
@@ -68,9 +69,11 @@ export function useSharedMemosForPeriod(
         period: number;
         content: string;
         subject: { name: string } | null;
+        unit: { name: string } | null;
       }>;
       return rows.map((r) => ({
         subjectName: r.subject?.name ?? "",
+        unitName: r.unit?.name ?? null,
         noteDate: r.note_date,
         period: r.period,
         content: r.content,
