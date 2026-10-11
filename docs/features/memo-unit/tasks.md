@@ -194,3 +194,11 @@ PR #26 のレビュー中の指摘(「厳選モードのときのプロンプト
   - DoD: (1)`mockups/settings.html`が5つのひな形と折りたたみの構成に一致する。(2)`e2e/settings-prompt-template.spec.ts`が折りたたみとラベル変更に追従し、「単元ごと」用の保存独立性と、単元ごとの生成でそのひな形が使われることが追加される。(3)`docs/requirements.md` F10・`docs/design.md` §4.2のDDL・`docs/design/screens.md`の設定画面・`docs/features/memo-unit/test-cases.md`が更新される。(4)`docs/manual/index.html` 4-3のひな形の説明が5つの構成に合わせて更新され、キャプチャを撮り直す。(5)`npm run lint`・`npm run test`・`npm run test:db`・`npx tsc --noEmit`・`npm run build`・`npm run test:e2e`がすべて通る
   - 依存: UN-028〜UN-034
   - ロールバック: 各ファイルのrevertのみ
+
+---
+
+## 本番反映の記録
+
+- [x] **2026-10-11 本番適用** `20261005090000_memo_unit.sql`・`20261011090000_prompt_template_unit.sql`の2本を本番へ適用(実行はユーザー、事前・事後の確認はClaudeが読み取りのみで実施)。適用前に`supabase migration list --linked`で未適用が想定の2本だけであることを確認し、適用後に`supabase db dump --linked --schema public`で`unit`テーブル・RLSポリシー・索引・トリガー、`memo.unit_id`と複合外部キー、`prompt_template`の5列、`export_teacher_data`の新定義を確認した。既存の列・データには触れていない
+- [x] **2026-10-11 PR #26 マージ** 適用の完了後にマージし、新コードを本番へデプロイした(順序: マイグレーション → デプロイ)
+- [ ] **手動確認** `docs/features/memo-unit/test-cases.md`のP0を本番またはプレビューで一通り確認し、「確認した環境」にチェックを入れる
