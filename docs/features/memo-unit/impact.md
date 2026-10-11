@@ -15,7 +15,7 @@
 
 | 画面 | 影響 |
 |---|---|
-| 科目管理(`/subjects`) | 科目の行が折りたたみになり、中に単元の一覧・追加・編集・削除が入る。科目の削除確認の本文に単元も削除されることを追記 |
+| 科目管理(`/subjects`) | 科目の行が折りたたみになり、中に単元の一覧・追加・編集・削除と「貼り付けで一括登録」が入る。科目の削除確認の本文に単元も削除されることを追記 |
 | 授業記録(`/memos/record`) | 単元のプルダウンを追加。単元を変えるとそのコマの保存済みメモ全件の単元が更新される |
 | 生徒別メモ一覧(`/memos/students`) | メモの見出しに単元名を表示。「教科別」表示が教科 → 単元の2段になる |
 | 所見管理(`/comments/class`) | AI生成セクションに生成単位の切り替えが増える(学習・総合のみ)。「単元ごとに生成」で単元カードの一覧が出る |
@@ -33,11 +33,13 @@
 | `shared/prompt-builder.ts` | `PromptMemo.unitName`を追加。`formatMemoLine`が単元名を含める。`buildPrompt`が`{{unitName}}`を置換。**既定ひな形3種の文面は変更しない** |
 | `shared/group-memos-by-unit.ts`(新規) | 所見生成の材料を単元ごとに分ける純粋関数と`UNIT_UNSET_LABEL` |
 | `shared/group-memos-by-subject-unit.ts`(新規) | 生徒別メモ一覧の教科 → 単元の2段グループ化の純粋関数 |
-| `hooks/useUnits.ts`(新規) | 科目ごとの単元の取得・追加・編集・削除 |
+| `shared/parse-unit-list.ts`(新規) | 貼り付けテキストから単元名を抽出する純粋関数(1行1単元・先頭列のみ) |
+| `hooks/useUnits.ts`(新規) | 科目ごとの単元の取得・追加・編集・削除・貼り付けでの一括登録 |
 | `hooks/useMemoRecord.ts` | 既存メモの`unit_id`を取得。`saveMemo`に`unitId`を追加。コマの単元を一括更新する`updateSlotUnit`を追加 |
 | `hooks/useStudentMemos.ts` | `memo`のselectに`unit(name)`を追加し、`StudentMemoRow.unitName`を持たせる |
 | `hooks/useSharedMemosForPeriod.ts` | `memo`のselectに`unit(name)`を追加(`left join`のまま)。学習・総合の科目名による絞り込みは変更しない |
 | `app/(main)/subjects/page.tsx` | 科目の行を折りたたみ化し、単元の管理UIを追加 |
+| `app/(main)/subjects/SubjectUnitList.tsx`(新規) | 開いた科目の単元一覧・追加・編集・削除・貼り付け一括登録 |
 | `app/(main)/memos/record/RecordView.tsx` | 単元の`Select`を追加 |
 | `app/(main)/memos/students/[[...id]]/StudentMemosContent.tsx` | 見出しの単元名表示、`groupBySubject`を`groupMemosBySubjectAndUnit`に置き換え |
 | `components/memo/StudentMemoRow.tsx` | 変更なし(単元の選択は画面側の共通プルダウンで扱う) |
@@ -57,7 +59,8 @@
 | `shared/prompt-builder.test.ts` | 単元ありのメモ行表記、`{{unitName}}`の置換、ひな形に`{{unitName}}`がない場合に従来どおりであることを追加 |
 | `shared/group-memos-by-unit.test.ts`(新規) | 単元ごとの分類・「単元未設定」が最後に来ること・並び順 |
 | `shared/group-memos-by-subject-unit.test.ts`(新規) | 教科 → 単元の2段化、単元付きが0件の教科はフラットのまま |
-| `e2e/subjects.spec.ts` | 単元の追加・編集・削除 |
+| `shared/parse-unit-list.test.ts`(新規) | 1行1単元・先頭列のみ・空行/空セルの無視・重複の集約・空入力 |
+| `e2e/subjects.spec.ts` | 単元の追加・編集・削除、貼り付けでの一括登録(重複のスキップを含む) |
 | `e2e/memos-record.spec.ts` | 単元を選んでメモを保存、単元の付け替えで既存メモも更新される |
 | `e2e/memos-students.spec.ts` | 教科別表示で単元の小見出しが出る |
 | `e2e/memo-unit.spec.ts`(新規) | 「単元ごとに生成」で単元カードが並び、選んだ案が所見欄に連結して反映される |
@@ -67,7 +70,7 @@
 
 | ファイル | 影響 |
 |---|---|
-| `mockups/subject-management.html` | 科目の折りたたみと単元の一覧・追加フォームを反映 |
+| `mockups/subject-management.html` | 科目の折りたたみと単元の一覧・追加フォーム・貼り付け一括登録を反映 |
 | `mockups/class-record.html` | 単元のプルダウンを反映 |
 | `mockups/student-memo-list.html` | 単元名の表示と教科 → 単元の2段表示を反映 |
 | `mockups/comment.html` | 生成単位の切り替えと単元カードの一覧を反映 |
@@ -84,12 +87,12 @@
 | `docs/design/components.md` | 新規の共通コンポーネントは作らないため追記のみ(既存コンポーネントの使用箇所に単元関連の画面を追加) |
 | `docs/design/user-flow.md` | 変更なし(画面遷移は変わらない) |
 | `docs/features/README.md` | 実装済み一覧に本機能の行を追加し、科目管理・授業記録・生徒別メモ一覧・所見管理の行にタスクID範囲を追記 |
-| `docs/manual/` | 使い方説明書に単元の登録・記録・単元ごとの所見生成の手順を追加 |
-| `docs/tasks.md` | 本機能のタスク範囲(`UN-001`〜)を1行追加 |
+| `docs/manual/` | 使い方説明書に単元の登録(1件ずつ・貼り付けで一括)・記録・単元ごとの所見生成の手順を追加 |
+| `docs/tasks.md` | 冒頭に「機能改修のタスクは`docs/features/<機能名>/tasks.md`が正」と明記(本機能の行は`docs/features/README.md`に置き、索引を二重に持たない) |
 
 ## 本番運用への影響
 
-- マイグレーションは加算的なため、適用とデプロイの順序に依存しない。先にマイグレーションを適用しても旧コードは正常に動作する
+- **マイグレーションを先に適用する。** 加算的な変更なので、適用後も現行(単元を知らない)コードはそのまま動作する。一方で**逆順は壊れる**: 新コードはメモ保存時に`unit_id`を送るため、列が無いDBに対してはPostgRESTが`PGRST204`を返し、授業記録のメモ保存が失敗する。PRのプレビューデプロイを試す場合も、先に適用しておく必要がある
 - データ移行は不要。既存メモはすべて「単元未設定」として扱われる
 - 本番にある検証用の生徒32名(クラス「1-2」出席番号4〜35)のメモにも影響はない(単元が`null`で追加されるだけ)
 - 「単元ごとに生成」は単元数ぶんのAI呼び出しになるため、教員が自分のAPIキーで使う場合の課金が増えうる。画面上で単元ごとに生成できるようにしているため、不要な単元の呼び出しは避けられる

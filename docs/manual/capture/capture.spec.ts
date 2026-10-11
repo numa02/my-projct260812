@@ -132,6 +132,16 @@ const SEED_UNITS: { subject: string; units: string[] }[] = [
   { subject: "算数", units: ["あまりのあるわり算", "大きい数のしくみ"] },
 ];
 
+/**
+ * 貼り付けでの一括登録の画面例に使うテキスト。Excelの「単元名」「時数」列を
+ * そのまま貼った形にして、時数の列が単元にならないことを説明書で見せる
+ */
+const UNIT_PASTE_TEXT = [
+  "円と球\t10",
+  "重さのたんいとはかり方\t8",
+  "小数のたし算とひき算\t12",
+].join("\n");
+
 /** 説明書の画面例に厚みを出すための授業メモ。時間割の配置と矛盾しない組み合わせにする */
 const SEED_MEMOS: {
   date: string;
@@ -263,6 +273,30 @@ test("使い方説明書のキャプチャを撮影する", async ({ page }) => 
         { n: 3, target: addButton },
       ]);
     }
+    // 貼り付けでの一括登録(算数の行で1枚撮る)
+    if (seed.subject === "算数") {
+      const importToggle = page.getByRole("button", {
+        name: `${seed.subject}の単元を貼り付けで一括登録`,
+        exact: true,
+      });
+      const pasteArea = page.getByLabel(`${seed.subject}の単元名を貼り付け`, { exact: true });
+      const importButton = page.getByRole("button", { name: "取り込む", exact: true });
+
+      await importToggle.click();
+      await pasteArea.fill(UNIT_PASTE_TEXT);
+      // 注釈が画像の外に出ないよう、取り込みボタンまでスクロールしてから撮る
+      await importButton.scrollIntoViewIfNeeded();
+      await shot(page, "05c-subjects-units-import", [
+        { n: 1, target: pasteArea },
+        { n: 2, target: importButton },
+      ]);
+      await importButton.click();
+      // 取り込みの完了は一覧への反映と貼り付け欄のクリアで待つ(docs/bugs.md BUG-010)
+      await expect(page.getByText("円と球", { exact: true })).toBeVisible();
+      await expect(pasteArea).toHaveValue("");
+      await importToggle.click();
+    }
+
     // 同時に開けるのは1つなので、次の科目を開く前に閉じる
     await rowToggle.click();
     await expect(nameInput).toHaveCount(0);

@@ -107,3 +107,44 @@ ID接頭辞: `UN-`。**加算的な変更のみ(テーブル追加・nullable列
   - DoD: `npm run lint`・`npm run test`・`npm run test:db`・`npx tsc --noEmit`・`npm run build`・`npm run test:e2e`がすべて通る。`docs/design.md` §4.2のDDLとマイグレーションの適用結果を突き合わせて差異がない
   - 依存: UN-001〜UN-019
   - ロールバック: なし(検証タスク)
+
+---
+
+## 追加: 単元の貼り付けによる一括登録(UN-021〜)
+
+PR #26 のレビュー中に受けた要望(「単元たちはまとめて追加できないの？テキスト貼り付けで一括登録ができるようにしてほしい」)への対応。**DBの変更は不要**(既存の`unit`テーブルへのinsertをまとめて行うだけ)なので、マイグレーション・DBテストのタスクは置かない。
+
+- [x] **UN-021** `shared/parse-unit-list.ts`を追加する
+  - DoD: `parseUnitNames(rawText: string): string[]`がexportされる。1行1単元として扱い、タブまたはカンマを含む行は**先頭の列だけ**を単元名にする(区切り文字は行ごとにタブ優先で判定する。`parseSubjectGridNames`と同じ判定順)。前後の空白をトリムし、空行・空の単元名は捨て、重複は初出順で1件にまとめる。`shared/parse-unit-list.test.ts`で各ケースと空入力・入力配列の非破壊が検証され、`npm run test`が通る
+  - 依存: なし
+  - ロールバック: ファイル削除のみ
+
+- [x] **UN-022** `hooks/useUnits.ts`に`importUnits`を追加する
+  - DoD: `importUnits(names: string[])`が、その科目の既存の単元名を取得して突き合わせ、**未登録のものだけ**を1回の`insert`で登録し、`{ inserted: string[] }`を返す。全件が登録済みなら`insert`を呼ばずに`{ inserted: [] }`を返す。成功後に`invalidateQueries`する。楽観的更新・自動リトライは行わない。`npx tsc --noEmit`が通る
+  - 依存: UN-021
+  - ロールバック: 追加分のrevertのみ(1件ずつの登録は影響を受けない)
+
+- [x] **UN-023** 科目管理画面の単元セクションに「貼り付けで一括登録」を追加する
+  - DoD: 開いた科目の単元セクションに折りたたみ「貼り付けで一括登録」があり、開くと貼り付け用`Textarea`と「取り込む」ボタンが出る。**`PasteOrUploadArea`は使わない**(入れ子が深くなるため。`design.md` §4.1)。貼り付け欄の説明に「1行に1つ」「タブ・カンマ区切りは先頭の列だけ」が書かれている。空・空白のみのときボタンは押せない。取り込み後はトーストで登録件数を知らせ、全件が登録済みなら「登録済みの単元のみだったため、新規追加はありませんでした」を出す。成功時のみ貼り付け欄をクリアし、失敗時は内容を残す(F13)。科目の行を閉じて開き直すと貼り付け欄は初期状態に戻る。`docs/design/design-system.md`にない色・フォントサイズ・余白を追加していない
+  - 依存: UN-022
+  - ロールバック: 折りたたみ部分のrevertのみ。1件ずつの登録は残る
+
+- [x] **UN-024** モックアップを更新する
+  - DoD: `mockups/subject-management.html`の単元セクションに「貼り付けで一括登録」が入り、実装と一致する
+  - 依存: UN-023
+  - ロールバック: モックアップのrevertのみ
+
+- [x] **UN-025** E2Eを追加する
+  - DoD: `e2e/subjects.spec.ts`に、(1)貼り付けで複数の単元がまとめて登録されること、(2)タブ区切りの2列目(時数など)が単元にならないこと、(3)登録済みの単元名がスキップされること、(4)全件が登録済みのときに新規追加0件の案内が出ること、が追加される。**完了の待機にはトーストではなく一覧への反映と貼り付け欄のクリアを使う**(`docs/bugs.md` BUG-010)。`npm run test:e2e`が通る
+  - 依存: UN-023
+  - ロールバック: テストのrevertのみ
+
+- [x] **UN-026** ドキュメント・使い方説明書を更新する
+  - DoD: (1)`docs/requirements.md` F3の単元の節に一括登録の振る舞いが入る。(2)`docs/design/screens.md`の科目管理画面の構成要素・状態バリエーションに一括登録が入る。(3)`docs/design/components.md`の該当コンポーネントの使用箇所が更新される。(4)`docs/features/memo-unit/test-cases.md`にP0/P1のケースが追加される。(5)`docs/manual/index.html` 2-3に貼り付けでの一括登録の手順が入り、キャプチャを撮り直して`public/manual/`を再生成する
+  - 依存: UN-023〜UN-025
+  - ロールバック: ドキュメントのrevertのみ
+
+- [x] **UN-027** 検証をすべて通す
+  - DoD: `npm run lint`・`npm run test`・`npm run test:db`・`npx tsc --noEmit`・`npm run build`・`npm run test:e2e`がすべて通る
+  - 依存: UN-021〜UN-026
+  - ロールバック: なし(検証タスク)

@@ -4,11 +4,12 @@ import { useState } from "react";
 import { Check, Pencil, Trash2, X } from "lucide-react";
 import { useUnits, type UnitRow } from "@/hooks/useUnits";
 import { Button } from "@/components/ui/Button";
-import { Input } from "@/components/ui/Input";
+import { Input, Textarea } from "@/components/ui/Input";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { useToast } from "@/components/ui/Toast";
 import { unitInputSchema } from "@/shared/schemas";
+import { parseUnitNames } from "@/shared/parse-unit-list";
 
 export interface SubjectUnitListProps {
   subjectId: string;
@@ -21,12 +22,14 @@ export interface SubjectUnitListProps {
  */
 export function SubjectUnitList({ subjectId, subjectName }: SubjectUnitListProps) {
   const { showToast } = useToast();
-  const { units, isLoading, createUnit, updateUnit, deleteUnit } = useUnits(subjectId);
+  const { units, isLoading, createUnit, updateUnit, deleteUnit, importUnits } = useUnits(subjectId);
 
   const [newName, setNewName] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState("");
   const [deleteTarget, setDeleteTarget] = useState<UnitRow | null>(null);
+  const [importOpen, setImportOpen] = useState(false);
+  const [pastedText, setPastedText] = useState("");
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -51,6 +54,23 @@ export function SubjectUnitList({ subjectId, subjectName }: SubjectUnitListProps
       setEditingId(null);
     } catch {
       showToast("error", "単元名の更新に失敗しました");
+    }
+  };
+
+  const handleImport = async () => {
+    const names = parseUnitNames(pastedText);
+    if (names.length === 0) return;
+    try {
+      const result = await importUnits.mutateAsync(names);
+      if (result.inserted.length > 0) {
+        showToast("success", `${result.inserted.length}件の単元を登録しました`);
+      } else {
+        showToast("success", "登録済みの単元のみだったため、新規追加はありませんでした");
+      }
+      // 成功したときだけクリアする。失敗時は貼り付け直しを求めない(F13)
+      setPastedText("");
+    } catch {
+      showToast("error", "単元の一括登録に失敗しました");
     }
   };
 
@@ -158,6 +178,46 @@ export function SubjectUnitList({ subjectId, subjectName }: SubjectUnitListProps
           単元を追加
         </Button>
       </form>
+
+      {/* 教科書の目次などからまとめて登録する。科目の行の中の入れ子になるため、
+          ファイル/貼り付けの2モードを持つPasteOrUploadAreaは使わず貼り付けだけにする */}
+      <div className="flex flex-col gap-2">
+        <button
+          type="button"
+          onClick={() => setImportOpen((v) => !v)}
+          aria-expanded={importOpen}
+          // 同じ画面に科目用の「貼り付けで一括登録」があるため、科目名を含めて読み分けられるようにする
+          aria-label={`${subjectName}の単元を貼り付けで一括登録`}
+          className="flex items-center gap-1 self-start text-sm font-medium text-gray-700"
+        >
+          <span aria-hidden>{importOpen ? "▼" : "▶"}</span>
+          貼り付けで一括登録
+        </button>
+        {importOpen && (
+          <div className="flex flex-col gap-2">
+            <Textarea
+              label={`${subjectName}の単元名を貼り付け`}
+              placeholder={"分数のかけ算\n円の面積\n比例と反比例"}
+              value={pastedText}
+              onChange={(e) => setPastedText(e.target.value)}
+              rows={5}
+            />
+            <p className="text-xs text-gray-500">
+              単元名を1行に1つずつ貼り付けてください。タブ・カンマ区切りの場合は先頭の列だけを単元名として取り込みます(時数などの列は無視されます)。登録済みの単元名は飛ばされます
+            </p>
+            <Button
+              variant="outline"
+              size="sm"
+              className="self-start"
+              loading={importUnits.isPending}
+              disabled={parseUnitNames(pastedText).length === 0}
+              onClick={handleImport}
+            >
+              取り込む
+            </Button>
+          </div>
+        )}
+      </div>
 
       <ConfirmDialog
         title="単元を削除しますか"
