@@ -263,6 +263,8 @@ test.describe("所見管理画面(クラス単位一覧)", () => {
 
     const row = page.getByRole("group", { name: "生徒Aの行" });
     await row.getByRole("button", { name: "AIで生成する" }).click();
+    // 生成単位の既定は「まとめて生成」(UN-013。単元の追加によって従来の挙動が変わらない)
+    await expect(row.getByRole("radio", { name: "まとめて生成" })).toBeChecked();
     await expect(
       row.getByText("「共有する」区分のメモが仮名化された状態で外部のAIサービスに送信されます"),
     ).toBeVisible();

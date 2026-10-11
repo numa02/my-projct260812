@@ -82,12 +82,17 @@ async function openPeriod(page: Page, startDate: string, endDate: string): Promi
   ).toHaveCount(0);
 }
 
+/** 所見の種類ごとの折りたたみを開く。既定で開いているのは「学習の所見」だけ(UN-034) */
+async function openTemplateSection(page: Page, title: string): Promise<void> {
+  await page.getByRole("button", { name: title, exact: true }).click();
+}
+
 test.describe("設定画面・プロンプトひな形編集(T-069)", () => {
   test("未編集の場合は本ツール既定のひな形が表示される", async ({ page }) => {
     await signUpAndLogin(page);
     await page.goto("/settings/prompt-template");
 
-    const learningTemplate = page.getByLabel("学習の所見用のひな形", { exact: true });
+    const learningTemplate = page.getByLabel("学習の所見用のひな形(まとめて生成)", { exact: true });
     await expect(learningTemplate).toHaveValue(/{{grade}}/);
     await expect(learningTemplate).toHaveValue(/{{targetCharCount}}/);
     await expect(learningTemplate).toHaveValue(/{{memos}}/);
@@ -99,8 +104,8 @@ test.describe("設定画面・プロンプトひな形編集(T-069)", () => {
     await signUpAndLogin(page);
     await page.goto("/settings/prompt-template");
 
-    await page.getByLabel("学習の所見用のひな形", { exact: true }).fill("");
-    await expect(page.getByRole("button", { name: "学習の所見用のひな形を保存" })).toBeDisabled();
+    await page.getByLabel("学習の所見用のひな形(まとめて生成)", { exact: true }).fill("");
+    await expect(page.getByRole("button", { name: "学習の所見用のひな形(まとめて生成)を保存" })).toBeDisabled();
   });
 
   test("編集して保存すると、以後の直接生成のプロンプトに反映される", async ({ page }) => {
@@ -113,10 +118,10 @@ test.describe("設定画面・プロンプトひな形編集(T-069)", () => {
 
     await page.goto("/settings/prompt-template");
     await page
-      .getByLabel("学習の所見用のひな形", { exact: true })
+      .getByLabel("学習の所見用のひな形(まとめて生成)", { exact: true })
       .fill("カスタムひな形マーカー: {{pseudonymCode}} / {{memos}} / {{targetCharCount}}");
-    await page.getByRole("button", { name: "学習の所見用のひな形を保存" }).click();
-    await expect(page.getByText("学習の所見用のひな形を保存しました")).toBeVisible();
+    await page.getByRole("button", { name: "学習の所見用のひな形(まとめて生成)を保存" }).click();
+    await expect(page.getByText("学習の所見用のひな形(まとめて生成)を保存しました")).toBeVisible();
 
     await page.goto("/settings/ai-provider");
     await page.getByLabel("APIキー").fill("sk-test-dummy-key");
@@ -149,14 +154,108 @@ test.describe("設定画面・プロンプトひな形編集(T-069)", () => {
 
     await page.goto("/settings/prompt-template");
     await page
-      .getByLabel("学習の所見用のひな形", { exact: true })
+      .getByLabel("学習の所見用のひな形(まとめて生成)", { exact: true })
       .fill("コピー運用用カスタムマーカー: {{pseudonymCode}} / {{memos}}");
-    await page.getByRole("button", { name: "学習の所見用のひな形を保存" }).click();
-    await expect(page.getByText("学習の所見用のひな形を保存しました")).toBeVisible();
+    await page.getByRole("button", { name: "学習の所見用のひな形(まとめて生成)を保存" }).click();
+    await expect(page.getByText("学習の所見用のひな形(まとめて生成)を保存しました")).toBeVisible();
 
     const row = await openCommentsForStudentA(page);
     await row.getByRole("button", { name: "AIで生成する" }).click();
 
     await expect(row.getByLabel("プロンプト")).toHaveValue(/コピー運用用カスタムマーカー/);
+  });
+
+  // 「単元ごと」専用のひな形(UN-034)
+  test("所見の種類ごとの折りたたみになっており、学習と総合は2つ・生活は1つのひな形を持つ", async ({
+    page,
+  }) => {
+    await signUpAndLogin(page);
+    await page.goto("/settings/prompt-template");
+
+    // 既定で「学習の所見」が開いている
+    await expect(
+      page.getByLabel("学習の所見用のひな形(まとめて生成)", { exact: true }),
+    ).toBeVisible();
+    await expect(page.getByLabel("学習の所見用のひな形(単元ごと)", { exact: true })).toBeVisible();
+    // 他の種類は閉じている
+    await expect(page.getByLabel("生活の所見用のひな形", { exact: true })).toHaveCount(0);
+
+    await openTemplateSection(page, "総合の所見");
+    await expect(
+      page.getByLabel("総合の所見用のひな形(まとめて生成)", { exact: true }),
+    ).toBeVisible();
+    await expect(page.getByLabel("総合の所見用のひな形(単元ごと)", { exact: true })).toBeVisible();
+    // 同時に開けるのは1つなので、学習は閉じる
+    await expect(
+      page.getByLabel("学習の所見用のひな形(まとめて生成)", { exact: true }),
+    ).toHaveCount(0);
+
+    // 生活の所見は単元を持たないためひな形は1つだけ
+    await openTemplateSection(page, "生活の所見");
+    await expect(page.getByLabel("生活の所見用のひな形", { exact: true })).toBeVisible();
+    await expect(page.getByLabel("生活の所見用のひな形(単元ごと)", { exact: true })).toHaveCount(0);
+  });
+
+  test("「単元ごと」用の既定ひな形は{{unitName}}を含み、まとめて生成用は含まない", async ({
+    page,
+  }) => {
+    await signUpAndLogin(page);
+    await page.goto("/settings/prompt-template");
+
+    await expect(
+      page.getByLabel("学習の所見用のひな形(単元ごと)", { exact: true }),
+    ).toHaveValue(/{{unitName}}/);
+    await expect(
+      page.getByLabel("学習の所見用のひな形(まとめて生成)", { exact: true }),
+    ).not.toHaveValue(/{{unitName}}/);
+  });
+
+  test("「単元ごと」用を編集して保存しても、まとめて生成用は変わらない", async ({ page }) => {
+    await signUpAndLogin(page);
+    await page.goto("/settings/prompt-template");
+
+    const wholeTemplate = page.getByLabel("学習の所見用のひな形(まとめて生成)", { exact: true });
+    const unitTemplate = page.getByLabel("学習の所見用のひな形(単元ごと)", { exact: true });
+    const wholeBefore = await wholeTemplate.inputValue();
+
+    await unitTemplate.fill("単元ごと専用マーカー: {{unitName}} / {{pseudonymCode}} / {{memos}}");
+    await page
+      .getByRole("button", { name: "学習の所見用のひな形(単元ごと)を保存", exact: true })
+      .click();
+    await expect(page.getByText("学習の所見用のひな形(単元ごと)を保存しました")).toBeVisible();
+
+    await page.reload();
+    await expect(unitTemplate).toHaveValue(/単元ごと専用マーカー/);
+    await expect(wholeTemplate).toHaveValue(wholeBefore);
+  });
+
+  test("「単元ごとに生成」では単元ごと用のひな形が使われる", async ({ page }) => {
+    await signUpAndLogin(page);
+    await createClass(page, "1", "1年1組");
+    await createSubject(page, "国語");
+    await importStudents(page, "1年1組", "1,生徒A");
+    await setUpMaster(page);
+    await recordMemo(page, "2026-04-06", 1, "音読が上手にできました");
+
+    await page.goto("/settings/prompt-template");
+    await page
+      .getByLabel("学習の所見用のひな形(単元ごと)", { exact: true })
+      .fill("単元ごと専用マーカー: {{unitName}} / {{memos}}");
+    await page
+      .getByRole("button", { name: "学習の所見用のひな形(単元ごと)を保存", exact: true })
+      .click();
+    await expect(page.getByText("学習の所見用のひな形(単元ごと)を保存しました")).toBeVisible();
+
+    const row = await openCommentsForStudentA(page);
+    await row.getByRole("button", { name: "AIで生成する" }).click();
+
+    // まとめて生成では従来どおり「まとめて生成」用のひな形
+    await expect(row.getByLabel("プロンプト")).not.toHaveValue(/単元ごと専用マーカー/);
+
+    // 単元ごとに切り替えると、単元ごと用のひな形が使われる(単元未設定のカード)
+    await row.getByRole("radio", { name: "単元ごとに生成" }).click();
+    const unitPrompt = row.getByLabel("単元未設定のプロンプト");
+    await expect(unitPrompt).toHaveValue(/単元ごと専用マーカー/);
+    await expect(unitPrompt).toHaveValue(/単元未設定/);
   });
 });

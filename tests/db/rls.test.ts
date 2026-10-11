@@ -131,6 +131,63 @@ describe("subject RLS", () => {
   });
 });
 
+describe("unit RLS(UN-002)", () => {
+  let teacherA: TestTeacher | undefined;
+  let teacherB: TestTeacher | undefined;
+
+  afterEach(async () => {
+    if (teacherA) await deleteTestTeacher(teacherA.id);
+    if (teacherB) await deleteTestTeacher(teacherB.id);
+    teacherA = undefined;
+    teacherB = undefined;
+  });
+
+  it("他教員の科目に紐づくunitへのアクセスがRLSで拒否される", async () => {
+    teacherA = await createTestTeacher();
+    teacherB = await createTestTeacher();
+
+    const { data: subjectA } = await teacherA.client
+      .from("subject")
+      .insert({ teacher_id: teacherA.id, name: "算数" })
+      .select()
+      .single<{ id: string }>();
+    const { data: unitA } = await teacherA.client
+      .from("unit")
+      .insert({ subject_id: subjectA!.id, name: "分数のかけ算" })
+      .select()
+      .single<{ id: string }>();
+
+    // 読めない
+    const { data: seenByB } = await teacherB.client.from("unit").select("id").eq("id", unitA!.id);
+    expect(seenByB).toHaveLength(0);
+
+    // 他教員の科目に単元を作れない(unitはteacher_idを持たないため、subject_id経由で拒否される)
+    const { error: spoofError } = await teacherB.client
+      .from("unit")
+      .insert({ subject_id: subjectA!.id, name: "偽装単元" });
+    expect(spoofError).not.toBeNull();
+
+    // 更新・削除も対象行に届かない
+    const { data: updated } = await teacherB.client
+      .from("unit")
+      .update({ name: "改ざん" })
+      .eq("id", unitA!.id)
+      .select();
+    expect(updated).toHaveLength(0);
+
+    const { data: deleted } = await teacherB.client
+      .from("unit")
+      .delete()
+      .eq("id", unitA!.id)
+      .select();
+    expect(deleted).toHaveLength(0);
+
+    // 本人からは見える(ポリシーが過剰に絞っていないことの確認)
+    const { data: seenByA } = await teacherA.client.from("unit").select("id").eq("id", unitA!.id);
+    expect(seenByA).toHaveLength(1);
+  });
+});
+
 describe("timetable_master_slot RLS", () => {
   let teacherA: TestTeacher | undefined;
   let teacherB: TestTeacher | undefined;

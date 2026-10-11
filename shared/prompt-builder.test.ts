@@ -2,15 +2,23 @@ import { describe, expect, it } from "vitest";
 import {
   buildPrompt,
   DEFAULT_GENERAL_PROMPT_TEMPLATE,
+  DEFAULT_GENERAL_UNIT_PROMPT_TEMPLATE,
   DEFAULT_LIFE_PROMPT_TEMPLATE,
   DEFAULT_PROMPT_TEMPLATE,
+  DEFAULT_UNIT_PROMPT_TEMPLATE,
 } from "./prompt-builder";
 
-const ALL_DEFAULT_TEMPLATES = [
+/** 「まとめて生成」用の3種 */
+const WHOLE_DEFAULT_TEMPLATES = [
   DEFAULT_PROMPT_TEMPLATE,
   DEFAULT_LIFE_PROMPT_TEMPLATE,
   DEFAULT_GENERAL_PROMPT_TEMPLATE,
 ];
+
+/** 「単元ごと」用の2種(UN-030) */
+const UNIT_DEFAULT_TEMPLATES = [DEFAULT_UNIT_PROMPT_TEMPLATE, DEFAULT_GENERAL_UNIT_PROMPT_TEMPLATE];
+
+const ALL_DEFAULT_TEMPLATES = [...WHOLE_DEFAULT_TEMPLATES, ...UNIT_DEFAULT_TEMPLATES];
 
 describe("buildPrompt", () => {
   it("プレースホルダーを学年・文字数・メモで置換する", () => {
@@ -47,6 +55,68 @@ describe("buildPrompt", () => {
     // メモ行に時限・科目が入らないこと(ひな形の本文には「時限」の語が出るため、行の形で検証する)
     expect(result).not.toContain("- 2026-04-10 ");
     expect(result).not.toContain("{{");
+  });
+
+  it("単元が記録されたメモは科目名に続けて単元名が入る", () => {
+    const result = buildPrompt({
+      template: DEFAULT_PROMPT_TEMPLATE,
+      memos: [
+        {
+          subjectName: "算数",
+          unitName: "分数のかけ算",
+          noteDate: "2026-04-11",
+          period: 3,
+          content: "計算が早い",
+        },
+        // 単元未設定のメモは従来どおりの表記のまま
+        { subjectName: "国語", noteDate: "2026-04-10", period: 1, content: "よく発言していた" },
+      ],
+      pseudonymCode: "1-03-10",
+    });
+
+    expect(result).toContain("- 2026-04-11 3時限 算数(分数のかけ算): 計算が早い");
+    expect(result).toContain("- 2026-04-10 1時限 国語: よく発言していた");
+  });
+
+  it("unitNameがnullのメモは単元なしとして扱う", () => {
+    const result = buildPrompt({
+      template: "{{memos}}",
+      memos: [
+        { subjectName: "算数", unitName: null, noteDate: "2026-04-11", period: 3, content: "計算が早い" },
+      ],
+      pseudonymCode: "1-03-10",
+    });
+    expect(result).toBe("- 2026-04-11 3時限 算数: 計算が早い");
+  });
+
+  it("{{unitName}}は渡した単元名に置換される", () => {
+    const result = buildPrompt({
+      template: "単元は{{unitName}}。",
+      memos: [],
+      pseudonymCode: "1-03-10",
+      unitName: "分数のかけ算",
+    });
+    expect(result).toBe("単元は分数のかけ算。");
+  });
+
+  it("{{unitName}}を渡さない(まとめて生成)場合は「指定なし」になる", () => {
+    const result = buildPrompt({
+      template: "単元は{{unitName}}。",
+      memos: [],
+      pseudonymCode: "1-03-10",
+    });
+    expect(result).toBe("単元は指定なし。");
+  });
+
+  it("ひな形に{{unitName}}がない場合、単元名を渡しても出力は従来と同一になる", () => {
+    const params = {
+      template: DEFAULT_PROMPT_TEMPLATE,
+      memos: [{ subjectName: "国語", noteDate: "2026-04-10", period: 1, content: "よく発言していた" }],
+      grade: "3",
+      targetCharCount: 200,
+      pseudonymCode: "1-03-10",
+    };
+    expect(buildPrompt({ ...params, unitName: "分数のかけ算" })).toBe(buildPrompt(params));
   });
 
   it("メモが0件の場合は代替文言になる", () => {
@@ -133,6 +203,28 @@ describe("初期値のひな形", () => {
   it("仮名コードのプレースホルダーを含む(教員が実名の非送信を目視確認できるようにするため)", () => {
     for (const template of ALL_DEFAULT_TEMPLATES) {
       expect(template).toContain("{{pseudonymCode}}");
+    }
+  });
+
+  // 「まとめて生成」用の3種に{{unitName}}を後から入れると、ひな形を保存していない教員の
+  // 生成結果が変わってしまうため入れない。任意の拡張として教員が自分で入れることはできる
+  it("「まとめて生成」用の3種は{{unitName}}を含まない(既定の生成結果を変えないため)", () => {
+    for (const template of WHOLE_DEFAULT_TEMPLATES) {
+      expect(template).not.toContain("{{unitName}}");
+    }
+  });
+
+  // 「単元ごと」用は新設のひな形なので、既定値に{{unitName}}を入れても既存の挙動は変わらない
+  it("「単元ごと」用の2種は{{unitName}}を含む(UN-030)", () => {
+    for (const template of UNIT_DEFAULT_TEMPLATES) {
+      expect(template).toContain("{{unitName}}");
+    }
+  });
+
+  it("「単元ごと」用の2種は、複数教科を前提にした取捨選択の指示を含まない(UN-030)", () => {
+    for (const template of UNIT_DEFAULT_TEMPLATES) {
+      expect(template).not.toContain("すべての教科を網羅する");
+      expect(template).not.toContain("複数の教科を無理に盛り込まず");
     }
   });
 });

@@ -106,6 +106,16 @@
           <span class="text-base font-medium text-gray-900">3年3組</span>
         </div>
 
+        <!-- 単元はコマごとに1つ。ここで選んだ単元が、このコマのメモ全件に入る(UN-011) -->
+        <div class="w-64 space-y-1.5">
+          <label class="text-sm font-medium text-gray-700">単元</label>
+          <select class="w-full px-3 py-2 rounded-sm border border-gray-300 bg-white text-base text-gray-700">
+            <option>選択しない</option>
+            <option selected>詩を読もう</option>
+            <option>物語を読む</option>
+          </select>
+        </div>
+
         <p class="text-xs text-gray-400">生徒名をタップすると入力欄が開きます。書いた生徒だけ個別に保存してください。</p>
 
         <div class="divide-y divide-gray-100">
@@ -275,6 +285,16 @@
     </section>
 
     <!-- 空状態 -->
+    <section class="space-y-3">
+      <h2 class="text-sm font-medium text-gray-500">空状態(その科目に単元が未登録)</h2>
+      <div class="bg-white rounded-lg border border-gray-200 shadow-sm p-4 tablet:p-6">
+        <div class="w-96 space-y-1.5">
+          <label class="text-sm font-medium text-gray-700">単元</label>
+          <p class="text-sm text-gray-500">まだ単元が登録されていません(科目管理画面で登録できます)</p>
+        </div>
+      </div>
+    </section>
+
     <section class="space-y-3">
       <h2 class="text-sm font-medium text-gray-500">空状態(科目・クラスが未設定の時限を選択した場合)</h2>
       <div class="bg-white rounded-lg border border-gray-200 shadow-sm p-8 text-center space-y-2">

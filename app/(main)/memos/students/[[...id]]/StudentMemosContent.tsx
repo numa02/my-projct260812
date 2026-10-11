@@ -15,6 +15,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { useToast } from "@/components/ui/Toast";
+import { groupMemosBySubjectAndUnit } from "@/shared/group-memos-by-subject-unit";
 
 type ViewMode = "date" | "subject";
 
@@ -24,24 +25,21 @@ export interface StudentMemosContentProps {
   from: string | null;
 }
 
-/** 一覧・操作ボタンのラベルに使う「日付 時限 科目」表記。生活メモは時限の代わりに「生活記録」とする */
+/**
+ * 一覧・操作ボタンのラベルに使う「日付 時限 科目 単元」表記。
+ * 生活メモは時限の代わりに「生活記録」とし、単元は持たない
+ */
 function memoLabel(memo: StudentMemoRow): string {
-  return memo.kind === "life"
-    ? `${memo.noteDate} ${memo.subjectName}`
-    : `${memo.noteDate} ${memo.period}限 ${memo.subjectName}`;
+  if (memo.kind === "life") return `${memo.noteDate} ${memo.subjectName}`;
+  const base = `${memo.noteDate} ${memo.period}限 ${memo.subjectName}`;
+  return memo.unitName ? `${base} ${memo.unitName}` : base;
 }
 
-function groupBySubject(memos: StudentMemoRow[]): Array<{ subjectName: string; memos: StudentMemoRow[] }> {
-  const groups: Array<{ subjectName: string; memos: StudentMemoRow[] }> = [];
-  for (const memo of memos) {
-    const group = groups.find((g) => g.subjectName === memo.subjectName);
-    if (group) {
-      group.memos.push(memo);
-    } else {
-      groups.push({ subjectName: memo.subjectName, memos: [memo] });
-    }
-  }
-  return groups;
+/** 一覧の見出しに使う「日付 ・ 時限 ・ 科目 ・ 単元」表記 */
+function memoHeading(memo: StudentMemoRow): string {
+  if (memo.kind === "life") return `${memo.noteDate} ・ ${memo.subjectName}`;
+  const base = `${memo.noteDate} ・ ${memo.period}限 ・ ${memo.subjectName}`;
+  return memo.unitName ? `${base} ・ ${memo.unitName}` : base;
 }
 
 export function StudentMemosContent({
@@ -111,11 +109,7 @@ export function StudentMemosContent({
   const renderMemoRow = (memo: StudentMemoRow) => (
     <div key={`${memo.kind}-${memo.id}`} className="flex flex-col gap-2 border-b border-gray-100 py-3 last:border-b-0">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <span className="text-sm text-gray-500">
-          {memo.kind === "life"
-            ? `${memo.noteDate} ・ ${memo.subjectName}`
-            : `${memo.noteDate} ・ ${memo.period}限 ・ ${memo.subjectName}`}
-        </span>
+        <span className="text-sm text-gray-500">{memoHeading(memo)}</span>
         <div className="flex items-center gap-2">
           <Toggle
             checked={memo.shareFlag === "shared"}
@@ -265,12 +259,26 @@ export function StudentMemosContent({
         </div>
       ) : (
         <div className="flex flex-col gap-6">
-          {groupBySubject(memos).map((group) => (
+          {groupMemosBySubjectAndUnit(memos).map((group) => (
             <div key={group.subjectName} className="flex flex-col gap-2">
               <h2 className="text-base font-semibold text-gray-900">{group.subjectName}</h2>
-              <div className="flex flex-col rounded-md border border-gray-200 px-4">
-                {group.memos.map(renderMemoRow)}
-              </div>
+              {group.unitGroups === null ? (
+                // その教科に単元付きのメモが1件もない場合は、従来どおりメモをそのまま並べる
+                <div className="flex flex-col rounded-md border border-gray-200 px-4">
+                  {group.memos.map(renderMemoRow)}
+                </div>
+              ) : (
+                <div className="flex flex-col gap-3">
+                  {group.unitGroups.map((unitGroup) => (
+                    <div key={unitGroup.unitName} className="flex flex-col gap-1.5">
+                      <h3 className="text-sm font-medium text-gray-700">{unitGroup.unitName}</h3>
+                      <div className="flex flex-col rounded-md border border-gray-200 px-4">
+                        {unitGroup.memos.map(renderMemoRow)}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           ))}
         </div>

@@ -73,6 +73,70 @@ describe("delete_subject", () => {
       .single();
     expect(slot?.subject_id).toBeNull();
   });
+
+  it("単元を持つ科目を削除すると単元もまとめて削除される(UN-003)", async () => {
+    teacher = await createTestTeacher();
+
+    const { data: subject } = await teacher.client
+      .from("subject")
+      .insert({ teacher_id: teacher.id, name: "算数" })
+      .select()
+      .single<{ id: string }>();
+    const { data: unit } = await teacher.client
+      .from("unit")
+      .insert({ subject_id: subject!.id, name: "分数のかけ算" })
+      .select()
+      .single<{ id: string }>();
+
+    const { error } = await teacher.client.rpc("delete_subject", { p_subject_id: subject!.id });
+    expect(error).toBeNull();
+
+    const { data: remainingUnits } = await teacher.client.from("unit").select("id").eq("id", unit!.id);
+    expect(remainingUnits).toHaveLength(0);
+  });
+
+  it("単元の有無はSUBJECT_IN_USEの判定に影響しない(メモがあれば従来どおり拒否される)(UN-003)", async () => {
+    teacher = await createTestTeacher();
+
+    const { data: subject } = await teacher.client
+      .from("subject")
+      .insert({ teacher_id: teacher.id, name: "算数" })
+      .select()
+      .single<{ id: string }>();
+    const { data: unit } = await teacher.client
+      .from("unit")
+      .insert({ subject_id: subject!.id, name: "分数のかけ算" })
+      .select()
+      .single<{ id: string }>();
+    const { data: klass } = await teacher.client
+      .rpc("create_class", { p_grade: "1", p_display_name: "1年1組" })
+      .single<{ id: string }>();
+    const { data: student } = await teacher.client
+      .from("student")
+      .insert({ class_id: klass!.id, attendance_number: 1, name: "生徒A" })
+      .select()
+      .single<{ id: string }>();
+    await teacher.client.from("memo").insert({
+      student_id: student!.id,
+      subject_id: subject!.id,
+      unit_id: unit!.id,
+      note_date: "2026-04-10",
+      period: 1,
+      content: "メモ",
+    });
+
+    const { error } = await teacher.client.rpc("delete_subject", { p_subject_id: subject!.id });
+    expect(error?.message).toContain("SUBJECT_IN_USE");
+
+    // 科目・単元・メモのいずれも残っている
+    const { data: stillExists } = await teacher.client
+      .from("subject")
+      .select("id")
+      .eq("id", subject!.id);
+    expect(stillExists).toHaveLength(1);
+    const { data: unitStillExists } = await teacher.client.from("unit").select("id").eq("id", unit!.id);
+    expect(unitStillExists).toHaveLength(1);
+  });
 });
 
 describe("seed_standard_subjects", () => {

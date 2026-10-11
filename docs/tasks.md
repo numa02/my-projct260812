@@ -2,6 +2,8 @@
 
 `docs/design.md`(技術設計)と `docs/design/components.md`(共通コンポーネント)をもとにしたタスク一覧。順序: セットアップ → 基盤 → デザインシステム実装 → 共通コンポーネント → 画面 → 仕上げ。各タスクは概ね1〜2時間で完了する粒度。
 
+**このファイルはMVP構築時(`T-`)の一覧である。** その後の機能改修のタスクは機能ごとに `docs/features/<機能名>/tasks.md` が正となり(`CM-`・`LS-`・`GS-`・`UN-`等のID接頭辞を持つ)、機能と対応するタスクID範囲の一覧は `docs/features/README.md` にある。新しい機能改修のタスクはこのファイルに足さず、`docs/features/<機能名>/tasks.md` を作って `docs/features/README.md` に1行追加する(`.claude/skills/feature-change/SKILL.md` §2)。
+
 ## セットアップ
 
 - [x] **T-001** Next.js (App Router) + TypeScriptプロジェクトを初期化する

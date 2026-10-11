@@ -89,6 +89,11 @@ async function setUpWithBothMemos(page: Page): Promise<void> {
   await recordMemo(page, "2026-04-06", 2, "地域の商店街について調べてまとめた");
 }
 
+/** 所見の種類ごとの折りたたみを開く。既定で開いているのは「学習の所見」だけ(UN-034) */
+async function openTemplateSection(page: Page, title: string): Promise<void> {
+  await page.getByRole("button", { name: title, exact: true }).click();
+}
+
 test.describe("総合の所見(GS-)", () => {
   test("総合タブのプロンプトには科目「総合」のメモだけが含まれ、他教科のメモは含まれない", async ({
     page,
@@ -217,27 +222,35 @@ test.describe("総合の所見(GS-)", () => {
     await setUpWithBothMemos(page);
 
     await page.goto("/settings/prompt-template");
-    await expect(page.getByLabel("総合の所見用のひな形", { exact: true })).toHaveValue(
-      /総合的な学習の時間/,
-    );
+    await openTemplateSection(page, "総合の所見");
+    await expect(
+      page.getByLabel("総合の所見用のひな形(まとめて生成)", { exact: true }),
+    ).toHaveValue(/総合的な学習の時間/);
 
     await page
-      .getByLabel("総合の所見用のひな形", { exact: true })
+      .getByLabel("総合の所見用のひな形(まとめて生成)", { exact: true })
       .fill("総合用マーカー: {{pseudonymCode}} / {{memos}}");
-    await page.getByRole("button", { name: "総合の所見用のひな形を保存" }).click();
-    await expect(page.getByText("総合の所見用のひな形を保存しました")).toBeVisible();
+    await page
+      .getByRole("button", { name: "総合の所見用のひな形(まとめて生成)を保存", exact: true })
+      .click();
+    await expect(
+      page.getByText("総合の所見用のひな形(まとめて生成)を保存しました"),
+    ).toBeVisible();
 
     await page.reload();
-    await expect(page.getByLabel("総合の所見用のひな形", { exact: true })).toHaveValue(
-      /総合用マーカー/,
-    );
-    // 学習用・生活用は既定値のまま
-    await expect(page.getByLabel("学習の所見用のひな形", { exact: true })).toHaveValue(
-      /質の高い学習所見を作成します/,
-    );
+    // 再読み込み直後は「学習の所見」が開いている。学習用は既定値のまま
+    await expect(
+      page.getByLabel("学習の所見用のひな形(まとめて生成)", { exact: true }),
+    ).toHaveValue(/質の高い学習所見を作成します/);
+    // 生活用も既定値のまま
+    await openTemplateSection(page, "生活の所見");
     await expect(page.getByLabel("生活の所見用のひな形", { exact: true })).toHaveValue(
       /質の高い生活所見を作成します/,
     );
+    await openTemplateSection(page, "総合の所見");
+    await expect(
+      page.getByLabel("総合の所見用のひな形(まとめて生成)", { exact: true }),
+    ).toHaveValue(/総合用マーカー/);
 
     // 総合タブのプロンプトに反映される
     const row = await openTab(page, "総合の所見");

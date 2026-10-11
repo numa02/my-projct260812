@@ -135,6 +135,9 @@
               <span class="font-medium text-gray-700">10/14(火) 3限</span>
               <span class="text-gray-300">/</span>
               <span>国語</span>
+              <!-- 単元が記録されているメモは見出しに単元名が入る(UN-012) -->
+              <span class="text-gray-300">/</span>
+              <span>詩を読もう</span>
               <span class="ml-auto bg-primary-50 text-primary-600 px-2 py-0.5 rounded-sm font-medium">共有する</span>
             </div>
             <p class="text-sm text-gray-700">音読の声が大きくなってきた。挙手も増えている。</p>
@@ -179,19 +182,32 @@
     <section class="space-y-3">
       <h2 class="text-sm font-medium text-gray-500">教科別表示(グループ化)</h2>
       <div class="bg-white rounded-lg border border-gray-200 shadow-sm p-4 tablet:p-6 space-y-5">
+        <!-- 単元付きのメモがある教科は、教科 → 単元の2段に分かれる。
+             単元未設定のメモは「単元未設定」として単元付きの後に置く(UN-012) -->
         <div>
           <p class="text-sm font-semibold text-gray-900 mb-2">国語(2件)</p>
-          <div class="space-y-2 pl-3 border-l-2 border-gray-100">
-            <div class="text-sm">
-              <span class="text-xs text-gray-400">10/14(火) 3限</span>
-              <p class="text-gray-700">音読の声が大きくなってきた。挙手も増えている。</p>
+          <div class="space-y-3">
+            <div>
+              <p class="text-sm font-medium text-gray-700 mb-1.5">詩を読もう</p>
+              <div class="space-y-2 pl-3 border-l-2 border-gray-100">
+                <div class="text-sm">
+                  <span class="text-xs text-gray-400">10/14(火) 3限 ・ 国語 ・ 詩を読もう</span>
+                  <p class="text-gray-700">音読の声が大きくなってきた。挙手も増えている。</p>
+                </div>
+              </div>
             </div>
-            <div class="text-sm">
-              <span class="text-xs text-gray-400">10/7(火) 3限</span>
-              <p class="text-gray-700">家庭の事情で少し元気がない様子。要継続観察。</p>
+            <div>
+              <p class="text-sm font-medium text-gray-700 mb-1.5">単元未設定</p>
+              <div class="space-y-2 pl-3 border-l-2 border-gray-100">
+                <div class="text-sm">
+                  <span class="text-xs text-gray-400">10/7(火) 3限 ・ 国語</span>
+                  <p class="text-gray-700">家庭の事情で少し元気がない様子。要継続観察。</p>
+                </div>
+              </div>
             </div>
           </div>
         </div>
+        <!-- 単元付きのメモが1件もない教科は、従来どおりメモがそのまま並ぶ -->
         <div>
           <p class="text-sm font-semibold text-gray-900 mb-2">生活記録(1件)</p>
           <div class="space-y-2 pl-3 border-l-2 border-gray-100">

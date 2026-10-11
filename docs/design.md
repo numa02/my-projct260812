@@ -138,6 +138,8 @@ flowchart LR
 │   ├── pseudonym.ts                # 仮名コード生成(純粋関数)
 │   ├── week.ts                     # JSTでの週(月曜始まり)・日付計算(純粋関数)
 │   ├── prompt-builder.ts           # プロンプト組み立て(純粋関数)
+│   ├── group-memos-by-unit.ts      # 所見の「単元ごとに生成」の材料分け(純粋関数、§5.5)
+│   ├── group-memos-by-subject-unit.ts # 生徒別メモ一覧の教科→単元の2段グループ化(純粋関数、§5.5)
 │   └── resolve-weekly-slots.ts     # マスタ+個別変更の解決(純粋関数、§5.4)
 ├── supabase/
 │   └── migrations/                 # Supabase CLIのSQLマイグレーション(テーブル+RPC関数)
@@ -220,6 +222,21 @@ create table subject (
   created_at timestamptz not null default now()
 );
 
+-- 単元: 科目に属する教科書の章・題材のまとまり。所有者はsubject経由で決まるため
+-- teacher_idは持たない(クライアントからteacher_idを渡す実装を不要にする)。
+-- 単元名の重複はsubjectと同じ方針で許可する。unique (id, subject_id) は名前の重複防止ではなく、
+-- memoからの複合外部キーの参照先として必要なもの(docs/features/memo-unit/design.md §1)
+create table unit (
+  id uuid primary key default gen_random_uuid(),
+  subject_id uuid not null references subject(id) on delete cascade,
+  name text not null,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique (id, subject_id)
+);
+
+create index unit_subject_id_idx on unit(subject_id);
+
 create table timetable_master_slot (
   id uuid primary key default gen_random_uuid(),
   teacher_id uuid not null references teacher_profile(id) on delete cascade,
@@ -256,13 +273,19 @@ create table memo (
   id uuid primary key default gen_random_uuid(),
   student_id uuid not null references student(id) on delete cascade,
   subject_id uuid not null references subject(id) on delete restrict,
+  -- 単元(nullable。コマごとに1つ選び、そのコマの全生徒のメモに同じ単元が入る)。
+  -- 複合外部キーにして「算数のメモに国語の単元が入る」組み合わせをDB側で止める。
+  -- on delete set null の列リストは省略できない: 複数列の外部キーでは既定で参照元の全列が
+  -- nullになるため、not nullであるsubject_idを巻き込んで単元削除が必ず失敗する
+  unit_id uuid,
   note_date date not null,
   period int not null check (period between 1 and 6),
   content text not null,
   share_flag share_flag not null default 'shared',
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
-  unique (student_id, subject_id, note_date, period)
+  unique (student_id, subject_id, note_date, period),
+  foreign key (unit_id, subject_id) references unit(id, subject_id) on delete set null (unit_id)
 );
 
 -- 生活メモ: 授業に紐づかない、日付ごとの生徒の様子の記録(1人1日1件)
@@ -332,11 +355,16 @@ create table prompt_template (
   content text,          -- 学習の所見用。nullなら本ツール既定のひな形を使う
   life_content text,     -- 生活の所見用。nullなら本ツール既定のひな形を使う
   general_content text,  -- 総合の所見用。nullなら本ツール既定のひな形を使う
+  -- 「単元ごとに生成」用のひな形(UN-028)。生活の所見は単元を持たないため対応する列はない
+  unit_content text,          -- 学習の所見・単元ごと用
+  general_unit_content text,  -- 総合の所見・単元ごと用
   updated_at timestamptz not null default now()
 );
 ```
 
-`subject`の削除制限(F3:メモで使用中は削除不可)は`memo.subject_id on delete restrict`で保証する。`timetable_master_slot`/`weekly_subject_override`側は`on delete set null`とし、「時間割でのみ使用中」の場合は削除自体は成功させ未設定に戻す(要件通り)。「メモで使用中」の場合だけを事前チェックしエラーメッセージを出すロジックは、後述の`delete_subject`関数に集約する。
+`updated_at`を持つテーブルには`set_updated_at`トリガー(`before update`)を張り、更新時に値が進むことをDB側で保証する(`docs/bugs.md` BUG-009)。対象は`memo`・`life_memo`・`student_comment`・`student_life_comment`・`student_general_comment`・`prompt_template`・`ai_provider_setting`・`unit`。
+
+`subject`の削除制限(F3:メモで使用中は削除不可)は`memo.subject_id on delete restrict`で保証する。`unit`は`subject`削除時に`on delete cascade`で消えるが、メモで使用中の科目はそもそも削除できないため、メモが参照している単元が巻き込まれることはない。`timetable_master_slot`/`weekly_subject_override`側は`on delete set null`とし、「時間割でのみ使用中」の場合は削除自体は成功させ未設定に戻す(要件通り)。「メモで使用中」の場合だけを事前チェックしエラーメッセージを出すロジックは、後述の`delete_subject`関数に集約する。
 
 上記のDDLは現行スキーマ(`supabase/migrations/`の全マイグレーション適用後)を反映している。実際の正は`supabase/migrations/`であり、スキーマを変更したときは同じPRでこのDDLも更新する。
 
@@ -351,7 +379,7 @@ create policy "teacher can manage own classes"
   with check (teacher_id = auth.uid());
 ```
 
-`student`/`memo`/`student_comment`のように`teacher_id`を直接持たないテーブルは、親テーブル経由のサブクエリでポリシーを書く(初版と同じ)。
+`student`/`memo`/`student_comment`/`unit`のように`teacher_id`を直接持たないテーブルは、親テーブル経由のサブクエリでポリシーを書く(初版と同じ)。`unit`は`subject`経由で所有者を判定する。
 
 **GRANTが別途必要(実装時に判明)。** Supabaseの現行デフォルト(`auto_expose_new_tables`が既定でfalse)では、新規テーブルはRLSポリシーを設定しただけでは`authenticated`/`service_role`ロールから一切アクセスできない(`permission denied for table ...`)。RLSは「行単位のフィルタ」であり、その手前の「テーブルへのアクセス可否」はPostgreSQLの`GRANT`が別途必要なため、各テーブルのマイグレーションで以下を明示的に付与している。
 
@@ -653,7 +681,11 @@ begin
       select jsonb_agg(jsonb_build_object(
         'id', sub.id,
         'name', sub.name,
-        'createdAt', sub.created_at
+        'createdAt', sub.created_at,
+        'units', coalesce((
+          select jsonb_agg(jsonb_build_object('id', u.id, 'name', u.name, 'createdAt', u.created_at) order by u.created_at)
+          from unit u where u.subject_id = sub.id
+        ), '[]'::jsonb)
       ) order by sub.created_at)
       from subject sub where sub.teacher_id = v_teacher_id
     ), '[]'::jsonb),
@@ -685,7 +717,7 @@ begin
       from weekly_class_override o where o.teacher_id = v_teacher_id
     ), '[]'::jsonb),
     'promptTemplate', (
-      select jsonb_build_object('content', p.content, 'lifeContent', p.life_content, 'generalContent', p.general_content, 'updatedAt', p.updated_at)
+      select jsonb_build_object('content', p.content, 'lifeContent', p.life_content, 'generalContent', p.general_content, 'unitContent', p.unit_content, 'generalUnitContent', p.general_unit_content, 'updatedAt', p.updated_at)
       from prompt_template p where p.teacher_id = v_teacher_id
     ),
     'students', coalesce((
@@ -698,6 +730,7 @@ begin
           select jsonb_agg(jsonb_build_object(
             'id', m.id,
             'subjectId', m.subject_id,
+            'unitId', m.unit_id,
             'noteDate', m.note_date,
             'period', m.period,
             'content', m.content,
@@ -801,21 +834,42 @@ export const POST = app.fetch;
 
 これ以外の単純なCRUD(クラス表示名編集、生徒編集・削除、科目名編集、週次個別変更の保存・revert、メモの保存・編集・削除、所見の保存・編集)は、単一テーブルへの`insert`/`update`/`delete`/`upsert`で完結するため、RPC化せず`supabase-js`から直接呼ぶ(§5.4)。
 
-### 5.3 主要な型・スキーマ(`shared/schemas`、変更なし)
+### 5.3 主要な型・スキーマ(`shared/schemas`)
 
 ```ts
 export const memoInputSchema = z.object({
   studentId: z.string().uuid(),
   subjectId: z.string().uuid(),
+  // そのコマの単元。選択は任意で、未選択はnull(単元未設定)
+  unitId: z.string().uuid().nullable().default(null),
   noteDate: z.string().date(),
   period: z.number().int().min(1).max(6),
   content: z.string().min(1),
   shareFlag: z.enum(["shared", "private"]).default("shared"),
 });
 
+export const unitInputSchema = z.object({
+  name: z.string().trim().min(1, "単元名を入力してください"),
+});
+
+// 所見の種類(学習/生活/総合)。生徒ごとに種類別で1件ずつ保持する
+export const commentKindSchema = z.enum(["learning", "life", "general"]);
+
+// 所見のAI生成の単位。whole=まとめて1件、per_unit=単元ごとに案を作って教員が選ぶ
+export const generationScopeSchema = z.enum(["whole", "per_unit"]);
+
+// プロンプトひな形の識別子。生活は単元を持たないため「単元ごと」用がなく計5つ
+export const promptTemplateKeySchema = z.enum([
+  "learning",
+  "learning_unit",
+  "life",
+  "general",
+  "general_unit",
+]);
+
+// 所見は生徒ごとに最新1件のみを保持するため、対象期間は保存対象に含めない
+// (期間はAI生成の材料を絞るためだけに使う。`docs/features/comments/design.md`)
 export const commentSaveInputSchema = z.object({
-  periodStartDate: z.string().date(),
-  periodEndDate: z.string().date(),
   content: z.string().min(1),
   targetCharCount: z.number().int().positive().optional(),
   creationMethod: z.enum(["direct_ai", "prompt_copy", "manual"]),
@@ -880,9 +934,30 @@ const usage = await checkClassUsage(classId); // useClasses.ts
 await supabase.rpc("delete_class", { p_class_id: classId });
 ```
 
+例:単元の管理と、コマの単元の付け替え(いずれも単一テーブルの操作なのでRPCは使わない)。
+
+```ts
+// hooks/useUnits.ts — 科目ごとの単元の取得・追加・編集・削除。
+// unitはsubject_idしか持たないため、teacher_idをクライアントから渡さない
+// (所有者はRLSがsubject経由で判定する)
+supabase.from("unit").select("id, name").eq("subject_id", subjectId).order("created_at");
+supabase.from("unit").insert({ subject_id: subjectId, name });
+
+// hooks/useMemoRecord.ts — 単元はコマごとに1つなので、プルダウンを変えたときに
+// そのコマの保存済みメモ全件の単元をまとめて更新する(単一ステートメント)
+supabase
+  .from("memo")
+  .update({ unit_id: unitId })
+  .eq("subject_id", subjectId)
+  .eq("note_date", dateISO)
+  .eq("period", period)
+  .in("student_id", studentIds)
+  .select("id"); // 更新件数を教員への通知に使う
+```
+
 **補足(所見の保存)**: 学習の所見(`student_comment`)・生活の所見(`student_life_comment`)・総合の所見(`student_general_comment`)はいずれも一意キーが`student_id`で、`upsert`(`onConflict: "student_id"`)により新規作成・更新の両方を1回の呼び出しでまかなう。所見管理画面は画面上部で対象期間を1つ確定させたうえで生徒ごとの行を描画するため、保存時点で対象の生徒は一意に定まっており、既存有無の事前チェック→上書き確認ダイアログという2ステップは不要(直接upsertするだけでよい)。
 
-### 5.5 主要な純粋関数(`shared/`、変更なし)
+### 5.5 主要な純粋関数(`shared/`)
 
 ```ts
 // pseudonym.ts
@@ -896,12 +971,34 @@ export function computePseudonymCode(input: {
 export function computeWeekNumber(startDate: Date, targetDate: Date): number;
 
 // prompt-builder.ts (F9直接呼び出し・F10コピー運用の両方から、ブラウザ側で共通利用)
+// メモ行は単元があるとき `- 2026-10-05 3時限 算数(分数のかけ算): 内容` になる。
+// unitNameは「単元ごとに生成」のときだけ渡し、ひな形の{{unitName}}を置換する
+// (既定のひな形3種は{{unitName}}を含まないため、既定の生成結果は変わらない)
 export function buildPrompt(params: {
   template: string;
-  memos: Array<{ subjectName: string; noteDate: string; period: number; content: string }>;
+  memos: PromptMemo[]; // { noteDate, content, subjectName?, period?, unitName? }
+  grade?: string;
   targetCharCount?: number;
   pseudonymCode: string;
+  unitName?: string;
 }): string;
+
+// group-memos-by-unit.ts (所見の「単元ごとに生成」の材料分け)
+// 単元ごとに最初に現れた順でまとめ、単元未設定のメモは常に最後のグループにする
+export const UNIT_UNSET_LABEL = "単元未設定";
+export function groupMemosByUnit(memos: PromptMemo[]): UnitMemoGroup[];
+
+// group-memos-by-subject-unit.ts (生徒別メモ一覧の「教科別」表示)
+// 教科ごとにまとめた上で、その教科に単元付きメモが1件以上あるときだけ
+// 単元の小グループに分ける(なければ unitGroups は null で従来の表示になる)
+export function groupMemosBySubjectAndUnit<T extends GroupableMemo>(memos: T[]): SubjectGroup<T>[];
+
+// prompt-template-key.ts (所見の種類×生成単位 → 使うひな形のキー)
+// 生活の所見は単元を持たないため、生成単位によらず "life" を返す
+export function resolvePromptTemplateKey(
+  kind: CommentKind,
+  scope: GenerationScope
+): PromptTemplateKey; // "learning" | "learning_unit" | "life" | "general" | "general_unit"
 
 // resolve-weekly-slots.ts
 export function resolveWeeklySlots(
@@ -942,18 +1039,22 @@ export class AiProviderError extends Error {
 |---|---|
 | `<WeeklyTimetableGrid>` | 週次時間割のマス表示。`resolveWeeklySlots`の結果を描画 |
 | `<SlotEditModal>` | マス編集。個別変更の保存/revertは直接upsert/delete |
-| `<MemoEntryGrid>` | 授業記録画面。生徒一覧+メモ入力欄。保存は各行を直接upsert |
+| `<MemoEntryGrid>` | 授業記録画面。生徒一覧+メモ入力欄+コマの単元を選ぶプルダウン。保存は各行を直接upsert。単元はコマごとに1つで、選び直すとそのコマの保存済みメモ全件の単元をまとめて更新する(`docs/features/memo-unit/design.md`) |
+| `<SubjectUnitList>` | 科目管理画面で科目の行を開いたときに出る、その科目の単元の一覧・追加・インライン編集・削除 |
 | `<LifeRecordView>` | 生活記録画面。日付ごとに生徒一覧+生活メモ入力欄。対象クラスはその日の時間割から決まり、1つに定まらない場合のみ選択欄を出す(`docs/features/life-shoken/design.md`) |
 | `<StudentRoster>` | 生徒名簿画面。`useClassOptions()`によるクラス選択(クラス0件時はクラス管理画面への導線を表示)+CSV/貼り付けインポート+一覧 |
-| `<StudentMemoList>` | 生徒別メモ一覧(日付順/教科別)。授業メモと生活メモを統合して表示し、生活メモの追加もできる。`useClassOptions()`によるクラス選択で生徒候補を絞り込む |
+| `<StudentMemoList>` | 生徒別メモ一覧(日付順/教科別)。授業メモと生活メモを統合して表示し、生活メモの追加もできる。見出しに単元名を出し、「教科別」は`groupMemosBySubjectAndUnit`で教科→単元の2段にする。`useClassOptions()`によるクラス選択で生徒候補を絞り込む |
 | `<TimetableMasterForm>` | 時間割マスタ設定画面。グリッド手入力に加え、CSV/貼り付け一括取り込みセクションを持つ(詳細は`docs/features/timetable-master/design.md`) |
-| `<ClassCommentsContent>` | 所見管理画面。`useClassOptions()`によるクラス選択+クラスごとにDB保存される対象期間(開始日・終了日。詳細は`docs/features/comments/design.md`)と、所見の種類タブ(学習/生活。`docs/features/life-shoken/design.md`)を持ち、クラスの生徒一覧を`<StudentCommentRow>`で行ごとに描画する |
-| `<StudentCommentRow>` | 所見管理画面の1行。氏名+所見入力欄(常時表示、`useStudentComments()`でその生徒の既存所見を初期表示)+保存ボタン+「AIで生成する」の折りたたみトグル。所見の種類(学習/生活)を`kind`で受け取り、参照するテーブル・材料のメモ・プロンプトひな形を切り替える |
-| `<CommentAiAssist>` | 行内の「AIで生成する」の中身。目安文字数指定→(APIキー未設定ならプロンプト表示+貼り付け欄、設定済みなら`/api/comments/generate`呼び出し)→結果は行の所見入力欄にコールバックで反映するのみで、保存自体は行う側(`<StudentCommentRow>`)の責務 |
+| `<ClassCommentsContent>` | 所見管理画面。`useClassOptions()`によるクラス選択+クラスごとにDB保存される対象期間(開始日・終了日。詳細は`docs/features/comments/design.md`)と、所見の種類タブ(学習/生活/総合。`docs/features/life-shoken/design.md`・`docs/features/general-shoken/design.md`)を持ち、クラスの生徒一覧を`<StudentCommentRow>`で行ごとに描画する |
+| `<StudentCommentRow>` | 所見管理画面の1行。氏名+所見入力欄(常時表示、`useStudentComments()`でその生徒の既存所見を初期表示)+保存ボタン+「AIで生成する」の折りたたみトグル。所見の種類(学習/生活/総合)を`kind`で受け取り、参照するテーブル・材料のメモ・プロンプトひな形を切り替える |
+| `<CommentAiAssist>` | 行内の「AIで生成する」の中身。作成方法(直接生成/プロンプト作成)と生成単位(まとめて生成/単元ごとに生成)の切り替え+学年・目安文字数の指定を持つ。「単元ごとに生成」では`groupMemosByUnit`の順に`<UnitCommentDraftCard>`を並べ、選択された案を連結して反映する。結果は行の所見入力欄にコールバックで反映するのみで、保存自体は行う側(`<StudentCommentRow>`)の責務 |
+| `<UnitCommentDraftCard>` | 単元1件分のカード。単元名・材料メモ件数・採用チェック・編集可能な所見案・文字数と、直接生成の実行ボタンまたはプロンプトのコピー+貼り付け欄を持つ。所見案は保存せず`<CommentAiAssist>`のstateにのみ保持する |
 | `<ConfirmDialog>` | 汎用確認ダイアログ(RPC関数が投げる例外メッセージ、または既存チェック結果を受けて表示) |
 | `useClasses()` / `useWeeklyTimetable()` / `useStudentMemos()` 等 | TanStack Queryベース。`queryFn`が直接`supabase-js`を呼ぶ |
 | `useClassOptions()` | 生徒名簿・生徒別メモ一覧・所見管理画面で共通利用する画面内クラス選択フック。教員のクラス一覧取得+選択中クラスの生徒一覧取得をまとめて提供し、重複実装を避ける |
 | `useStudentComments(studentId, kind)` | 生徒1人分の所見(種類ごとに1件)の取得・upsert保存。`kind`が`learning`なら`student_comment`、`life`なら`student_life_comment`、`general`なら`student_general_comment`を参照する |
+| `useUnits(subjectId)` | 科目ごとの単元の取得(登録順)・追加・名前編集・削除・貼り付けでの一括登録。`teacher_id`はクライアントから渡さない(`unit`は`subject_id`のみを持ち、所有者はRLSが`subject`経由で判定する) |
+| `usePromptTemplate()` | プロンプトひな形5つ(所見の種類×生成単位)の取得・保存。未保存のものは本ツール既定の初期値を返す。保存は対象の列だけを送るため、他のひな形は保持される |
 | `useClassCommentPeriod(classId)` | クラスごとの所見対象期間の取得・自動保存。詳細は`docs/features/comments/design.md` |
 | `<ToastProvider>` / `useToast()` | 保存成功・失敗等のトースト通知(`components.md` Toast)。`app/providers.tsx`でアプリ全体をラップし、`useToast().showToast(variant, message)`でどこからでも呼び出せる |
 

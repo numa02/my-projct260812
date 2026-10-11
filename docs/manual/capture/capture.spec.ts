@@ -122,12 +122,39 @@ const TIMETABLE_PASTE = [
   .map((row) => row.join("\t"))
   .join("\n");
 
+/**
+ * 説明書の画面例に使う単元(科目ごと)。登録順にプルダウンへ並ぶ。
+ * 教科別表示で「単元で分かれる教科」と「分かれない教科」が両方写るよう、
+ * 理科と算数にだけ登録する
+ */
+const SEED_UNITS: { subject: string; units: string[] }[] = [
+  { subject: "理科", units: ["日なたと日かげ", "光のせいしつ"] },
+  { subject: "算数", units: ["あまりのあるわり算", "大きい数のしくみ"] },
+];
+
+/**
+ * 貼り付けでの一括登録の画面例に使うテキスト。Excelの「単元名」「時数」列を
+ * そのまま貼った形にして、時数の列が単元にならないことを説明書で見せる
+ */
+const UNIT_PASTE_TEXT = [
+  "円と球\t10",
+  "重さのたんいとはかり方\t8",
+  "小数のたし算とひき算\t12",
+].join("\n");
+
 /** 説明書の画面例に厚みを出すための授業メモ。時間割の配置と矛盾しない組み合わせにする */
-const SEED_MEMOS: { date: string; period: number; entries: { student: string; text: string }[] }[] =
+const SEED_MEMOS: {
+  date: string;
+  period: number;
+  /** そのコマで選ぶ単元。単元を登録していない科目のコマでは省略する */
+  unit?: string;
+  entries: { student: string; text: string }[];
+}[] =
   [
     {
       date: "2026-09-21",
       period: 3,
+      unit: "日なたと日かげ",
       entries: [
         {
           student: "青木 陽菜",
@@ -152,6 +179,7 @@ const SEED_MEMOS: { date: string; period: number; entries: { student: string; te
     {
       date: "2026-09-22",
       period: 1,
+      unit: "あまりのあるわり算",
       entries: [
         {
           student: "青木 陽菜",
@@ -218,6 +246,61 @@ test("使い方説明書のキャプチャを撮影する", async ({ page }) => 
     { n: 1, target: page.getByLabel("科目名") },
     { n: 2, target: page.getByRole("button", { name: "登録", exact: true }) },
   ]);
+
+  // ---------------------------------------------------------------- 単元
+  // 画像の連番は説明書の読む順を表す。既存の06以降を振り直さずに差し込むため「05b」とする
+  for (const [index, seed] of SEED_UNITS.entries()) {
+    const rowToggle = page.getByRole("button", { name: `${seed.subject}の単元`, exact: true });
+    const nameInput = page.getByLabel(`${seed.subject}の単元名`, { exact: true });
+    const addButton = page.getByRole("button", { name: "単元を追加", exact: true });
+
+    await rowToggle.click();
+    for (const unit of seed.units) {
+      await nameInput.fill(unit);
+      // 保存中は無効化されるため、押せる状態になってからクリックする
+      await expect(addButton).toBeEnabled();
+      await addButton.click();
+      // 完了の合図にはトーストではなく一覧と入力欄のクリアを使う。
+      // トーストは4秒で消えるため、2件目以降で前のトーストを見て先に進む恐れがある
+      await expect(page.getByText(unit, { exact: true })).toBeVisible();
+      await expect(nameInput).toHaveValue("");
+    }
+    // 最初の科目を開いた状態を1枚撮る(2つ目以降は同じ見た目なので撮らない)
+    if (index === 0) {
+      await shot(page, "05b-subjects-units", [
+        { n: 1, target: rowToggle },
+        { n: 2, target: nameInput },
+        { n: 3, target: addButton },
+      ]);
+    }
+    // 貼り付けでの一括登録(算数の行で1枚撮る)
+    if (seed.subject === "算数") {
+      const importToggle = page.getByRole("button", {
+        name: `${seed.subject}の単元を貼り付けで一括登録`,
+        exact: true,
+      });
+      const pasteArea = page.getByLabel(`${seed.subject}の単元名を貼り付け`, { exact: true });
+      const importButton = page.getByRole("button", { name: "取り込む", exact: true });
+
+      await importToggle.click();
+      await pasteArea.fill(UNIT_PASTE_TEXT);
+      // 注釈が画像の外に出ないよう、取り込みボタンまでスクロールしてから撮る
+      await importButton.scrollIntoViewIfNeeded();
+      await shot(page, "05c-subjects-units-import", [
+        { n: 1, target: pasteArea },
+        { n: 2, target: importButton },
+      ]);
+      await importButton.click();
+      // 取り込みの完了は一覧への反映と貼り付け欄のクリアで待つ(docs/bugs.md BUG-010)
+      await expect(page.getByText("円と球", { exact: true })).toBeVisible();
+      await expect(pasteArea).toHaveValue("");
+      await importToggle.click();
+    }
+
+    // 同時に開けるのは1つなので、次の科目を開く前に閉じる
+    await rowToggle.click();
+    await expect(nameInput).toHaveCount(0);
+  }
 
   // ---------------------------------------------------------------- クラス
   await page.goto("/classes");
@@ -296,6 +379,10 @@ test("使い方説明書のキャプチャを撮影する", async ({ page }) => 
     { n: 1, target: page.getByRole("button", { name: new RegExp(STUDENTS[0]) }) },
   ]);
 
+  // 単元はコマごとに1つ。ここで選んでおくと、このコマで保存する全員のメモに同じ単元が入る
+  await page.getByLabel("単元").selectOption({ label: "日なたと日かげ" });
+  await shot(page, "15b-record-unit", [{ n: 1, target: page.getByLabel("単元") }]);
+
   await page.getByRole("button", { name: new RegExp(STUDENTS[0]) }).click();
   await page
     .getByLabel("メモ", { exact: true })
@@ -315,6 +402,9 @@ test("使い方説明書のキャプチャを撮影する", async ({ page }) => 
   // 説明書の他の画面を実際の記録で埋めるため、残りのメモも同じ画面から入力する
   for (const seed of SEED_MEMOS) {
     await page.goto(`/memos/record?date=${seed.date}&period=${seed.period}`);
+    if (seed.unit) {
+      await page.getByLabel("単元").selectOption({ label: seed.unit });
+    }
     for (const entry of seed.entries) {
       const row = page.getByRole("button", { name: new RegExp(entry.student) });
       await row.click();
@@ -380,10 +470,32 @@ test("使い方説明書のキャプチャを撮影する", async ({ page }) => 
   await expect(page.getByText("AIプロバイダ設定を保存しました")).toBeVisible();
 
   // ---------------------------------------------------------------- 所見
+  // 「単元ごとに生成」は同じエンドポイントを単元の数だけ呼ぶ。プロンプトにどのメモが
+  // 入っているかで、その単元らしい文面を返し分ける(説明書の画面例を自然にするため)。
+  // 1グループぶんのメモしか入っていなければ「単元ごと」、複数混ざっていれば「まとめて」
+  const SAMPLE_TEXT: { marker: string; text: string }[] = [
+    {
+      marker: "(日なたと日かげ)",
+      text: "日なたと日かげの学習では、地面の温度を時間を決めて記録し、結果を表にまとめることができました。",
+    },
+    {
+      marker: "(あまりのあるわり算)",
+      text: "あまりのあるわり算では、図をかいて考え方を友だちに説明する姿が見られました。",
+    },
+    {
+      // 単元を選ばずに記録したメモ(社会)。「単元未設定」のカードがこれに当たる
+      marker: "スーパーマーケット",
+      text: "お店の見学では、調べたことをもとに工夫を3つ挙げて発表することができました。",
+    },
+  ];
+
   await page.route("**/api/comments/generate", async (route) => {
+    const prompt: string = route.request().postDataJSON()?.prompt ?? "";
+    const matched = SAMPLE_TEXT.filter((sample) => prompt.includes(sample.marker));
     await route.fulfill({
       json: {
         rawText:
+          (matched.length === 1 ? matched[0].text : undefined) ??
           "理科では日なたと日かげの地面の温度を時間を決めて記録し、結果を表にまとめることができました。算数のあまりのあるわり算では、図をかいて考え方を友だちに説明する姿が見られました。",
       },
     });
@@ -418,9 +530,25 @@ test("使い方説明書のキャプチャを撮影する", async ({ page }) => 
   await commentRow.getByRole("button", { name: "保存" }).click();
   await expect(page.getByText(`${STUDENTS[0]}の所見を保存しました`)).toBeVisible();
 
+  // 単元ごとに生成して、先生が採用する案を選ぶ方式
+  await commentRow.getByRole("radio", { name: "単元ごとに生成" }).click();
+  await commentRow.getByRole("button", { name: "すべての単元を生成" }).click();
+  await expect(page.getByText(/件の単元の所見案を生成しました/)).toBeVisible();
+  // 単元のカードは縦に長く、画面の高さに収まらない。注釈が画像の外に出ないよう、
+  // 反映ボタンまでスクロールしてから、その前後だけを撮る
+  const applyButton = commentRow.getByRole("button", { name: /選択した案を所見欄に反映/ });
+  await applyButton.scrollIntoViewIfNeeded();
+  await shot(page, "25b-comments-unit-drafts", [
+    { n: 1, target: commentRow.getByRole("checkbox", { name: /の案を採用する/ }).last() },
+    { n: 2, target: applyButton },
+  ]);
+
   // ---------------------------------------------------------------- 設定まわり
   await page.goto("/settings/prompt-template");
-  await expect(page.getByLabel("学習の所見用のひな形", { exact: true })).toBeVisible();
+  // 既定で「学習の所見」の折りたたみが開いており、中に2つのひな形が入っている(UN-034)
+  await expect(
+    page.getByLabel("学習の所見用のひな形(まとめて生成)", { exact: true }),
+  ).toBeVisible();
   await shot(page, "26-prompt-template", []);
 
   await page.goto("/settings/export");

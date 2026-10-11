@@ -43,8 +43,25 @@ async function setUpMaster(page: Page): Promise<void> {
   await expect(page.getByText("時間割マスタを保存しました")).toBeVisible();
 }
 
-async function recordMemo(page: Page, period: number, content: string): Promise<void> {
-  await page.goto(`/memos/record?date=2026-04-06&period=${period}`);
+/** 科目管理画面で、その科目の単元を1件登録する(UN-010) */
+async function createUnit(page: Page, subjectName: string, unitName: string): Promise<void> {
+  await page.goto("/subjects");
+  await page.getByRole("button", { name: `${subjectName}の単元` }).click();
+  await page.getByLabel(`${subjectName}の単元名`).fill(unitName);
+  await page.getByRole("button", { name: "単元を追加" }).click();
+  await expect(page.getByText("単元を登録しました")).toBeVisible();
+}
+
+async function recordMemo(
+  page: Page,
+  period: number,
+  content: string,
+  unitName?: string,
+  // 2026-04-06・2026-04-13はいずれも月曜日なので、同じ時限でも時間割の科目は変わらない
+  dateISO = "2026-04-06",
+): Promise<void> {
+  await page.goto(`/memos/record?date=${dateISO}&period=${period}`);
+  if (unitName) await page.getByLabel("単元").selectOption({ label: unitName });
   await page.getByRole("button", { name: /生徒A/ }).click();
   await page.getByLabel("メモ", { exact: true }).fill(content);
   await page.getByRole("button", { name: "保存" }).click();
@@ -131,5 +148,63 @@ test.describe("生徒別メモ一覧画面(T-064)", () => {
 
     await page.getByLabel("生徒").selectOption({ label: "生徒A" });
     await expect(page.getByText("まだメモがありません")).toBeVisible();
+  });
+
+  // 単元の表示(UN-012)
+  test("教科別表示で、単元付きメモがある教科だけ単元の小見出しに分かれる", async ({ page }) => {
+    await signUpAndLogin(page);
+    await createClass(page, "1", "1年1組");
+    await createSubject(page, "国語");
+    await createSubject(page, "算数");
+    await createUnit(page, "国語", "詩を読もう");
+    await importStudents(page, "1年1組", "1,生徒A");
+    await setUpMaster(page);
+
+    // 国語: 単元付き。算数: 単元を登録していないので単元未設定のまま
+    await recordMemo(page, 1, "国語メモ", "詩を読もう");
+    await recordMemo(page, 2, "算数メモ");
+
+    await page.goto("/students");
+    await page.getByLabel("クラス").selectOption({ label: "1年1組" });
+    await page.getByRole("link", { name: "生徒A", exact: true }).click();
+
+    // 日付順の見出しに単元名が入る。単元未設定のメモには入らない
+    await expect(page.getByText(/1限 ・ 国語 ・ 詩を読もう/)).toBeVisible();
+    await expect(page.getByText(/2限 ・ 算数$/)).toBeVisible();
+
+    await page.getByRole("radio", { name: "教科別" }).click();
+    await expect(page.getByRole("heading", { name: "国語", level: 2 })).toBeVisible();
+    // 単元付きメモがある国語だけ単元の小見出しが出る
+    await expect(page.getByRole("heading", { name: "詩を読もう", level: 3 })).toBeVisible();
+    // 算数には単元の小見出しが作られない(従来どおりメモがそのまま並ぶ)
+    await expect(page.getByRole("heading", { name: "単元未設定", level: 3 })).toHaveCount(0);
+    await expect(page.getByText("算数メモ")).toBeVisible();
+  });
+
+  test("同じ教科に単元付きと単元未設定が混在すると「単元未設定」の小見出しが最後に出る", async ({
+    page,
+  }) => {
+    await signUpAndLogin(page);
+    await createClass(page, "1", "1年1組");
+    await createSubject(page, "国語");
+    await createSubject(page, "算数"); // setUpMasterが月曜2限に設定するため登録しておく
+    await importStudents(page, "1年1組", "1,生徒A");
+    await setUpMaster(page);
+
+    // 先に単元なしで記録し、あとから単元を登録して別の日の同じコマに単元付きで記録する
+    // (単元はコマごとに1つなので、同じ教科で混在させるには別の日に記録する)
+    await recordMemo(page, 1, "単元なしの国語メモ");
+    await createUnit(page, "国語", "詩を読もう");
+    await recordMemo(page, 1, "単元ありの国語メモ", "詩を読もう", "2026-04-13");
+
+    await page.goto("/students");
+    await page.getByLabel("クラス").selectOption({ label: "1年1組" });
+    await page.getByRole("link", { name: "生徒A", exact: true }).click();
+    await page.getByRole("radio", { name: "教科別" }).click();
+
+    const unitHeadings = page.getByRole("heading", { level: 3 });
+    await expect(unitHeadings).toHaveCount(2);
+    await expect(unitHeadings.nth(0)).toHaveText("詩を読もう");
+    await expect(unitHeadings.nth(1)).toHaveText("単元未設定");
   });
 });
