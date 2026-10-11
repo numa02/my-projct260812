@@ -61,8 +61,10 @@ describe("export_teacher_data", () => {
     await teacher.client.from("prompt_template").insert({
       teacher_id: teacher.id,
       content: "学習用ひな形",
+      unit_content: "学習・単元ごとひな形",
       life_content: "生活用ひな形",
       general_content: "総合用ひな形",
+      general_unit_content: "総合・単元ごとひな形",
     });
     await teacher.client
       .from("ai_provider_setting")
@@ -89,8 +91,10 @@ describe("export_teacher_data", () => {
       }>;
       promptTemplate: {
         content: string | null;
+        unitContent: string | null;
         lifeContent: string | null;
         generalContent: string | null;
+        generalUnitContent: string | null;
       } | null;
       aiProviderSetting?: unknown;
     };
@@ -121,8 +125,10 @@ describe("export_teacher_data", () => {
     expect(result.promptTemplate).toEqual(
       expect.objectContaining({
         content: "学習用ひな形",
+        unitContent: "学習・単元ごとひな形",
         lifeContent: "生活用ひな形",
         generalContent: "総合用ひな形",
+        generalUnitContent: "総合・単元ごとひな形",
       }),
     );
     expect(result.aiProviderSetting).toBeUndefined();

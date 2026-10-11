@@ -148,3 +148,49 @@ PR #26 のレビュー中に受けた要望(「単元たちはまとめて追加
   - DoD: `npm run lint`・`npm run test`・`npm run test:db`・`npx tsc --noEmit`・`npm run build`・`npm run test:e2e`がすべて通る
   - 依存: UN-021〜UN-026
   - ロールバック: なし(検証タスク)
+
+---
+
+## 追加: 「単元ごと」専用のプロンプトひな形(UN-028〜)
+
+PR #26 のレビュー中の指摘(「厳選モードのときのプロンプトはどうなっていますか?」)への対応。実際の出力を確認したところ、単元ごとに生成しても「まとめて生成」用のひな形をそのまま使っており、「すべての教科を網羅することより」など1単元の文脈に合わない指示が残っていた。**学習用・総合用に「単元ごと」専用のひな形を追加し、設定画面で編集できるようにする**(生活は単元を持たないため追加しない)。
+
+- [x] **UN-028** `prompt_template`に「単元ごと」用の2列を追加するマイグレーションを作成する
+  - DoD: `supabase/migrations/20261011090000_prompt_template_unit.sql`が作成され、`unit_content`・`general_unit_content`(いずれもnullable)を追加し、`export_teacher_data`を`create or replace`して`promptTemplate.unitContent`・`generalUnitContent`を出力する。**既存の列・制約には触れない。** `20261005090000_memo_unit.sql`は書き換えない(ローカルでは適用済みのため)。ローカルで`npx supabase db reset`が最後まで通る
+  - 依存: UN-001
+  - ロールバック: ローカル未適用ならファイル削除。本番適用後は`drop column`と`export_teacher_data`を戻す新規マイグレーションを追加する
+
+- [x] **UN-029** DBテストを追従させる
+  - DoD: `tests/db/schema.test.ts`に「5つのひな形列が独立に保存される」(1つをupsertしても他が消えない)が追加され、既存3列の検証は維持される。`tests/db/rpc-export.test.ts`に`promptTemplate.unitContent`・`generalUnitContent`が含まれることが追加される。`npm run test:db`が通る
+  - 依存: UN-028
+  - ロールバック: テストのrevertのみ
+
+- [x] **UN-030** 「単元ごと」用の既定ひな形2種を追加する
+  - DoD: `shared/prompt-builder.ts`に`DEFAULT_UNIT_PROMPT_TEMPLATE`(学習)と`DEFAULT_GENERAL_UNIT_PROMPT_TEMPLATE`(総合)が追加される。どちらも`{{unitName}}`を含み、(1)対象が1単元であることを明示、(2)複数教科を前提にした取捨選択の指示を外す、(3)他の単元の案と連結されうるため前置き・総括を書かせない、の3点が反映されている。**既存3種の文面は1文字も変えない。** `shared/prompt-builder.test.ts`で、新2種が`{{pseudonymCode}}`・`{{grade}}`・`{{targetCharCount}}`・`{{memos}}`・`{{unitName}}`を含むこと、既存3種が`{{unitName}}`を含まないままであることが検証され、`npm run test`が通る
+  - 依存: なし
+  - ロールバック: 定数の削除(UN-032と併せて戻す)
+
+- [x] **UN-031** `shared/prompt-template-key.ts`を追加する
+  - DoD: `resolvePromptTemplateKey(kind, scope): PromptTemplateKey`がexportされ、学習×まとめて=`learning`、学習×単元ごと=`learning_unit`、総合×まとめて=`general`、総合×単元ごと=`general_unit`、生活は生成単位によらず`life`を返す。`shared/schemas/index.ts`に`promptTemplateKeySchema`が追加される。`shared/prompt-template-key.test.ts`で5通りが検証され、`npm run test`が通る
+  - 依存: UN-030
+  - ロールバック: ファイル削除のみ
+
+- [x] **UN-032** `hooks/usePromptTemplate.ts`を5つのひな形に対応させる
+  - DoD: `templates`が`Record<PromptTemplateKey, string>`になり、未保存のキーは対応する既定値を返す。`saveTemplate`がキーごとに対応する列だけを送る(送らなかった列はupsertで上書きされないため他のひな形は保持される)。`npx tsc --noEmit`が通る
+  - 依存: UN-028, UN-031
+  - ロールバック: フックのrevert(UN-033・UN-034と併せて戻す)
+
+- [x] **UN-033** `CommentAiAssist`が生成単位に応じてひな形を切り替える
+  - DoD: 「まとめて生成」では従来どおり`learning`/`life`/`general`のひな形、「単元ごとに生成」では`learning_unit`/`general_unit`のひな形が使われる。**「まとめて生成」の組み立て結果は従来と1文字も変わらない。** `npx tsc --noEmit`が通る
+  - 依存: UN-032
+  - ロールバック: 切り替え分のrevertのみ
+
+- [x] **UN-034** プロンプトひな形編集画面を所見の種類ごとの折りたたみに組み替える
+  - DoD: `/settings/prompt-template`が学習・生活・総合の折りたたみになり(同時に開けるのは1つ、既定は学習)、学習と総合の中に「まとめて生成」用・「単元ごと」用の2つ、生活の中に1つのフォームが入る。見出し・テキストエリアのラベル・保存ボタンの名前に種類と生成単位の両方が入り、画面内で重複しない。1つ保存しても他の4つは変わらない。空欄では保存ボタンが押せない(従来どおり)。`docs/design/design-system.md`にない色・フォントサイズ・余白を追加していない
+  - 依存: UN-032
+  - ロールバック: 画面のrevertのみ
+
+- [x] **UN-035** モックアップ・E2E・ドキュメント・検証
+  - DoD: (1)`mockups/settings.html`が5つのひな形と折りたたみの構成に一致する。(2)`e2e/settings-prompt-template.spec.ts`が折りたたみとラベル変更に追従し、「単元ごと」用の保存独立性と、単元ごとの生成でそのひな形が使われることが追加される。(3)`docs/requirements.md` F10・`docs/design.md` §4.2のDDL・`docs/design/screens.md`の設定画面・`docs/features/memo-unit/test-cases.md`が更新される。(4)`docs/manual/index.html` 4-3のひな形の説明が5つの構成に合わせて更新され、キャプチャを撮り直す。(5)`npm run lint`・`npm run test`・`npm run test:db`・`npx tsc --noEmit`・`npm run build`・`npm run test:e2e`がすべて通る
+  - 依存: UN-028〜UN-034
+  - ロールバック: 各ファイルのrevertのみ

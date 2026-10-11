@@ -103,6 +103,20 @@ export type CommentKind = z.infer<typeof commentKindSchema>;
 export const generationScopeSchema = z.enum(["whole", "per_unit"]);
 export type GenerationScope = z.infer<typeof generationScopeSchema>;
 
+/**
+ * プロンプトひな形の識別子。所見の種類(学習・生活・総合)と生成単位(まとめて生成・単元ごと)の
+ * 組み合わせで決まる。生活の所見は単元を持たないため「単元ごと」用を持たず、計5つになる。
+ * 種類と生成単位からの変換は`shared/prompt-template-key.ts`の`resolvePromptTemplateKey`
+ */
+export const promptTemplateKeySchema = z.enum([
+  "learning",
+  "learning_unit",
+  "life",
+  "general",
+  "general_unit",
+]);
+export type PromptTemplateKey = z.infer<typeof promptTemplateKeySchema>;
+
 export const commentSaveInputSchema = z.object({
   content: z.string().min(1),
   targetCharCount: z.number().int().positive().optional(),

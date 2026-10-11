@@ -9,6 +9,7 @@ import { useGenerateComment } from "@/hooks/useGenerateComment";
 import type { CommentCreationMethod } from "@/hooks/useStudentComments";
 import { buildPrompt } from "@/shared/prompt-builder";
 import { groupMemosByUnit } from "@/shared/group-memos-by-unit";
+import { resolvePromptTemplateKey } from "@/shared/prompt-template-key";
 import type { CommentKind, GenerationScope } from "@/shared/schemas";
 import { Input, Textarea } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
@@ -68,7 +69,6 @@ export function CommentAiAssist({
   const { showToast } = useToast();
   const { setting, isLoading: isLoadingSetting } = useAiProviderSettings();
   const { templates, isLoading: isLoadingTemplate } = usePromptTemplate();
-  const template = templates[kind];
   const memoLabel = MEMO_LABEL[kind];
   const generateComment = useGenerateComment();
 
@@ -91,6 +91,10 @@ export function CommentAiAssist({
   const [unitErrors, setUnitErrors] = useState<Record<string, string>>({});
   const [generatingUnitName, setGeneratingUnitName] = useState<string | null>(null);
   const [batchProgress, setBatchProgress] = useState<{ done: number; total: number } | null>(null);
+
+  // 使うひな形は所見の種類と生成単位の組み合わせで決まる(生活は生成単位によらずlife)。
+  // 「まとめて生成」のひな形・組み立て結果は従来と変わらない
+  const template = templates[resolvePromptTemplateKey(kind, effectiveScope)];
 
   const { memos, isLoading: isLoadingMemos } = useSharedMemosForPeriod(
     studentId,

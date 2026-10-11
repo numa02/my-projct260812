@@ -7,7 +7,8 @@
 | `unit`(新設) | テーブル追加。`subject_id`必須、`unique (id, subject_id)`、RLSポリシー、`updated_at`トリガー | いいえ(追加のみ) |
 | `memo` | `unit_id`列の追加(nullable)と複合外部キー`(unit_id, subject_id) → unit(id, subject_id) on delete set null (unit_id)` | いいえ。既存行はすべて`null`になり、既存の列・制約・RLSポリシーには触れない |
 | `subject` | 変更なし。`unit`から`on delete cascade`で参照されるだけ | いいえ |
-| `export_teacher_data` | `create or replace`。`subjects[].units`と`memos[].unitId`を追加 | いいえ(既存キーは不変) |
+| `prompt_template` | `unit_content`・`general_unit_content`の2列を追加(nullable)。別マイグレーション`20261011090000_prompt_template_unit.sql` | いいえ(追加のみ)。ただし新コードはこの2列をselectするため、**適用がデプロイより先**である必要がある |
+| `export_teacher_data` | `create or replace`。`subjects[].units`・`memos[].unitId`・`promptTemplate.unitContent`・`promptTemplate.generalUnitContent`を追加 | いいえ(既存キーは不変) |
 
 既存の一意制約・NOT NULL・RLSポリシーの入れ替えがないため、**2フェーズ方式(expand/contract)は不要**。マイグレーション適用とVercelデプロイの順序に依存しない(適用後・デプロイ前の旧コードは`unit_id`を読み書きしないため正常に動く)。
 
@@ -19,7 +20,7 @@
 | 授業記録(`/memos/record`) | 単元のプルダウンを追加。単元を変えるとそのコマの保存済みメモ全件の単元が更新される |
 | 生徒別メモ一覧(`/memos/students`) | メモの見出しに単元名を表示。「教科別」表示が教科 → 単元の2段になる |
 | 所見管理(`/comments/class`) | AI生成セクションに生成単位の切り替えが増える(学習・総合のみ)。「単元ごとに生成」で単元カードの一覧が出る |
-| プロンプトひな形編集(`/settings/prompt-template`) | 案内文に`{{unitName}}`を追記 |
+| プロンプトひな形編集(`/settings/prompt-template`) | 案内文に`{{unitName}}`を追記。所見の種類ごとの折りたたみに組み替え、学習・総合は中に「まとめて生成」用と「単元ごと」用の2つを持つ(計5つ) |
 | 週次時間割・生活記録・クラス管理・生徒名簿・AIプロバイダ設定・データエクスポート | 画面の変更なし(エクスポートは出力内容が増えるだけ) |
 
 グローバルナビの項目は増えない。画面遷移も変わらないため`docs/design/user-flow.md`のMermaid図は変更不要。
@@ -34,6 +35,7 @@
 | `shared/group-memos-by-unit.ts`(新規) | 所見生成の材料を単元ごとに分ける純粋関数と`UNIT_UNSET_LABEL` |
 | `shared/group-memos-by-subject-unit.ts`(新規) | 生徒別メモ一覧の教科 → 単元の2段グループ化の純粋関数 |
 | `shared/parse-unit-list.ts`(新規) | 貼り付けテキストから単元名を抽出する純粋関数(1行1単元・先頭列のみ) |
+| `shared/prompt-template-key.ts`(新規) | 所見の種類と生成単位から使うひな形のキーを決める純粋関数 |
 | `hooks/useUnits.ts`(新規) | 科目ごとの単元の取得・追加・編集・削除・貼り付けでの一括登録 |
 | `hooks/useMemoRecord.ts` | 既存メモの`unit_id`を取得。`saveMemo`に`unitId`を追加。コマの単元を一括更新する`updateSlotUnit`を追加 |
 | `hooks/useStudentMemos.ts` | `memo`のselectに`unit(name)`を追加し、`StudentMemoRow.unitName`を持たせる |
@@ -45,7 +47,10 @@
 | `components/memo/StudentMemoRow.tsx` | 変更なし(単元の選択は画面側の共通プルダウンで扱う) |
 | `components/comment/CommentAiAssist.tsx` | 生成単位の切り替えと「単元ごとに生成」の一覧・一括生成・反映を追加 |
 | `components/comment/UnitCommentDraftCard.tsx`(新規) | 単元1件分のカード(生成・編集・コピー・貼り付け・採用チェック) |
-| `app/(main)/settings/prompt-template/PromptTemplateForm.tsx` | 案内文の追記のみ |
+| `app/(main)/settings/prompt-template/PromptTemplateForm.tsx` | 案内文の追記と、ひな形のキー(種類×生成単位)を受け取る形への変更 |
+| `app/(main)/settings/prompt-template/page.tsx` | 所見の種類ごとの折りたたみに組み替え、5つのフォームを配置 |
+| `hooks/usePromptTemplate.ts` | 5つのひな形キーに対応(`unit_content`・`general_unit_content`の読み書きを追加) |
+| `components/comment/CommentAiAssist.tsx` | 生成単位に応じて使うひな形を切り替える |
 | `hooks/useGenerateComment.ts`・`lib/hono-server/**` | 変更なし(既存エンドポイントを単元ごとに呼ぶだけ) |
 
 ## テストへの影響
@@ -60,6 +65,9 @@
 | `shared/group-memos-by-unit.test.ts`(新規) | 単元ごとの分類・「単元未設定」が最後に来ること・並び順 |
 | `shared/group-memos-by-subject-unit.test.ts`(新規) | 教科 → 単元の2段化、単元付きが0件の教科はフラットのまま |
 | `shared/parse-unit-list.test.ts`(新規) | 1行1単元・先頭列のみ・空行/空セルの無視・重複の集約・空入力 |
+| `shared/prompt-template-key.test.ts`(新規) | 種類×生成単位の5通り、生活は生成単位によらず`life` |
+| `tests/db/schema.test.ts` | `prompt_template`の5列が独立に保存されることを追加 |
+| `e2e/settings-prompt-template.spec.ts` | 折りたたみとラベル変更への追従、「単元ごと」用の保存独立性 |
 | `e2e/subjects.spec.ts` | 単元の追加・編集・削除、貼り付けでの一括登録(重複のスキップを含む) |
 | `e2e/memos-record.spec.ts` | 単元を選んでメモを保存、単元の付け替えで既存メモも更新される |
 | `e2e/memos-students.spec.ts` | 教科別表示で単元の小見出しが出る |
@@ -74,7 +82,7 @@
 | `mockups/class-record.html` | 単元のプルダウンを反映 |
 | `mockups/student-memo-list.html` | 単元名の表示と教科 → 単元の2段表示を反映 |
 | `mockups/comment.html` | 生成単位の切り替えと単元カードの一覧を反映 |
-| `mockups/settings.html` | ひな形の案内文に`{{unitName}}`を追記 |
+| `mockups/settings.html` | ひな形の案内文に`{{unitName}}`を追記し、所見の種類ごとの折りたたみ+5つのひな形の構成に合わせる |
 
 ## ドキュメントへの影響
 

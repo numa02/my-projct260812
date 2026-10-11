@@ -613,6 +613,37 @@ describe("prompt_template", () => {
       }>();
     expect(data).toEqual({ content: "学習用", life_content: "生活用", general_content: "総合用" });
   });
+
+  it("「単元ごと」用の2つを含む5つのひな形が独立に保存される(UN-029)", async () => {
+    teacher = await createTestTeacher();
+
+    const saves: { column: string; value: string }[] = [
+      { column: "content", value: "学習・まとめて" },
+      { column: "unit_content", value: "学習・単元ごと" },
+      { column: "life_content", value: "生活" },
+      { column: "general_content", value: "総合・まとめて" },
+      { column: "general_unit_content", value: "総合・単元ごと" },
+    ];
+    // 画面と同じく、1つずつ別々のupsertで保存する(送らなかった列は上書きされない)
+    for (const save of saves) {
+      const { error } = await teacher.client
+        .from("prompt_template")
+        .upsert({ teacher_id: teacher.id, [save.column]: save.value }, { onConflict: "teacher_id" });
+      expect(error).toBeNull();
+    }
+
+    const { data } = await teacher.client
+      .from("prompt_template")
+      .select("content, unit_content, life_content, general_content, general_unit_content")
+      .single();
+    expect(data).toEqual({
+      content: "学習・まとめて",
+      unit_content: "学習・単元ごと",
+      life_content: "生活",
+      general_content: "総合・まとめて",
+      general_unit_content: "総合・単元ごと",
+    });
+  });
 });
 
 describe("ai_provider_setting", () => {

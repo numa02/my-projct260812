@@ -2,15 +2,23 @@ import { describe, expect, it } from "vitest";
 import {
   buildPrompt,
   DEFAULT_GENERAL_PROMPT_TEMPLATE,
+  DEFAULT_GENERAL_UNIT_PROMPT_TEMPLATE,
   DEFAULT_LIFE_PROMPT_TEMPLATE,
   DEFAULT_PROMPT_TEMPLATE,
+  DEFAULT_UNIT_PROMPT_TEMPLATE,
 } from "./prompt-builder";
 
-const ALL_DEFAULT_TEMPLATES = [
+/** 「まとめて生成」用の3種 */
+const WHOLE_DEFAULT_TEMPLATES = [
   DEFAULT_PROMPT_TEMPLATE,
   DEFAULT_LIFE_PROMPT_TEMPLATE,
   DEFAULT_GENERAL_PROMPT_TEMPLATE,
 ];
+
+/** 「単元ごと」用の2種(UN-030) */
+const UNIT_DEFAULT_TEMPLATES = [DEFAULT_UNIT_PROMPT_TEMPLATE, DEFAULT_GENERAL_UNIT_PROMPT_TEMPLATE];
+
+const ALL_DEFAULT_TEMPLATES = [...WHOLE_DEFAULT_TEMPLATES, ...UNIT_DEFAULT_TEMPLATES];
 
 describe("buildPrompt", () => {
   it("プレースホルダーを学年・文字数・メモで置換する", () => {
@@ -198,11 +206,25 @@ describe("初期値のひな形", () => {
     }
   });
 
-  // {{unitName}}は「必要な教員が自分のひな形に入れる」任意の拡張として提供する。
-  // 既定値に入れると、ひな形を保存していない教員の生成結果が本機能の追加だけで変わってしまう
-  it("{{unitName}}は含まない(既定の生成結果を変えないため)", () => {
-    for (const template of ALL_DEFAULT_TEMPLATES) {
+  // 「まとめて生成」用の3種に{{unitName}}を後から入れると、ひな形を保存していない教員の
+  // 生成結果が変わってしまうため入れない。任意の拡張として教員が自分で入れることはできる
+  it("「まとめて生成」用の3種は{{unitName}}を含まない(既定の生成結果を変えないため)", () => {
+    for (const template of WHOLE_DEFAULT_TEMPLATES) {
       expect(template).not.toContain("{{unitName}}");
+    }
+  });
+
+  // 「単元ごと」用は新設のひな形なので、既定値に{{unitName}}を入れても既存の挙動は変わらない
+  it("「単元ごと」用の2種は{{unitName}}を含む(UN-030)", () => {
+    for (const template of UNIT_DEFAULT_TEMPLATES) {
+      expect(template).toContain("{{unitName}}");
+    }
+  });
+
+  it("「単元ごと」用の2種は、複数教科を前提にした取捨選択の指示を含まない(UN-030)", () => {
+    for (const template of UNIT_DEFAULT_TEMPLATES) {
+      expect(template).not.toContain("すべての教科を網羅する");
+      expect(template).not.toContain("複数の教科を無理に盛り込まず");
     }
   });
 });

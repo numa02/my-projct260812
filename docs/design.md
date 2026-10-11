@@ -355,6 +355,9 @@ create table prompt_template (
   content text,          -- 学習の所見用。nullなら本ツール既定のひな形を使う
   life_content text,     -- 生活の所見用。nullなら本ツール既定のひな形を使う
   general_content text,  -- 総合の所見用。nullなら本ツール既定のひな形を使う
+  -- 「単元ごとに生成」用のひな形(UN-028)。生活の所見は単元を持たないため対応する列はない
+  unit_content text,          -- 学習の所見・単元ごと用
+  general_unit_content text,  -- 総合の所見・単元ごと用
   updated_at timestamptz not null default now()
 );
 ```
@@ -714,7 +717,7 @@ begin
       from weekly_class_override o where o.teacher_id = v_teacher_id
     ), '[]'::jsonb),
     'promptTemplate', (
-      select jsonb_build_object('content', p.content, 'lifeContent', p.life_content, 'generalContent', p.general_content, 'updatedAt', p.updated_at)
+      select jsonb_build_object('content', p.content, 'lifeContent', p.life_content, 'generalContent', p.general_content, 'unitContent', p.unit_content, 'generalUnitContent', p.general_unit_content, 'updatedAt', p.updated_at)
       from prompt_template p where p.teacher_id = v_teacher_id
     ),
     'students', coalesce((
@@ -855,6 +858,15 @@ export const commentKindSchema = z.enum(["learning", "life", "general"]);
 // 所見のAI生成の単位。whole=まとめて1件、per_unit=単元ごとに案を作って教員が選ぶ
 export const generationScopeSchema = z.enum(["whole", "per_unit"]);
 
+// プロンプトひな形の識別子。生活は単元を持たないため「単元ごと」用がなく計5つ
+export const promptTemplateKeySchema = z.enum([
+  "learning",
+  "learning_unit",
+  "life",
+  "general",
+  "general_unit",
+]);
+
 // 所見は生徒ごとに最新1件のみを保持するため、対象期間は保存対象に含めない
 // (期間はAI生成の材料を絞るためだけに使う。`docs/features/comments/design.md`)
 export const commentSaveInputSchema = z.object({
@@ -981,6 +993,13 @@ export function groupMemosByUnit(memos: PromptMemo[]): UnitMemoGroup[];
 // 単元の小グループに分ける(なければ unitGroups は null で従来の表示になる)
 export function groupMemosBySubjectAndUnit<T extends GroupableMemo>(memos: T[]): SubjectGroup<T>[];
 
+// prompt-template-key.ts (所見の種類×生成単位 → 使うひな形のキー)
+// 生活の所見は単元を持たないため、生成単位によらず "life" を返す
+export function resolvePromptTemplateKey(
+  kind: CommentKind,
+  scope: GenerationScope
+): PromptTemplateKey; // "learning" | "learning_unit" | "life" | "general" | "general_unit"
+
 // resolve-weekly-slots.ts
 export function resolveWeeklySlots(
   master: MasterSlot[],
@@ -1034,7 +1053,8 @@ export class AiProviderError extends Error {
 | `useClasses()` / `useWeeklyTimetable()` / `useStudentMemos()` 等 | TanStack Queryベース。`queryFn`が直接`supabase-js`を呼ぶ |
 | `useClassOptions()` | 生徒名簿・生徒別メモ一覧・所見管理画面で共通利用する画面内クラス選択フック。教員のクラス一覧取得+選択中クラスの生徒一覧取得をまとめて提供し、重複実装を避ける |
 | `useStudentComments(studentId, kind)` | 生徒1人分の所見(種類ごとに1件)の取得・upsert保存。`kind`が`learning`なら`student_comment`、`life`なら`student_life_comment`、`general`なら`student_general_comment`を参照する |
-| `useUnits(subjectId)` | 科目ごとの単元の取得(登録順)・追加・名前編集・削除。`teacher_id`はクライアントから渡さない(`unit`は`subject_id`のみを持ち、所有者はRLSが`subject`経由で判定する) |
+| `useUnits(subjectId)` | 科目ごとの単元の取得(登録順)・追加・名前編集・削除・貼り付けでの一括登録。`teacher_id`はクライアントから渡さない(`unit`は`subject_id`のみを持ち、所有者はRLSが`subject`経由で判定する) |
+| `usePromptTemplate()` | プロンプトひな形5つ(所見の種類×生成単位)の取得・保存。未保存のものは本ツール既定の初期値を返す。保存は対象の列だけを送るため、他のひな形は保持される |
 | `useClassCommentPeriod(classId)` | クラスごとの所見対象期間の取得・自動保存。詳細は`docs/features/comments/design.md` |
 | `<ToastProvider>` / `useToast()` | 保存成功・失敗等のトースト通知(`components.md` Toast)。`app/providers.tsx`でアプリ全体をラップし、`useToast().showToast(variant, message)`でどこからでも呼び出せる |
 

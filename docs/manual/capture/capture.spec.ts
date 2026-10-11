@@ -545,7 +545,10 @@ test("使い方説明書のキャプチャを撮影する", async ({ page }) => 
 
   // ---------------------------------------------------------------- 設定まわり
   await page.goto("/settings/prompt-template");
-  await expect(page.getByLabel("学習の所見用のひな形", { exact: true })).toBeVisible();
+  // 既定で「学習の所見」の折りたたみが開いており、中に2つのひな形が入っている(UN-034)
+  await expect(
+    page.getByLabel("学習の所見用のひな形(まとめて生成)", { exact: true }),
+  ).toBeVisible();
   await shot(page, "26-prompt-template", []);
 
   await page.goto("/settings/export");
