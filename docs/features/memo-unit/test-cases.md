@@ -146,7 +146,7 @@
 - 優先度: P0
 - 自動テスト: `tests/db/rpc-export.test.ts`
 - 手順: 単元を登録し、単元を記録したメモを作ってから全データをエクスポートする
-- 期待結果: `subjects[].units`に単元が含まれ、`memos[].unitId`にその単元のIDが入る。単元が未登録・未設定の場合はそれぞれ空配列とnullになる。既存のキーは従来どおり出力される
+- 期待結果: `subjects[].units`に単元が含まれ、`memos[].unitId`にその単元のIDが入る。`promptTemplate`に`unitContent`・`generalUnitContent`が含まれる。単元が未登録・未設定の場合はそれぞれ空配列とnullになる。既存のキーは従来どおり出力される
 
 ### UN-P0-18 科目を削除すると単元もまとめて消える
 
