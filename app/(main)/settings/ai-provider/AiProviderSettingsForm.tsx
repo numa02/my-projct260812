@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/Button";
 import { InlineMessage } from "@/components/ui/InlineMessage";
 import { Badge } from "@/components/ui/Badge";
 import { useToast } from "@/components/ui/Toast";
-import { SUPPORTED_MODELS, DEFAULT_MODEL, isSupportedModel, type AiProvider } from "@/shared/ai-models";
+import { AI_MODEL, type AiProvider } from "@/shared/ai-models";
 import type { AiProviderSettingData } from "@/hooks/useAiProviderSettings";
 
 const PROVIDER_OPTIONS: { value: AiProvider; label: string }[] = [
@@ -23,7 +23,7 @@ interface AsyncAction<T> {
 
 export interface AiProviderSettingsFormProps {
   initialSetting: AiProviderSettingData;
-  saveSetting: AsyncAction<{ provider: AiProvider; model: string; apiKey: string }>;
+  saveSetting: AsyncAction<{ provider: AiProvider; apiKey: string }>;
 }
 
 /** 下書きの初期値はpropsから一度だけ受け取る(サーバーデータのロード完了後にのみ親から描画される) */
@@ -31,33 +31,20 @@ export function AiProviderSettingsForm({ initialSetting, saveSetting }: AiProvid
   const { showToast } = useToast();
 
   const [provider, setProvider] = useState<AiProvider>(initialSetting.provider ?? "openai");
-  const initialProvider = initialSetting.provider ?? "openai";
-  const [model, setModel] = useState(
-    initialSetting.model && isSupportedModel(initialProvider, initialSetting.model)
-      ? initialSetting.model
-      : DEFAULT_MODEL[initialProvider],
-  );
   const [apiKey, setApiKey] = useState("");
   const [hasKey, setHasKey] = useState(initialSetting.hasKey);
   // プルダウンの選択値は「保存済みの値」と「教員が選び直しただけの未保存の値」を区別できないため、
-  // 登録済みの内容を別に保持して設定状況の横に併記する(docs/features/ui-clarity/)
+  // 登録済みの内容を別に保持して設定状況の横に併記する(docs/features/ui-clarity/)。
+  // モデルは教員が選ばず、プロバイダごとの固定モデルを併記する(docs/features/ai-model-fixed/)
   const [savedProvider, setSavedProvider] = useState(initialSetting.provider);
-  const [savedModel, setSavedModel] = useState(initialSetting.model);
-
-  const handleProviderChange = (value: string) => {
-    const nextProvider = value as AiProvider;
-    setProvider(nextProvider);
-    setModel(DEFAULT_MODEL[nextProvider]);
-  };
 
   const handleSave = async () => {
     if (apiKey.trim().length === 0) return;
     try {
-      await saveSetting.mutateAsync({ provider, model, apiKey: apiKey.trim() });
+      await saveSetting.mutateAsync({ provider, apiKey: apiKey.trim() });
       setApiKey("");
       setHasKey(true);
       setSavedProvider(provider);
-      setSavedModel(model);
       showToast("success", "AIプロバイダ設定を保存しました");
     } catch (err) {
       showToast("error", (err as Error).message || "保存に失敗しました");
@@ -75,10 +62,10 @@ export function AiProviderSettingsForm({ initialSetting, saveSetting }: AiProvid
         ) : (
           <Badge variant="neutral" label="未設定" />
         )}
-        {hasKey && savedProvider && savedModel && (
+        {hasKey && savedProvider && (
           <span className="text-sm text-gray-600">
             {PROVIDER_OPTIONS.find((o) => o.value === savedProvider)?.label ?? savedProvider} /{" "}
-            {savedModel}
+            {AI_MODEL[savedProvider]}
           </span>
         )}
       </div>
@@ -88,13 +75,7 @@ export function AiProviderSettingsForm({ initialSetting, saveSetting }: AiProvid
           label="AIプロバイダ"
           options={PROVIDER_OPTIONS}
           value={provider}
-          onChange={handleProviderChange}
-        />
-        <Select
-          label="モデル"
-          options={SUPPORTED_MODELS[provider].map((m) => ({ value: m, label: m }))}
-          value={model}
-          onChange={setModel}
+          onChange={(value) => setProvider(value as AiProvider)}
         />
         <Input
           label="APIキー"

@@ -124,9 +124,9 @@ export const commentSaveInputSchema = z.object({
 });
 export type CommentSaveInput = z.infer<typeof commentSaveInputSchema>;
 
+// モデルは教員が選ばず、プロバイダごとの固定モデル(shared/ai-models.ts)を使う
 export const aiProviderSettingInputSchema = z.object({
   provider: z.enum(["openai", "anthropic", "gemini"]),
-  model: z.string().min(1),
   apiKey: z.string().min(1),
 });
 export type AiProviderSettingInput = z.infer<typeof aiProviderSettingInputSchema>;

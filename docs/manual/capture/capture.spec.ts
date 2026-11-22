@@ -462,9 +462,8 @@ test("使い方説明書のキャプチャを撮影する", async ({ page }) => 
   await page.getByLabel("APIキー").fill("AIzaSyDEMO-manual-capture-key");
   await shot(page, "22-ai-provider", [
     { n: 1, target: page.getByLabel("AIプロバイダ") },
-    { n: 2, target: page.getByLabel("モデル") },
-    { n: 3, target: page.getByLabel("APIキー") },
-    { n: 4, target: page.getByRole("button", { name: "保存" }) },
+    { n: 2, target: page.getByLabel("APIキー") },
+    { n: 3, target: page.getByRole("button", { name: "保存" }) },
   ]);
   await page.getByRole("button", { name: "保存" }).click();
   await expect(page.getByText("AIプロバイダ設定を保存しました")).toBeVisible();
