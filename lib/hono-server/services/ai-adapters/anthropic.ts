@@ -7,11 +7,15 @@ export const anthropicAdapter: AiAdapter = {
       headers: {
         "x-api-key": apiKey,
         "anthropic-version": "2023-06-01",
+        // 安全分類器が辞退した場合に、辞退の種類に応じた別モデルでサーバー側が自動で再実行する
+        "anthropic-beta": "server-side-fallback-2026-07-01",
         "content-type": "application/json",
       },
       body: JSON.stringify({
         model,
-        max_tokens: 2048,
+        // 考える処理(adaptive thinking)の出力もmax_tokensに数えられるため、所見本文が途中で切れないよう余裕を持たせる
+        max_tokens: 16000,
+        fallbacks: "default",
         messages: [{ role: "user", content: prompt }],
       }),
     });

@@ -804,8 +804,8 @@ import { Hono } from "hono";
 
 const app = new Hono().basePath("/api");
 
-app.get("/settings/ai-provider", /* ... */);   // 現在の provider/model と hasKey(boolean) のみ返す。鍵本体は返さない
-app.put("/settings/ai-provider", /* ... */);   // { provider, model, apiKey } を受け取り、暗号化して保存
+app.get("/settings/ai-provider", /* ... */);   // 現在の provider と hasKey(boolean) のみ返す。鍵本体は返さない
+app.put("/settings/ai-provider", /* ... */);   // { provider, apiKey } を受け取り、暗号化して保存(model列には固定モデル名を記録)
 app.post("/comments/generate", /* ... */);     // { prompt, targetCharCount? } を受け取り、外部AIへ送信し { rawText } を返す
 
 export const GET = app.fetch;
@@ -876,24 +876,18 @@ export const commentSaveInputSchema = z.object({
 });
 ```
 
-**モデル名のバリデーション。** `PUT /settings/ai-provider`は`model`を自由入力のまま受け付けず、プロバイダごとの許可リストと照合する。許可リストは`shared/ai-models.ts`に静的に持つ。
+**固定モデル。** 教員はモデルを選ばず、生成に使うモデルはプロバイダごとに`shared/ai-models.ts`で1つに固定する(`docs/features/ai-model-fixed/`)。
 
 ```ts
-// shared/ai-models.ts(実装時点、2026-08。各社のリリース状況に応じて要更新)
-export const SUPPORTED_MODELS: Record<AiProvider, readonly string[]> = {
-  openai: ["gpt-5-nano", "gpt-5-mini", "gpt-5"],
-  anthropic: ["claude-haiku-4-5-20251001", "claude-sonnet-5", "claude-opus-5"],
-  gemini: ["gemini-2.5-flash-lite", "gemini-2.5-flash", "gemini-2.5-pro"],
-};
-
-export const DEFAULT_MODEL: Record<AiProvider, string> = {
-  openai: "gpt-5-mini",
-  anthropic: "claude-sonnet-5",
-  gemini: "gemini-2.5-flash",
+// shared/ai-models.ts(2026-11時点。各社の廃止・後継に合わせてここだけを更新する)
+export const AI_MODEL: Record<AiProvider, string> = {
+  openai: "gpt-6.1-terra",
+  anthropic: "claude-sonnet-5-5",
+  gemini: "gemini-3.8-flash",
 };
 ```
 
-許可リストに存在しない`model`が送られた場合は400(`UNSUPPORTED_MODEL`)エラーとする。各社のモデルラインアップは頻繁に更新されるため、このリストは新モデルのリリースに合わせて手動更新する運用になる(要件定義書の未決事項「AIプロバイダごとに選択可能なモデルの具体的な一覧は未確定」に対応する実装上の受け皿)。上記のモデル名は実装時点で確認できたものであり、実際の提供状況・料金は各プロバイダの公式ドキュメントで都度確認し、乖離があれば更新すること。
+`PUT /settings/ai-provider`は`model`を受け取らず、`ai_provider_setting.model`列には保存時点の`AI_MODEL[provider]`を記録する。`POST /comments/generate`は`model`列を読まず、常にその時点の`AI_MODEL[provider]`を使う。これにより固定モデルを更新すると、教員が設定を保存し直さなくても全員の生成が新しいモデルに切り替わる。モデル名は実装時点で確認できたものであり、実際の提供状況・料金は各プロバイダの公式ドキュメントで都度確認し、廃止の告知があれば更新すること。
 
 ### 5.4 直接Supabaseアクセスのパターン
 
@@ -1085,7 +1079,7 @@ export class AiProviderError extends Error {
 - **RPC関数からのビジネスルール違反**: `raise exception 'CODE: メッセージ'`という接頭辞付きの文字列規約で統一する。PostgRESTはこれをHTTP 400 + `{ message: "CODE: メッセージ" }`として返すため、フロント共通のエラーハンドラが`:`より前をコードとして分岐処理(確認ダイアログの出し分け等)に、`:`より後をそのままトースト表示に使う。
 - **RLS拒否**: PostgRESTが403相当を返す。通常のユーザー操作では発生しない想定のため、フロントは汎用的な「アクセス権がありません」表示のみ行う(想定外パスの検知用)。
 - **一意制約違反**: メモ・所見の保存は`upsert`(`onConflict`指定)を使うため、通常は制約違反自体が発生しない。
-- **Hono側(`/settings/ai-provider`, `/comments/generate`)**: `{ error: { code, message } }`の独自エンベロープを維持する(この2エンドポイントはHonoが完全に制御しているため)。認証エラー・レート制限エラーはAIプロバイダからの応答をラップして返し、所見は保存せず直前の状態を維持する(F9)。実装している`code`一覧: `UNAUTHORIZED`(401、未ログイン)・`FORBIDDEN`(403、CSRF対策で同一オリジン以外を拒否)・`INVALID_INPUT`(400)・`UNSUPPORTED_MODEL`(400、§5.3の許可リスト外)・`NOT_CONFIGURED`(400、AIプロバイダ未設定で生成を実行)・`AUTH_ERROR`(401、AIプロバイダ側の認証エラー)・`RATE_LIMIT`(429)・`PROVIDER_ERROR`(502、その他のAIプロバイダエラー)・`INTERNAL_ERROR`(500)。
+- **Hono側(`/settings/ai-provider`, `/comments/generate`)**: `{ error: { code, message } }`の独自エンベロープを維持する(この2エンドポイントはHonoが完全に制御しているため)。認証エラー・レート制限エラーはAIプロバイダからの応答をラップして返し、所見は保存せず直前の状態を維持する(F9)。実装している`code`一覧: `UNAUTHORIZED`(401、未ログイン)・`FORBIDDEN`(403、CSRF対策で同一オリジン以外を拒否)・`INVALID_INPUT`(400)・`NOT_CONFIGURED`(400、AIプロバイダ未設定で生成を実行)・`AUTH_ERROR`(401、AIプロバイダ側の認証エラー)・`RATE_LIMIT`(429)・`PROVIDER_ERROR`(502、その他のAIプロバイダエラー)・`INTERNAL_ERROR`(500)。
 
 ### 6.3 保存エラー(F13)
 

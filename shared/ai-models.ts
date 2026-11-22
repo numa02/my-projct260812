@@ -1,30 +1,20 @@
 export type AiProvider = "openai" | "anthropic" | "gemini";
 
 /**
- * プロバイダごとの選択可能モデル許可リスト(要件定義書の未決事項に対応、T-030)。
- * 各社のモデルラインアップは頻繁に更新されるため、このリストは新モデルのリリースに
- * 合わせて手動更新する運用になる。実際の提供状況は各プロバイダの公式ドキュメントで都度確認すること。
+ * プロバイダごとに所見生成で使うモデル(固定モデル。docs/features/ai-model-fixed/)。
+ * 教員はモデルを選ばない。各社のモデル廃止・後継の提供に合わせてここだけを更新すれば、
+ * 教員が設定を保存し直さなくても全員の生成が新しいモデルに切り替わる
+ * (生成時はDBのai_provider_setting.modelを読まず、常にこの値を使う)。
+ * 実際の提供状況は各プロバイダの公式ドキュメントで都度確認すること。
  *
  * 更新履歴:
- * - 2026-08: 実装時点で確認できた各社の中位モデルを既定値として設定
- * - 2026-09: gemini-2.5-flash-liteが新規ユーザー向けに提供終了(404 NOT_FOUND)されたため、
- *   flash-lite/flashをGemini 3.5系に更新。gemini-3.5-proは本更新時点で未一般提供のため
- *   gemini-2.5-proを暫定維持(Gemini 2.5系は2026-10-16に正式廃止予定のため、それまでに
- *   3.5-proの提供状況を再確認して更新すること)
+ * - 2026-08: 教員が選ぶ方式で、各社の中位モデルを既定値として設定
+ * - 2026-09: Gemini 2.5系の提供終了に伴い選択肢を更新
+ * - 2026-11: モデル選択を廃止し固定モデルへ。gpt-5系(2026-12-11停止)・gemini-2.5系(2026-12-01停止)の
+ *   後継として、各社の中位モデルを採用
  */
-export const SUPPORTED_MODELS: Record<AiProvider, readonly string[]> = {
-  openai: ["gpt-5-nano", "gpt-5-mini", "gpt-5"],
-  anthropic: ["claude-haiku-4-5-20251001", "claude-sonnet-5", "claude-opus-5"],
-  gemini: ["gemini-3.5-flash-lite", "gemini-3.5-flash", "gemini-2.5-pro"],
+export const AI_MODEL: Record<AiProvider, string> = {
+  openai: "gpt-6.1-terra",
+  anthropic: "claude-sonnet-5-5",
+  gemini: "gemini-3.8-flash",
 };
-
-/** コストと品質のバランスを重視した中位モデルを既定値とする(要件定義書 非機能要件) */
-export const DEFAULT_MODEL: Record<AiProvider, string> = {
-  openai: "gpt-5-mini",
-  anthropic: "claude-sonnet-5",
-  gemini: "gemini-3.5-flash",
-};
-
-export function isSupportedModel(provider: AiProvider, model: string): boolean {
-  return (SUPPORTED_MODELS[provider] as readonly string[]).includes(model);
-}

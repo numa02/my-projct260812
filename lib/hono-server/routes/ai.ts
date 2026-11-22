@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { aiProviderSettingInputSchema } from "@/shared/schemas";
-import { isSupportedModel, type AiProvider } from "@/shared/ai-models";
+import { AI_MODEL, type AiProvider } from "@/shared/ai-models";
 import { encryptApiKey, decryptApiKey } from "../services/crypto";
 import { aiAdapters, AiProviderError } from "../services/ai-adapters";
 
@@ -26,7 +26,7 @@ aiRoutes.get("/settings/ai-provider", async (c) => {
 
   const { data, error } = await supabase
     .from("ai_provider_setting")
-    .select("provider, model")
+    .select("provider")
     .eq("teacher_id", user.id)
     .maybeSingle();
 
@@ -35,10 +35,10 @@ aiRoutes.get("/settings/ai-provider", async (c) => {
   }
 
   if (!data) {
-    return c.json({ provider: null, model: null, hasKey: false });
+    return c.json({ provider: null, hasKey: false });
   }
 
-  return c.json({ provider: data.provider, model: data.model, hasKey: true });
+  return c.json({ provider: data.provider, hasKey: true });
 });
 
 aiRoutes.put("/settings/ai-provider", async (c) => {
@@ -54,11 +54,9 @@ aiRoutes.put("/settings/ai-provider", async (c) => {
   if (!parsed.success) {
     return c.json({ error: { code: "INVALID_INPUT", message: "入力内容が不正です" } }, 400);
   }
-  const { provider, model, apiKey } = parsed.data;
-
-  if (!isSupportedModel(provider as AiProvider, model)) {
-    return c.json({ error: { code: "UNSUPPORTED_MODEL", message: "許可されていないモデルです" } }, 400);
-  }
+  const { provider, apiKey } = parsed.data;
+  // model列は保存時点の固定モデルの記録として残す(生成では読まない。docs/features/ai-model-fixed/)
+  const model = AI_MODEL[provider];
 
   const masterKey = await getMasterKey();
   const encryptedApiKey = await encryptApiKey({ apiKey, teacherId: user.id, masterKeyBase64: masterKey });
@@ -74,7 +72,7 @@ aiRoutes.put("/settings/ai-provider", async (c) => {
     return c.json({ error: { code: "INTERNAL_ERROR", message: "保存に失敗しました" } }, 500);
   }
 
-  return c.json({ provider, model, hasKey: true });
+  return c.json({ provider, hasKey: true });
 });
 
 aiRoutes.post("/comments/generate", async (c) => {
@@ -93,7 +91,7 @@ aiRoutes.post("/comments/generate", async (c) => {
 
   const { data: setting, error: settingError } = await supabase
     .from("ai_provider_setting")
-    .select("provider, model, encrypted_api_key")
+    .select("provider, encrypted_api_key")
     .eq("teacher_id", user.id)
     .maybeSingle();
 
@@ -112,10 +110,11 @@ aiRoutes.post("/comments/generate", async (c) => {
       masterKeyBase64: masterKey,
     });
 
-    const adapter = aiAdapters[setting.provider as AiProvider];
-    const rawText = await adapter.generateComment({
+    const provider = setting.provider as AiProvider;
+    const rawText = await aiAdapters[provider].generateComment({
       apiKey,
-      model: setting.model,
+      // 保存済みのmodel列ではなく、その時点の固定モデルを使う(固定モデル更新時に再保存を不要にするため)
+      model: AI_MODEL[provider],
       prompt: body.prompt,
     });
 

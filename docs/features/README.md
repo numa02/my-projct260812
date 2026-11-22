@@ -15,7 +15,7 @@
 - [授業記録](./memo-record/test-cases.md)(T-063、UN-011で単元の選択を追加)
 - [生徒別メモ一覧](./memo-students-list/test-cases.md)(T-064、UN-012で単元名の表示と教科→単元の2段表示を追加)
 - [所見管理(クラス単位一覧)](./comments/test-cases.md)(T-080。T-065〜T-067の生徒単位・タブ切替の構成を再設計・置換。UN-013で「単元ごとに生成」を追加)
-- [AIプロバイダ設定](./settings-ai-provider/test-cases.md)(T-068)
+- [AIプロバイダ設定](./settings-ai-provider/test-cases.md)(T-068、AM-001〜AM-007でモデル選択を廃止しプロバイダごとの固定モデルに変更)
 - [プロンプトひな形編集](./settings-prompt-template/test-cases.md)(T-069、UN-034で所見の種類ごとの折りたたみ+「単元ごと」用ひな形の追加により計5つに)
 - [データエクスポート](./settings-export/test-cases.md)(T-070)
 - [用語「所感」→「所見」の統一](./terminology-shoken/test-cases.md)(TS-001〜TS-005)

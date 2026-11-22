@@ -159,7 +159,7 @@ erDiagram
         uuid id PK
         uuid teacher_id FK
         string provider "OpenAI/Anthropic/Google Gemini"
-        string model
+        string model "保存時点の固定モデル名の記録。生成には使わない"
         string encrypted_api_key
         datetime updated_at
     }

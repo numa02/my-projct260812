@@ -5,7 +5,6 @@ import type { AiProvider } from "@/shared/ai-models";
 
 export interface AiProviderSettingData {
   provider: AiProvider | null;
-  model: string | null;
   hasKey: boolean;
 }
 
@@ -33,7 +32,7 @@ export function useAiProviderSettings() {
   });
 
   const saveSetting = useMutation({
-    mutationFn: (input: { provider: AiProvider; model: string; apiKey: string }) =>
+    mutationFn: (input: { provider: AiProvider; apiKey: string }) =>
       fetchJson<AiProviderSettingData>("/api/settings/ai-provider", {
         method: "PUT",
         headers: { "content-type": "application/json" },
@@ -43,7 +42,7 @@ export function useAiProviderSettings() {
   });
 
   return {
-    setting: settingQuery.data ?? { provider: null, model: null, hasKey: false },
+    setting: settingQuery.data ?? { provider: null, hasKey: false },
     isLoading: settingQuery.isLoading,
     saveSetting,
   };
